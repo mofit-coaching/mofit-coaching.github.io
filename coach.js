@@ -1,0 +1,277 @@
+/* ======================================================================
+   COACH: CLIENTS
+   ====================================================================== */
+async function loadClients(){ const { data } = await sb.from("profiles").select("*").eq("role","client").order("created_at",{ascending:false}); S.coachClients=data||[]; }
+function profileFields(p={}){
+  return `<div class="grid2">
+    <label class="f">النوع<select data-p="sex"><option value=""></option>${["ذكر","أنثى"].map(s=>`<option ${p.sex===s?"selected":""}>${s}</option>`).join("")}</select></label>
+    <label class="f">العمر<input inputmode="numeric" data-p="age" value="${esc(p.age??"")}"></label>
+    <label class="f">الطول (سم)<input inputmode="decimal" data-p="height_cm" value="${esc(p.height_cm??"")}"></label>
+    <label class="f">الوزن عند البداية (كجم)<input inputmode="decimal" data-p="start_weight" value="${esc(p.start_weight??"")}"></label>
+    <label class="f">تاريخ البداية<input type="date" data-p="start_date" value="${esc(p.start_date??today())}"></label>
+    <label class="f">عدد الوجبات<select data-p="meals_per_day">${[2,3,4,5,6].map(n=>`<option ${(+p.meals_per_day||3)===n?"selected":""}>${n}</option>`).join("")}</select></label>
+    <label class="f">مستوى النشاط<select data-p="activity_factor">${ACTIVITY.map(([l,v])=>`<option value="${v}" ${(+p.activity_factor||1.2)===v?"selected":""}>${l}</option>`).join("")}</select></label>
+    <label class="f">الهدف<select data-p="goal">${GOALS.map(([l])=>`<option ${p.goal===l?"selected":""}>${l}</option>`).join("")}</select></label>
+    <label class="f">سعرات يدوية (اختياري)<input inputmode="decimal" data-p="manual_kcal" value="${esc(p.manual_kcal??"")}"></label>
+    <label class="f">بروتين جم/كجم (اختياري)<input inputmode="decimal" data-p="protein_gpk" value="${esc(p.protein_gpk??"")}"></label></div>
+    <div class="grid3"><label class="f">بروتين %<input inputmode="decimal" data-p="p_pct" value="${Math.round((p.p_pct??0.3)*100)}"></label>
+    <label class="f">كارب %<input inputmode="decimal" data-p="c_pct" value="${Math.round((p.c_pct??0.4)*100)}"></label>
+    <label class="f">دهون %<input inputmode="decimal" data-p="f_pct" value="${Math.round((p.f_pct??0.3)*100)}"></label></div>`;
+}
+function readProfile(root){
+  const v=k=>root.querySelector(`[data-p="${k}"]`).value, goal=v("goal");
+  return { sex:v("sex")||null, age:num(v("age")), height_cm:num(v("height_cm")), start_weight:num(v("start_weight")), start_date:v("start_date")||null,
+    meals_per_day:num(v("meals_per_day"))||3, activity_factor:+v("activity_factor"), goal, goal_adj:(GOALS.find(g=>g[0]===goal)||[0,0])[1],
+    manual_kcal:num(v("manual_kcal")), protein_gpk:num(v("protein_gpk")), p_pct:(num(v("p_pct"))??30)/100, c_pct:(num(v("c_pct"))??40)/100, f_pct:(num(v("f_pct"))??30)/100 };
+}
+async function viewClients(el){
+  const C=S.coachClients;
+  el.innerHTML=`<div class="grid3" style="margin-bottom:14px"><div class="stat dark"><div class="l">العملاء</div><div class="v">${C.length}</div></div>
+      <div class="stat acc"><div class="l">مفعّل</div><div class="v">${C.filter(c=>c.active).length}</div></div>
+      <div class="stat"><div class="l">برامج محفوظة</div><div class="v">${S.templates.length}</div></div></div>
+    <button class="btn primary block" id="addBtn" style="margin-bottom:14px">+ إضافة عميل جديد</button>
+    <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
+      ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
+    <div class="card"><div class="card-h"><div class="ic acc">✍</div><h2>برامج الكوتش المحفوظة<small>بتظهر في قائمة "برنامج الكوتش" عند اختيار النظام</small></h2></div><div id="tplList"></div></div>`;
+  const draw=q=>{ const list=C.filter(c=>!q||(c.full_name||"").includes(q)||(c.email||"").includes(q));
+    $("#cl").innerHTML=list.length?list.map(c=>{ const wk=currentWeek(c); return `<div class="client" data-id="${c.id}"><div class="av">${initials(c)}</div>
+      <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
+      <div class="bar" style="height:5px"><i style="width:${wk/12*100}%"></i></div></div><div style="text-align:center"><b class="num">${wk}</b><div class="muted" style="font-size:.66rem">/12</div></div>${c.active?"":`<span class="pill navy">موقوف</span>`}</div>`; }).join(""):emptyBox("🙋","ضيف أول عميل من الزرار اللي فوق");
+    $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
+  draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
+  $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
+  $("#tplList").querySelectorAll("[data-tdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف البرنامج المحفوظ؟ (برامج العملاء الحالية مش هتتأثر)")) return; await sb.from("program_templates").delete().eq("id",b.dataset.tdel); await loadCoachTemplates(); viewClients(el); });
+  $("#addBtn").onclick=()=>addClientSheet(el);
+}
+function addClientSheet(el){
+  const body=openSheet(`<div class="between"><b style="font-size:1.1rem">عميل جديد</b><button class="btn sm ghost" data-close>✕</button></div>
+    <div class="seg" style="margin:10px 0 14px"><button class="on" data-st="1">1 · الحساب</button><button data-st="2">2 · البيانات</button><button data-st="3">3 · التمرين</button></div>
+    <div data-step="1"><label class="f">اسم العميل<input id="nName"></label><label class="f">الإيميل (اسم الدخول)<input id="nEmail" type="email" autocomplete="off"></label>
+      <label class="f">كلمة السر<div class="row"><input id="nPass" class="grow" autocomplete="new-password" value="${genPass()}"><button class="btn sm" id="gen">توليد</button></div></label></div>
+    <div data-step="2" class="hidden">${profileFields({})}</div>
+    <div data-step="3" class="hidden" id="nSys">${systemFields(3,"متوسط")}</div>
+    <p class="err" id="nErr"></p>
+    <div class="row"><button class="btn grow hidden" id="nBack">→ السابق</button><button class="btn navy grow" id="nNext">التالي ←</button><button class="btn primary grow hidden" id="nCreate">إنشاء الحساب ✓</button></div><div id="nDone"></div>`);
+  let step=1; const getSys=wireSystemPicker($("#nSys"),null);
+  const go=n=>{ step=n; body.querySelectorAll("[data-step]").forEach(d=>d.classList.toggle("hidden",+d.dataset.step!==n)); body.querySelectorAll("[data-st]").forEach(b=>b.classList.toggle("on",+b.dataset.st===n));
+    $("#nBack").classList.toggle("hidden",n===1); $("#nNext").classList.toggle("hidden",n===3); $("#nCreate").classList.toggle("hidden",n!==3); };
+  body.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>go(+b.dataset.st));
+  $("#nNext").onclick=()=>go(step+1); $("#nBack").onclick=()=>go(step-1);
+  body.querySelector("[data-close]").onclick=closeSheet; $("#gen").onclick=()=>$("#nPass").value=genPass();
+  $("#nCreate").onclick=async()=>{
+    $("#nErr").textContent=""; const btn=$("#nCreate"); btn.disabled=true; btn.textContent="جارٍ الإنشاء…";
+    const email=$("#nEmail").value.trim(), password=$("#nPass").value, full_name=$("#nName").value.trim(), {sys,level}=getSys();
+    const { data, error } = await sb.functions.invoke("coach-admin",{ body:{ action:"create_client", email, password, full_name, profile:readProfile(body) } });
+    btn.disabled=false; btn.textContent="إنشاء الحساب ✓";
+    const msg=await fnErr(error,data); if(msg){ $("#nErr").textContent=msg; return; }
+    if(sys) await applyProgram({id:data.id}, sys, level); else await sb.from("profiles").update({level}).eq("id",data.id);
+    const link=location.href.split("#")[0].split("?")[0];
+    const share=`أهلاً ${full_name} 👋\nده حسابك في Mofit:\n🔗 ${link}\n📧 ${email}\n🔑 ${password}`;
+    $("#nDone").innerHTML=`<div class="card" style="background:var(--good-soft);box-shadow:none;margin-top:12px"><b>✓ تم إنشاء الحساب</b><pre style="white-space:pre-wrap;font-family:inherit;margin:8px 0">${esc(share)}</pre>
+      <div class="row"><button class="btn sm navy" id="cp">📋 نسخ الرسالة</button><a class="btn sm" style="text-decoration:none" target="_blank" href="https://wa.me/?text=${encodeURIComponent(share)}">واتساب ↗</a></div></div>`;
+    $("#cp").onclick=()=>navigator.clipboard.writeText(share).then(()=>toast("✓ اتنسخت"));
+    $("#nCreate").classList.add("hidden"); $("#nBack").classList.add("hidden");
+    await loadClients(); viewClients(el);
+  };
+}
+
+/* ======================================================================
+   COACH: CLIENT CONTROL PANEL
+   ====================================================================== */
+async function viewSetup(el){
+  const tabsH=[["data","👤 البيانات"],["program","🏋️ التمرين"],["diet","🥗 التغذية"],["account","🔐 الحساب"]];
+  el.innerHTML=`<div class="seg" style="margin-bottom:14px">${tabsH.map(([k,l])=>`<button data-sub="${k}" class="${S.setupTab===k?"on":""}">${l}</button>`).join("")}</div><div id="sub"></div>`;
+  el.querySelectorAll("[data-sub]").forEach(b=>b.onclick=()=>{ S.setupTab=b.dataset.sub; viewSetup(el); });
+  const sub=$("#sub");
+  if(S.setupTab==="data") return setupData(sub);
+  if(S.setupTab==="program") return setupProgram(sub);
+  if(S.setupTab==="diet") return setupDiet(sub);
+  return setupAccount(sub);
+}
+function setupData(el){
+  const p=S.client, t=targets(p);
+  el.innerHTML=`<div class="card dark"><div class="card-h"><div class="ic">🧮</div><h2>الأهداف المحسوبة<small>Mifflin-St Jeor · TDEE = BMR × النشاط</small></h2></div>
+      <div class="grid3"><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">BMR</div><div class="v num">${fmt(t.bmr)}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">TDEE</div><div class="v num">${fmt(t.tdee)}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">السعرات</div><div class="v num" style="color:var(--acc)">${fmt(t.kcal)}</div></div>
+      <div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">بروتين</div><div class="v num">${fmt(t.P)}</div><div class="s">جم${t.P&&p.start_weight?" · "+fmt(t.P/p.start_weight,2)+" جم/كجم":""}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">كارب</div><div class="v num">${fmt(t.C)}</div><div class="s">جم</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">دهون</div><div class="v num">${fmt(t.F)}</div><div class="s">جم</div></div></div></div>
+    <div class="card"><div class="card-h"><div class="ic">👤</div><h2>بيانات العميل</h2></div>
+      <label class="f">الاسم<input data-x="full_name" value="${esc(p.full_name??"")}"></label>${profileFields(p)}
+      <label class="f">ملاحظات الكوتش (خاصة – العميل مش بيشوفها)<textarea rows="2" data-x="coach_notes">${esc(p.coach_notes??"")}</textarea></label>
+      <button class="btn primary block" id="pSave">حفظ البيانات</button></div>`;
+  $("#pSave").onclick=async()=>{
+    const upd={...readProfile(el), full_name:el.querySelector('[data-x="full_name"]').value.trim(), coach_notes:el.querySelector('[data-x="coach_notes"]').value.trim()||null};
+    const { error } = await sb.from("profiles").update(upd).eq("id",p.id); if(error) return toast(error.message);
+    await refreshClient(); toast("✓ اتحفظت"); render();
+  };
+}
+function setupProgram(el){
+  const p=S.client, days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
+  if(!days.includes(S.day)&&days.length) S.day=days[0];
+  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
+      <div id="sysBox">${systemFields(p.training_days||3, p.level||"متوسط")}</div>
+      <button class="btn primary block" id="sysApply" style="margin-top:10px">تطبيق على ${esc(p.full_name||"العميل")}</button>
+      <p class="hint">⚠ التطبيق بيستبدل البرنامج الحالي ويمسح المجموعات المسجلة على التمارين القديمة.</p></div>
+    <div class="card"><div class="card-h"><div class="ic acc">📆</div><h2>جدول الأسبوع<small>اسحب الأيام ورتّبها – وحط أيام راحة بينها</small></h2></div>
+      <div id="wk"></div>
+      <div class="row" style="margin-top:10px"><button class="btn grow" id="wkAuto">⚡ توزيع تلقائي للراحة</button><button class="btn primary grow" id="wkSave">حفظ الجدول</button></div>
+      <p class="hint">الدورة 7 أيام وبتبدأ من تاريخ البداية${p.start_date?" ("+esc(p.start_date)+")":""}. المجموعات المسجلة بتفضل مع تمارينها.</p></div>
+    <div class="card"><div class="card-h"><div class="ic dark">✏️</div><h2>تعديل البرنامج يدوياً<small>العدات · RIR · الراحة · التمبو · رابط الفيديو</small></h2></div>
+      <div class="scroller">${[1,2,3,4,5,6,7].map(d=>`<button class="chip ${S.day===d?"on":""}" data-d="${d}">يوم ${d}${days.includes(d)?" ("+S.program.filter(e=>e.day_no===d).length+")":""}</button>`).join("")}</div>
+      <div class="row" style="margin:10px 0"><input id="dLbl" class="grow" placeholder="اسم اليوم (مثلاً Push / Upper A)" value="${esc(dayLabel(S.day))}"><button class="btn sm" id="dLblSave">حفظ الاسم</button></div>
+      <div id="pList"></div>
+      <div class="row"><button class="btn navy grow" id="exAdd">+ تمرين ليوم ${S.day}</button>${S.program.length?`<button class="btn grow" id="tplSave">💾 حفظ كبرنامج كوتش</button>`:""}</div></div>`;
+  const getSys=wireSystemPicker($("#sysBox"), p.split_key);
+  weekEditor($("#wk"), el);
+  $("#sysApply").onclick=async()=>{
+    const {sys,level}=getSys(); if(!sys) return toast("اختار نظام");
+    if(S.program.length && !confirm(`استبدال برنامج ${p.full_name||""} الحالي بـ "${sys.name}" (${level})؟`)) return;
+    if(await applyProgram(p, sys, level)){ await refreshClient(); S.day=1; toast("✓ تم تطبيق النظام"); render(); }
+  };
+  el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{S.day=+b.dataset.d; setupProgram(el);});
+  $("#dLblSave").onclick=async()=>{ const v=$("#dLbl").value.trim()||null; const { error } = await sb.from("program_exercises").update({day_label:v}).eq("client_id",p.id).eq("day_no",S.day); if(error) return toast(error.message); S.program.filter(e=>e.day_no===S.day).forEach(e=>e.day_label=v); toast("✓ اتحفظ"); };
+  const exs=S.program.filter(e=>e.day_no===S.day), list=$("#pList");
+  list.innerHTML=exs.length?"":`<p class="hint">يوم راحة – مفيش تمارين.</p>`;
+  exs.forEach((ex,idx)=>{
+    const d=document.createElement("div"); d.className="edit-ex"; const lib=S.videos[(ex.name||"").toUpperCase()];
+    d.innerHTML=`<div class="between" style="margin-bottom:8px"><b>${idx+1}. ${esc(ex.name)}</b><div class="row"><button class="btn sm" data-up>▲</button><button class="btn sm" data-dn>▼</button></div></div>
+      <div class="grid3"><label class="f">اسم التمرين<input data-e="name" value="${esc(ex.name)}"></label>
+        <label class="f">المجموعات<input inputmode="numeric" data-e="sets" value="${ex.sets}"></label>
+        <label class="f">العدات<input data-e="target_reps" placeholder="8-12" value="${esc(ex.target_reps??"")}"></label>
+        <label class="f">RIR<input data-e="target_rir" placeholder="1-2" value="${esc(ex.target_rir??"")}"></label>
+        <label class="f">الراحة (ثانية)<input inputmode="numeric" data-e="rest_sec" placeholder="90" value="${esc(ex.rest_sec??"")}"></label>
+        <label class="f">التمبو<input data-e="tempo" placeholder="3-1-1-0" value="${esc(ex.tempo??"")}"></label></div>
+      <label class="f">🎬 رابط فيديو الأداء (YouTube)<input data-e="video_url" placeholder="${lib?"من المكتبة: "+esc(lib):"https://youtu.be/…"}" value="${esc(ex.video_url??"")}"></label>
+      <label class="f">ملاحظات للعميل<input data-e="notes" value="${esc(ex.notes??"")}"></label>
+      <div class="row"><button class="btn sm primary" data-save>حفظ</button>${videoFor(ex)?`<button class="btn sm" data-play>▶ معاينة</button>`:""}<span class="grow"></span><button class="btn sm danger" data-del>حذف</button></div>`;
+    d.querySelector("[data-save]").onclick=async()=>{
+      const v=k=>d.querySelector(`[data-e="${k}"]`).value.trim();
+      const upd={name:(v("name")||ex.name).toUpperCase(),sets:Math.min(Math.max(num(v("sets"))||3,1),10),target_reps:v("target_reps")||null,target_rir:v("target_rir")||null,rest_sec:num(v("rest_sec")),tempo:v("tempo")||null,video_url:v("video_url")||null,notes:v("notes")||null};
+      const { error } = await sb.from("program_exercises").update(upd).eq("id",ex.id); if(error) return toast(error.message); Object.assign(ex,upd); toast("✓ اتحفظ"); setupProgram(el);
+    };
+    d.querySelector("[data-play]")&&(d.querySelector("[data-play]").onclick=()=>openVideo(ex));
+    d.querySelector("[data-del]").onclick=async()=>{ if(!confirm("حذف التمرين وكل المجموعات المسجلة له؟")) return; const { error } = await sb.from("program_exercises").delete().eq("id",ex.id); if(error) return toast(error.message); S.program=S.program.filter(e=>e.id!==ex.id); setupProgram(el); };
+    const move=async dir=>{ const j=idx+dir; if(j<0||j>=exs.length) return; const a=exs[idx], b=exs[j];
+      await Promise.all([sb.from("program_exercises").update({position:j}).eq("id",a.id), sb.from("program_exercises").update({position:idx}).eq("id",b.id)]);
+      a.position=j; b.position=idx; S.program.sort((x,y)=>x.day_no-y.day_no||x.position-y.position); setupProgram(el); };
+    d.querySelector("[data-up]").onclick=()=>move(-1); d.querySelector("[data-dn]").onclick=()=>move(1);
+    list.appendChild(d);
+  });
+  $("#exAdd").onclick=async()=>{ const name=prompt("اسم التمرين"); if(!name) return;
+    const L=LEVELS[p.level]||LEVELS["متوسط"], c=isCompound(name.toUpperCase());
+    const { data, error } = await sb.from("program_exercises").insert({client_id:p.id,day_no:S.day,position:exs.length,name:name.trim().toUpperCase(),sets:3,target_reps:c?"6-10":"10-15",target_rir:c?L.rir.c:L.rir.i,rest_sec:c?L.rest.c:L.rest.i,tempo:c?L.tempo.c:L.tempo.i,day_label:dayLabel(S.day)||null}).select().single();
+    if(error) return toast(error.message); S.program.push(data); setupProgram(el); };
+  $("#tplSave")&&($("#tplSave").onclick=async()=>{ const name=prompt("اسم برنامج الكوتش", p.split_name||"برنامج الكوتش"); if(!name) return;
+    const ds=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
+    const plan=ds.map(d=>({label:dayLabel(d)||("Day "+d), ex:S.program.filter(e=>e.day_no===d).map(e=>[e.name,e.sets,e.target_reps,e.target_rir,e.rest_sec,e.tempo,e.notes,e.video_url])}));
+    const { error } = await sb.from("program_templates").insert({name:name.trim(),days:ds.length,plan}); if(error) return toast(error.message); await loadCoachTemplates(); toast("✓ اتحفظ كبرنامج كوتش"); });
+}
+const WEEKDAYS=["الأحد","الاتنين","التلات","الأربع","الخميس","الجمعة","السبت"];
+function weekEditor(host, panel){
+  const p=S.client, train=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
+  let slots=[...Array(7)].map((_,i)=>train.includes(i+1)?{t:"d",d:i+1}:{t:"r"});
+  const wd=i=>p.start_date?WEEKDAYS[new Date(addDays(p.start_date,i)+"T00:00:00").getDay()]:"";
+  const draw=()=>{
+    host.innerHTML=`<div class="wk-list">${slots.map((s,i)=>{ const n=s.t==="d"?S.program.filter(e=>e.day_no===s.d).length:0;
+      return `<div class="wk-slot ${s.t==="r"?"rest":""}" data-i="${i}"><span class="wk-grip">⠿</span><div class="wk-day"><b>${i+1}</b><small>${wd(i)}</small></div>
+        <div class="wk-body">${s.t==="d"?`<b>${esc(dayLabel(s.d)||"يوم تمرين")}</b><small>${n} تمارين</small>`:`<b>😴 راحة</b><small>استشفاء</small>`}</div>
+        <button class="btn sm" data-up="${i}" ${i===0?"disabled":""}>▲</button><button class="btn sm" data-dn="${i}" ${i===6?"disabled":""}>▼</button></div>`; }).join("")}</div>`;
+    const swap=(i,j)=>{ [slots[i],slots[j]]=[slots[j],slots[i]]; draw(); };
+    host.querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>swap(+b.dataset.up,+b.dataset.up-1));
+    host.querySelectorAll("[data-dn]").forEach(b=>b.onclick=()=>swap(+b.dataset.dn,+b.dataset.dn+1));
+    if(window.Sortable) Sortable.create(host.querySelector(".wk-list"),{handle:".wk-grip",animation:180,ghostClass:"wk-ghost",forceFallback:true,fallbackTolerance:3,
+      onEnd:()=>{ slots=[...host.querySelectorAll(".wk-slot")].map(x=>slots[+x.dataset.i]); draw(); }});
+  };
+  draw();
+  $("#wkAuto").onclick=()=>{ const ds=slots.filter(s=>s.t==="d"), pos=DEFAULT_SLOTS[ds.length]||[]; slots=[...Array(7)].map(()=>({t:"r"})); ds.forEach((s,k)=>slots[pos[k]-1]=s); draw(); };
+  $("#wkSave").onclick=async()=>{
+    const moves=slots.map((s,i)=>s.t==="d"&&s.d!==i+1?{from:s.d,to:i+1}:null).filter(Boolean);
+    if(!moves.length) return toast("مفيش تغيير");
+    for(const m of moves){ const ids=S.program.filter(e=>e.day_no===m.from).map(e=>e.id);
+      const { error } = await sb.from("program_exercises").update({day_no:m.to}).in("id",ids); if(error) return toast(error.message); }
+    await refreshClient(); S.day=slots.findIndex(s=>s.t==="d")+1||1; toast("✓ اتحفظ الجدول"); setupProgram(panel);
+  };
+}
+async function setupDiet(el){
+  const p=S.client, n=Math.max(1,Math.min(+p.meals_per_day||3,8));
+  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic acc">🍽</div><h2>الوجبات<small>عددها وأسماؤها</small></h2></div>
+      <div class="grid2"><label class="f">عدد الوجبات<select id="mCount">${[2,3,4,5,6].map(x=>`<option ${n===x?"selected":""}>${x}</option>`).join("")}</select></label>
+      ${[...Array(n)].map((_,i)=>`<label class="f">${MEAL_ICONS[i]} اسم الوجبة ${i+1}<input data-mn="${i}" value="${esc(mealName(p,i+1))}"></label>`).join("")}</div>
+      <button class="btn navy block" id="mSave">حفظ الوجبات</button></div>
+    <p class="hint" style="margin:0 4px 10px">📋 الخطة دي بتظهر للعميل في صفحة التغذية – يقدر يعلّم على اللي أكله بضغطة ✓، ويقدر يعدّل فيها.</p>
+    <div id="planHost"></div>`;
+  $("#mSave").onclick=async()=>{ const names=[...el.querySelectorAll("[data-mn]")].map(i=>i.value.trim()||null);
+    const { error } = await sb.from("profiles").update({meals_per_day:+$("#mCount").value, meal_names:names}).eq("id",p.id); if(error) return toast(error.message);
+    await refreshClient(); toast("✓ اتحفظ"); setupDiet(el); };
+  $("#mCount").onchange=async()=>{ await sb.from("profiles").update({meals_per_day:+$("#mCount").value}).eq("id",p.id); await refreshClient(); setupDiet(el); };
+  renderMeals($("#planHost"),{mode:"plan"});
+}
+function setupAccount(el){
+  const p=S.client;
+  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📧</div><h2>الإيميل (اسم الدخول)</h2></div>
+      <div class="row"><input id="newEmail" class="grow" type="email" value="${esc(p.email??"")}"><button class="btn sm navy" id="se">تغيير</button></div></div>
+    <div class="card"><div class="card-h"><div class="ic dark">🔑</div><h2>كلمة السر</h2></div>
+      <div class="row"><input id="newPass" class="grow" placeholder="كلمة سر جديدة" autocomplete="new-password"><button class="btn sm" id="gp">توليد</button><button class="btn sm navy" id="sp">تغيير</button></div></div>
+    <div class="card"><div class="card-h"><div class="ic">⚙️</div><h2>حالة الحساب<small>${p.active?"مفعّل – العميل يقدر يدخل":"موقوف – العميل مش هيقدر يدخل"}</small></h2></div>
+      <div class="row"><button class="btn grow" id="act">${p.active?"⏸ إيقاف الحساب":"▶ تفعيل الحساب"}</button><button class="btn danger grow" id="del">🗑 حذف العميل نهائياً</button></div></div>`;
+  const call=async body=>{ const { data, error } = await sb.functions.invoke("coach-admin",{body}); const msg=await fnErr(error,data); if(msg){ toast(msg); return false; } return true; };
+  $("#se").onclick=async()=>{ if(await call({action:"set_email",user_id:p.id,email:$("#newEmail").value.trim()})){ await refreshClient(); toast("✓ اتغيّر الإيميل"); } };
+  $("#gp").onclick=()=>$("#newPass").value=genPass();
+  $("#sp").onclick=async()=>{ const pw=$("#newPass").value; if(await call({action:"set_password",user_id:p.id,password:pw})){ navigator.clipboard?.writeText(pw); toast("✓ اتغيّرت واتنسخت: "+pw); } };
+  $("#act").onclick=async()=>{ const { error } = await sb.from("profiles").update({active:!p.active}).eq("id",p.id); if(error) return toast(error.message); await refreshClient(); setupAccount(el); };
+  $("#del").onclick=async()=>{ if(!confirm(`حذف ${p.full_name||"العميل"} وكل بياناته نهائياً؟ مفيش رجوع.`)) return; if(await call({action:"delete_client",user_id:p.id})){ S.client=null; S.tab="clients"; await loadClients(); render(); } };
+}
+
+/* ======================================================================
+   COACH: EXERCISE VIDEO LIBRARY
+   ====================================================================== */
+async function viewVideos(el){
+  const [{ data:lib }, { data:ex }] = await Promise.all([ sb.from("exercise_videos").select("*"), sb.from("program_exercises").select("name") ]);
+  const names=new Set([...(ex||[]).map(e=>e.name.toUpperCase()), ...Object.values(B).flat().map(e=>e[0]), ...MOFIT_TEMPLATE.map(e=>e.name), ...(lib||[]).map(v=>v.name)]);
+  const map=Object.fromEntries((lib||[]).map(v=>[v.name,v.video_url]));
+  const all=[...names].sort(), withVid=all.filter(n=>map[n]).length;
+  el.innerHTML=`<div class="card dark"><div class="card-h"><div class="ic">🎬</div><h2>مكتبة فيديوهات التمارين<small>حط الرابط مرة واحدة – يظهر عند كل العملاء</small></h2></div>
+      <div class="bar" style="background:rgba(255,255,255,.15)"><i style="width:${all.length?withVid/all.length*100:0}%"></i></div><p class="hint">${withVid} من ${all.length} تمرين ليهم فيديو</p></div>
+    <div class="card"><div class="row" style="margin-bottom:10px"><input id="vq" class="grow" placeholder="🔍 ابحث عن تمرين"><select id="vf" style="width:auto"><option value="">الكل</option><option value="no">بدون فيديو</option><option value="yes">بفيديو</option></select></div>
+      <div class="row" style="margin-bottom:12px"><input id="vNew" class="grow" placeholder="+ تمرين جديد للمكتبة"><button class="btn sm navy" id="vAdd">إضافة</button></div><div id="vl"></div></div>`;
+  const draw=()=>{ const q=$("#vq").value.trim().toUpperCase(), f=$("#vf").value;
+    const list=all.filter(n=>(!q||n.includes(q))&&(!f||(f==="yes")===!!map[n])).slice(0,80);
+    $("#vl").innerHTML=list.map(n=>`<div class="edit-ex" data-n="${esc(n)}"><div class="between"><b>${map[n]?"🎬":"⚪"} ${esc(n)}</b>${map[n]?`<button class="btn sm" data-play>▶</button>`:""}</div>
+      <div class="row" style="margin-top:6px"><input class="grow" data-url placeholder="https://youtu.be/…" value="${esc(map[n]||"")}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox("🔎","مفيش نتائج");
+    $("#vl").querySelectorAll("[data-n]").forEach(r=>{ const n=r.dataset.n;
+      r.querySelector("[data-save]").onclick=async()=>{ const url=r.querySelector("[data-url]").value.trim();
+        const { error } = url? await sb.from("exercise_videos").upsert({name:n,video_url:url,updated_at:new Date().toISOString()}) : await sb.from("exercise_videos").delete().eq("name",n);
+        if(error) return toast(error.message); if(url) map[n]=url; else delete map[n]; await loadVideos(); toast(url?"✓ اتحفظ الفيديو":"اتشال الفيديو"); draw(); };
+      r.querySelector("[data-play]")&&(r.querySelector("[data-play]").onclick=()=>openVideo({name:n})); }); };
+  $("#vq").oninput=draw; $("#vf").onchange=draw;
+  $("#vAdd").onclick=()=>{ const n=$("#vNew").value.trim().toUpperCase(); if(!n) return; if(!all.includes(n)) all.unshift(n); $("#vq").value=n; $("#vNew").value=""; draw(); };
+  draw();
+}
+
+/* ======================================================================
+   COACH: FOODS
+   ====================================================================== */
+async function viewFoods(el){
+  el.innerHTML=`<div class="card dark"><div class="card-h"><div class="ic">🍎</div><h2>قاعدة بيانات الأطعمة<small id="fc">خاصة – العملاء بيبحثوا فيها بس، مش بيشوفوها كاملة</small></h2></div></div>
+    <div class="card"><input id="fq" placeholder="🔍 ابحث…"><div id="fl" style="margin-top:8px"></div></div>
+    <div class="card"><div class="card-h"><div class="ic acc">➕</div><h2>صنف جديد<small>جم/مل: القيم لكل 100 · حبة/شريحة: اكتب قيم القطعة الواحدة</small></h2></div>
+     <label class="f">الاسم<input id="fn"></label>
+     <div class="grid3"><label class="f">الوحدة<select id="fu">${["جم","مل","حبة","شريحة","قطعة","كوب","ملعقة كبيرة","سكوب","رغيف"].map(u=>`<option>${u}</option>`).join("")}</select></label>
+     <label class="f">سعرات<input id="fk" inputmode="decimal"></label><label class="f">بروتين<input id="fp" inputmode="decimal"></label>
+     <label class="f">كارب<input id="fcb" inputmode="decimal"></label><label class="f">دهون<input id="ff" inputmode="decimal"></label></div>
+     <p class="hint" id="fuHint"></p><button class="btn primary block" id="fAdd">إضافة</button></div>`;
+  const { count } = await sb.from("foods").select("id",{count:"exact",head:true}); $("#fc").textContent=fmt(count)+" صنف · خاصة – العملاء بيبحثوا فيها بس";
+  const hint=()=>{ const u=$("#fu").value; $("#fuHint").innerHTML=COUNT_UNITS(u)?`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fone" checked style="width:auto;min-height:0"> القيم اللي كتبتها لـ ${u} واحدة</label>`:`القيم لكل 100 ${u}.`; };
+  $("#fu").onchange=hint; hint();
+  let timer; $("#fq").oninput=()=>{ clearTimeout(timer); timer=setTimeout(async()=>{
+    const q=$("#fq").value.trim(); if(q.length<2){ $("#fl").innerHTML=""; return; }
+    const { data } = await sb.from("foods").select("*").ilike("name",`%${q.replace(/[%_,()]/g," ")}%`).limit(40);
+    $("#fl").innerHTML=(data||[]).map(f=>{ const u=unitInfo(f); return `<div class="food-r"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(f.name)}<small>${esc(f.category||"")} · ${u.base}: ${fmt(u.per.kcal)} kcal · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}</small></div></div>`; }).join("")||emptyBox("🔎","مفيش نتائج");
+  },250); };
+  $("#fAdd").onclick=async()=>{
+    const k=$("#fone")?.checked?100:1;
+    const rec={name:$("#fn").value.trim(),unit:$("#fu").value,kcal:(num($("#fk").value)||0)*k,protein:(num($("#fp").value)||0)*k,carbs:(num($("#fcb").value)||0)*k,fat:(num($("#ff").value)||0)*k,source:"الكوتش"};
+    if(!rec.name) return toast("اكتب اسم الصنف");
+    const { error } = await sb.from("foods").insert(rec); if(error) return toast(error.message); toast("✓ اتضاف"); viewFoods(el);
+  };
+}
+
+boot();
