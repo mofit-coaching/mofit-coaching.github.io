@@ -251,3 +251,32 @@ svg text{font-family:inherit}
   .card{box-shadow:none!important;border:1px solid #E2E8F0;break-inside:avoid}
   .report .grid4{grid-template-columns:repeat(4,1fr)!important}
 }
+/* ---- v4: program checks ---- */
+.pv-meta{background:var(--soft2);border-radius:14px;padding:12px;margin-bottom:10px}
+.pv-desc{margin:0 0 8px;font-size:.84rem;line-height:1.7}
+.pv-row{display:flex;flex-wrap:wrap;gap:6px}
+.vchips{display:flex;flex-wrap:wrap;gap:6px}
+.vchip{background:#fff;border:1px solid var(--soft);border-radius:999px;padding:3px 10px;font-size:.74rem}
+.vchip b{font-weight:800}.vchip.ok{border-color:#86EFAC;background:#F0FDF4}.vchip.warn{border-color:var(--acc-line);background:var(--acc-soft)}.vchip.bad{border-color:#FCA5A5;background:#FEF2F2}
+.pv-warn{margin-top:10px;background:#FEF2F2;border:1px solid #FECACA;border-radius:12px;padding:10px;font-size:.8rem;display:grid;gap:6px}
+.pv-ok{margin-top:10px;background:#F0FDF4;border:1px solid #BBF7D0;border-radius:12px;padding:10px;font-size:.82rem}
+.pv-note{display:block;color:var(--slate);font-size:.7rem;margin-top:2px;line-height:1.5}
+/* ---- v4: workout tools ---- */
+.tools{padding:12px}
+.ready-cta{background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border:0}.ready-cta small{opacity:.7;font-weight:400}
+.ready{display:flex;align-items:center;justify-content:space-between;gap:10px;border-radius:14px;padding:10px 12px}
+.ready b{display:block;font-size:.86rem}.ready small{color:var(--slate);font-size:.72rem}
+.ready.good{background:#F0FDF4;border:1px solid #BBF7D0}.ready.mid{background:#FEFCE8;border:1px solid #FDE68A}.ready.low{background:#FEF2F2;border:1px solid #FECACA}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.mode{border:1.5px solid var(--soft);background:#fff;border-radius:12px;padding:9px;font:inherit;font-weight:700;font-size:.82rem;cursor:pointer;color:var(--navy)}
+.mode.on{border-color:var(--acc);background:var(--acc-soft);color:#C2410C}
+.warm{background:var(--acc-soft);border:1px dashed var(--acc-line);border-radius:12px;padding:10px;margin:0 0 10px}
+.warm b{font-size:.82rem}.warm .scroller{margin:6px 0 4px}.warm small{color:var(--slate);font-size:.7rem}
+.pain-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--soft)}
+.pain-row b{display:block;font-size:.84rem}.pain-row small{color:var(--slate);font-size:.72rem}.pain-row.serious b{color:#B91C1C}
+.card.miss{border:1.5px solid var(--acc-line);background:linear-gradient(180deg,#fff, var(--acc-soft))}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.pr-pop{position:fixed;inset:auto 50% 40% auto;transform:translate(50%,0) scale(.6);background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;border-radius:22px;padding:18px 26px;text-align:center;z-index:9999;box-shadow:0 20px 50px rgba(15,23,42,.45);border:2px solid var(--acc);animation:prIn .35s cubic-bezier(.2,1.4,.4,1) forwards;transition:opacity .4s,transform .4s}
+.pr-pop div{font-size:2.6rem;line-height:1}.pr-pop b{display:block;color:var(--acc2);font-size:1.1rem;margin:4px 0}.pr-pop small{opacity:.85;font-size:.78rem}
+.pr-pop.out{opacity:0;transform:translate(50%,-30px) scale(.9)}
+@keyframes prIn{to{transform:translate(50%,0) scale(1)}}

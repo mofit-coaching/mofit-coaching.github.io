@@ -312,3 +312,104 @@ async function exportBackup(btn){
   }catch(e){ toast("تعذر عمل النسخة: "+e.message); }
   btn.disabled=false; btn.textContent="📦 نزّل نسخة احتياطية كاملة";
 }
+
+/* ---------- 12) real-life client problems ---------- */
+/* readiness check → autoregulation */
+const READY_Q=[["sleep","😴 نومك امبارح"],["energy","⚡ طاقتك دلوقتي"],["sore","🦵 الشد العضلي (1 = مكسّر · 5 = ولا حاجة)"],["stress","🧠 الضغط والتوتر (1 = عالي · 5 = هادي)"]];
+const readyKey=()=>"mofit_ready_"+S.client.id+"_"+today();
+function readinessToday(){ try{ return JSON.parse(localStorage.getItem(readyKey())||"null"); }catch(e){ return null; } }
+function readinessBanner(r){
+  if(!r) return `<button class="btn block ready-cta" id="rdyBtn">🔋 قبل ما تبدأ: إزيك النهارده؟ <small>(10 ثواني)</small></button>`;
+  const z=r.score>=3.8?["good","🟢 جاهز – يوم مناسب تحاول تكسر رقمك"]:r.score>=2.8?["mid","🟡 عادي – التزم بالخطة بالظبط"]:["low","🔴 جسمك تعبان – فعّلنا اليوم الخفيف. الهدف الحركة مش الأرقام"];
+  return `<div class="ready ${z[0]}"><div><b>${z[1]}</b><small>الجاهزية ${fmt(r.score,1)} / 5</small></div><button class="pill" id="rdyBtn" style="border:0;cursor:pointer">تعديل</button></div>`;
+}
+function openReadiness(onDone){
+  const cur=readinessToday()||{};
+  const body=openSheet(`<b style="font-size:1.05rem">🔋 جاهزيتك النهارده</b><p class="hint">بنظبط التمرين على حالتك الحقيقية – ده اللي بيفرق المدرب الشاطر.</p>
+    ${READY_Q.map(([k,q])=>`<div style="margin:10px 0"><div style="font-weight:700;margin-bottom:6px">${q}</div><div class="seg" data-r="${k}">${[1,2,3,4,5].map(v=>`<button data-v="${v}" class="${(cur[k]||3)===v?"on":""}">${v}</button>`).join("")}</div></div>`).join("")}
+    <button class="btn primary block" id="rdySave">تمام ✓</button>`);
+  body.querySelectorAll(".seg[data-r]").forEach(s=>s.querySelectorAll("button").forEach(b=>b.onclick=()=>s.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b))));
+  $("#rdySave").onclick=async()=>{
+    const r=Object.fromEntries([...body.querySelectorAll(".seg[data-r]")].map(s=>[s.dataset.r,+s.querySelector(".on").dataset.v]));
+    r.score=Math.round(avg(Object.values(r))*10)/10;
+    localStorage.setItem(readyKey(),JSON.stringify(r));
+    if(r.score<2.8) setTrainMode("light");
+    closeSheet(); onDone&&onDone();
+    await dbWrite({op:"upsert",table:"client_events",row:{client_id:S.client.id,kind:"readiness",event_date:today(),ref:"",data:r},onConflict:"client_id,kind,event_date,ref"});
+  };
+}
+/* short-on-time / light-day modes (reset automatically next day) */
+function trainMode(){ return localStorage.getItem("mofit_mode_"+(S.client?.id||"")+"_"+today())||""; }
+function setTrainMode(m){ localStorage.setItem("mofit_mode_"+(S.client?.id||"")+"_"+today(), m||""); }
+const modeSets=n=>trainMode()?Math.max(2,n-1):n;
+const modeRest=r=>trainMode()==="quick"?Math.max(30,Math.round(r*0.66/5)*5):r;
+const modeRir=t=>trainMode()==="light"&&t?String(t).replace(/\d+/g,d=>+d+1):t;
+function trainToolsHTML(){
+  const m=trainMode();
+  return readinessBanner(readinessToday())+`<div class="modes"><button class="mode ${m==="quick"?"on":""}" data-mode="quick">⏱ عندي وقت قليل</button><button class="mode ${m==="light"?"on":""}" data-mode="light">🪫 يوم خفيف</button></div>
+    ${m?`<p class="hint" style="margin:6px 0 0">${m==="quick"?"⏱ أهم 4 تمارين · مجموعة أقل · راحة أقصر (≈35 دقيقة). الأهم إنك ماتفوّتش اليوم.":"🪫 مجموعة أقل وRIR زيادة 1. يوم خفيف أحسن بكتير من يوم ضايع."}</p>`:""}`;
+}
+/* warm-up ramp for the first big lift */
+function warmupHTML(workW){
+  const r=v=>Math.max(2.5,Math.round(v/2.5)*2.5);
+  const steps=workW>=20?[[0.5,8],[0.7,5],[0.85,2]].map(([p,n])=>`<span class="pill">${fmt(r(workW*p),1)} كجم × ${n}</span>`).join("")
+    :`<span class="pill">بار فاضي / وزن خفيف × 10</span><span class="pill">+ مجموعتين تصاعدي × 5 و 3</span>`;
+  return `<div class="warm"><b>🔥 إحماء قبل وزن الشغل</b><div class="scroller">${steps}</div><small>5 دقايق حركة خفيفة الأول · راحة 60ث بين مجموعات الإحماء · مابتتحسبش في التسجيل</small></div>`;
+}
+/* pain / injury report */
+const PAIN_AREAS=["كتف","كوع","رسغ","رقبة","أسفل الضهر","ركبة","حوض / فخد","كاحل","تاني"];
+function openPain(ex, onAlt){
+  const body=openSheet(`<b style="font-size:1.05rem">🤕 حاسس بألم في ${esc(ex.name)}؟</b>
+    <div style="margin:10px 0"><div style="font-weight:700;margin-bottom:6px">فين؟</div><div class="chips" data-area>${PAIN_AREAS.map((a,i)=>`<button class="chip ${i===0?"on":""}" data-v="${a}">${a}</button>`).join("")}</div></div>
+    <div style="margin:10px 0"><div style="font-weight:700;margin-bottom:6px">نوعه؟</div><div class="seg" data-type><button data-v="muscle" class="on">حرقان / تعب في العضلة</button><button data-v="joint">ألم حاد / في المفصل / وخز</button></div></div>
+    <label class="f">الشدة (1 خفيف – 10 مش قادر)<select id="pLvl">${[...Array(10)].map((_,i)=>`<option ${i===2?"selected":""}>${i+1}</option>`).join("")}</select></label>
+    <div id="pOut"></div><button class="btn primary block" id="pSave">قيّم وبلّغ الكوتش</button>`);
+  const one=sel=>body.querySelectorAll(sel+" button").forEach(b=>b.onclick=()=>body.querySelectorAll(sel+" button").forEach(x=>x.classList.toggle("on",x===b)));
+  one("[data-area]"); one("[data-type]");
+  $("#pSave").onclick=async()=>{
+    const area=body.querySelector("[data-area] .on").dataset.v, type=body.querySelector("[data-type] .on").dataset.v, level=+$("#pLvl").value;
+    const serious=type==="joint"||level>=5;
+    $("#pOut").innerHTML=serious
+      ?`<div class="pv-warn"><b>⛔ وقّف التمرين ده النهارده.</b><div>جرّب بديل مايوجعش، ولو الألم استمر أكتر من 48 ساعة أو فيه تورم/تنميل لازم دكتور. الكوتش اتبلّغ.</div></div><button class="btn navy block" id="pAlt" style="margin-top:8px">⇄ اختار بديل دلوقتي</button>`
+      :`<div class="pv-ok">💪 غالباً ده تعب عضلي طبيعي (DOMS / حرقان المجهود) – كمّل بنفس التكنيك، ولو اتحول لألم حاد وقّف.</div>`;
+    $("#pSave").remove();
+    $("#pAlt")&&($("#pAlt").onclick=()=>{ closeSheet(); onAlt&&onAlt(); });
+    await dbWrite({op:"upsert",table:"client_events",row:{client_id:S.client.id,kind:"pain",event_date:today(),ref:ex.id+"-"+Date.now(),data:{exercise:ex.name,area,type,level,serious}},onConflict:"client_id,kind,event_date,ref"});
+  };
+}
+/* PR celebration */
+function celebratePR(name, now, before){
+  const d=document.createElement("div"); d.className="pr-pop";
+  d.innerHTML=`<div>🏆</div><b>رقم قياسي جديد!</b><small>${esc(name)}<br>1RM ≈ ${fmt(now,1)} كجم (+${fmt((now/before-1)*100,1)}%)</small>`;
+  document.body.appendChild(d); setTimeout(()=>d.classList.add("out"),2200); setTimeout(()=>d.remove(),2700);
+  if(navigator.vibrate) navigator.vibrate([60,40,60]);
+}
+/* missed yesterday's workout */
+function missedCard(p, sets){
+  const y=addDays(today(),-1), start=p.start_date; if(!start||daysBetween(start,y)<0) return "";
+  const dn=((daysBetween(start,y)%7)+7)%7+1, exIds=S.program.filter(e=>e.day_no===dn).map(e=>e.id), wk=weekOfDate(p,y);
+  if(!exIds.length||!wk) return "";
+  if((sets||[]).some(s=>exIds.includes(s.exercise_id)&&s.week===wk&&(s.reps||s.weight))) return "";
+  return `<div class="card miss"><div class="card-h"><div class="ic acc">⏰</div><h2>فاتك تمرين امبارح<small>يوم ${dn}${dayLabel(dn)?" · "+esc(dayLabel(dn)):""}</small></h2></div>
+    <p class="hint" style="margin:0 0 10px">مفيش مشكلة – ده بيحصل لكل الناس. القاعدة: اعمله النهارده وكمّل الجدول بعده. ماتعملش تمرينين في يوم واحد، ولو فاتك أكتر من يومين كمّل من مكانك عادي. الاستمرارية أهم من الكمال.</p>
+    <button class="btn primary block" id="doMissed" data-d="${dn}" data-w="${wk}">اعمل تمرين امبارح دلوقتي ←</button></div>`;
+}
+/* coach-side alerts from events + program age */
+async function loadEvents(){ const { data } = await sb.from("client_events").select("*").gte("event_date",addDays(today(),-30)).order("event_date",{ascending:false}); S.events=data||[]; }
+function eventAlerts(c){
+  const A=[], E=(S.events||[]).filter(e=>e.client_id===c.id);
+  const pain=E.filter(e=>e.kind==="pain"&&e.data?.serious&&!e.resolved_at&&daysBetween(e.event_date,today())<=10);
+  if(pain.length){ const x=pain[0].data; A.push({p:3,icon:"🤕",text:`بلّغ عن ألم ${esc(x.area)} في ${esc(x.exercise)} (شدة ${x.level}/10)`}); }
+  const low=E.filter(e=>e.kind==="readiness"&&daysBetween(e.event_date,today())<=7&&+e.data?.score<2.8);
+  if(low.length>=3) A.push({p:2,icon:"🪫",text:`جاهزية منخفضة ${low.length} مرات الأسبوع ده – راجع النوم والسعرات أو ادّيله ديلود`});
+  if(c.program_started_at&&c.split_key){ const w=Math.floor(daysBetween(c.program_started_at.slice(0,10),today())/7); if(w>=10) A.push({p:1,icon:"🔁",text:`البرنامج بقاله ${w} أسبوع – وقت تجديد التمارين أو النظام`}); }
+  return A;
+}
+function painCard(p){
+  const P=(S.events||[]).filter(e=>e.client_id===p.id&&e.kind==="pain");
+  if(!P.length) return "";
+  return `<div class="card"><div class="card-h"><div class="ic acc">🤕</div><h2>تقارير الألم<small>آخر 30 يوم</small></h2></div>
+    ${P.map(e=>`<div class="pain-row ${e.data?.serious?"serious":""}"><div><b>${esc(e.data?.area||"")} · ${esc(e.data?.exercise||"")}</b><small>${niceDate(e.event_date)} · ${e.data?.type==="joint"?"ألم حاد/مفصل":"تعب عضلي"} · شدة ${e.data?.level}/10</small></div>
+      ${e.resolved_at?`<span class="pill good">تمت المتابعة</span>`:`<button class="btn sm" data-pres="${e.id}">تمت المتابعة ✓</button>`}</div>`).join("")}
+    <p class="hint">لو الألم في مفصل: بدّل التمرين من تبويب البرنامج، أو قلل المدى/الوزن، أو حوّله لنظام "ضهر آمن".</p></div>`;
+}
