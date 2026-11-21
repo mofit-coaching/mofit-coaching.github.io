@@ -118,7 +118,7 @@ function closeSheet(){ $("#sheet").classList.add("hidden"); $("#sheetBody").inne
 document.addEventListener("click",e=>{ if(e.target.classList?.contains("sheet-bg")) closeSheet(); });
 
 /* ---------- exercise videos ---------- */
-async function loadVideos(){ const { data } = await sb.from("exercise_videos").select("name,video_url"); S.videos=Object.fromEntries((data||[]).map(v=>[v.name.toUpperCase(),v.video_url])); }
+async function loadVideos(){ const { data, error } = await sb.from("exercise_videos").select("name,video_url,alternatives"); if(error) return; S.videos=Object.fromEntries((data||[]).filter(v=>v.video_url).map(v=>[v.name.toUpperCase(),v.video_url])); S.alts=Object.fromEntries((data||[]).filter(v=>v.alternatives?.length).map(v=>[v.name.toUpperCase(),v.alternatives])); }
 function videoFor(ex){ return ex.video_url || S.videos[(ex.name||"").toUpperCase()] || null; }
 function ytId(url){ const m=String(url).match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/); return m?m[1]:null; }
 function openVideo(ex){

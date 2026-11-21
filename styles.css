@@ -228,3 +228,26 @@ svg text{font-family:inherit}
 .wk-ghost{opacity:.35;background:var(--acc-soft)!important}
 .wk-slot .btn.sm{min-height:30px;padding:2px 8px}
 .wk-slot .btn:disabled{opacity:.3}
+
+/* ---------- pro features ---------- */
+.offbar{position:fixed;top:0;left:0;right:0;z-index:90;background:var(--navy);color:#fff;text-align:center;font-size:.8rem;padding:calc(6px + env(safe-area-inset-top)) 10px 6px;border-bottom:2px solid var(--acc)}
+.prog{border-radius:12px;padding:8px 10px;font-size:.8rem;font-weight:700;margin-bottom:8px;background:var(--soft2)}
+.prog.up{background:var(--good-soft);color:#166534}.prog.hold{background:var(--bad-soft);color:#991B1B}.prog.reps{background:var(--acc-soft);color:#9A3412}.prog.deload{background:#E0E7FF;color:#3730A3}
+.photo{display:block;cursor:pointer}
+.ph{aspect-ratio:3/4;border:2px dashed var(--soft);border-radius:14px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;background:var(--soft2);overflow:hidden;color:var(--slate)}
+.ph span{font-size:1.6rem}.ph img,.cmp img{width:100%;height:100%;object-fit:cover;display:block}
+.cmp{position:relative;aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:var(--soft2)}
+.cmp small{position:absolute;bottom:6px;right:6px;background:rgba(15,23,42,.75);color:#fff;border-radius:99px;padding:1px 8px;font-size:.7rem}
+.alert-row{display:flex;gap:10px;align-items:flex-start;padding:10px;border-radius:14px;cursor:pointer;border-bottom:1px solid var(--soft2)}
+.alert-row:hover{background:var(--soft2)}.alert-row .av{width:38px;height:38px;font-size:.9rem;border-radius:12px}
+.alert-row .nm{flex:1;min-width:0;display:flex;flex-wrap:wrap;gap:4px;align-items:center}.alert-row .nm b{width:100%}
+.rep-head{display:flex;justify-content:space-between;align-items:center;background:#fff;border-radius:var(--r);padding:14px 16px;margin-bottom:14px;box-shadow:var(--sh);border-top:6px solid var(--acc)}
+.rep-head small{color:var(--slate)}
+@media print{
+  @page{size:A4;margin:12mm}
+  body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .top,.nav,.coachbar,.seg,.no-print,.timer,.offbar,.toast{display:none!important}
+  main{padding:0!important;max-width:none}
+  .card{box-shadow:none!important;border:1px solid #E2E8F0;break-inside:avoid}
+  .report .grid4{grid-template-columns:repeat(4,1fr)!important}
+}

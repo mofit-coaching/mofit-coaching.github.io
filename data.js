@@ -100,7 +100,7 @@ async function applyProgram(client, sys, level){
   if(de){ toast(de.message); return false; }
   const { error } = await sb.from("program_exercises").insert(planRows(client.id, plan));
   if(error){ toast(error.message); return false; }
-  await sb.from("profiles").update({training_days:plan.length, split_key:sys.key, split_name:sys.name, level}).eq("id",client.id);
+  await sb.from("profiles").update({training_days:plan.length, split_key:sys.key, split_name:sys.name, level, deload_weeks:(typeof DELOAD_DEFAULT!=="undefined"?DELOAD_DEFAULT[level]:null)||[]}).eq("id",client.id);
   return true;
 }
 async function loadCoachTemplates(){

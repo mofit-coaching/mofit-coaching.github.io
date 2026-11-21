@@ -1,7 +1,10 @@
 /* ======================================================================
    COACH: CLIENTS
    ====================================================================== */
-async function loadClients(){ const { data } = await sb.from("profiles").select("*").eq("role","client").order("created_at",{ascending:false}); S.coachClients=data||[]; }
+async function loadClients(){
+  const [{ data }, { data:ov }] = await Promise.all([ sb.from("profiles").select("*").eq("role","client").order("created_at",{ascending:false}), sb.rpc("coach_overview") ]);
+  S.coachClients=data||[]; S.overview=Object.fromEntries((ov||[]).map(o=>[o.client_id,o]));
+}
 function profileFields(p={}){
   return `<div class="grid2">
     <label class="f">النوع<select data-p="sex"><option value=""></option>${["ذكر","أنثى"].map(s=>`<option ${p.sex===s?"selected":""}>${s}</option>`).join("")}</select></label>
@@ -30,13 +33,21 @@ async function viewClients(el){
       <div class="stat acc"><div class="l">مفعّل</div><div class="v">${C.filter(c=>c.active).length}</div></div>
       <div class="stat"><div class="l">برامج محفوظة</div><div class="v">${S.templates.length}</div></div></div>
     <button class="btn primary block" id="addBtn" style="margin-bottom:14px">+ إضافة عميل جديد</button>
+    <div class="card" id="alerts"></div>
     <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
       ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
     <div class="card"><div class="card-h"><div class="ic acc">✍</div><h2>برامج الكوتش المحفوظة<small>بتظهر في قائمة "برنامج الكوتش" عند اختيار النظام</small></h2></div><div id="tplList"></div></div>`;
+  const AL=Object.fromEntries(C.map(c=>[c.id,clientAlerts(c,S.overview?.[c.id])]));
+  const urgent=C.filter(c=>AL[c.id].length).sort((a,b)=>AL[b.id][0].p-AL[a.id][0].p||AL[b.id].length-AL[a.id].length);
+  $("#alerts").innerHTML=`<div class="card-h"><div class="ic acc">🔔</div><h2>يحتاجوا اهتمامك النهارده<small>${urgent.length?urgent.length+" عميل":"كله تمام 👌"}</small></h2></div>`+
+    (urgent.length?urgent.map(c=>`<div class="alert-row" data-id="${c.id}"><div class="av">${initials(c)}</div><div class="nm"><b>${esc(c.full_name||c.email)}</b>${AL[c.id].map(a=>`<span class="pill ${a.p>=3?"acc":a.p==2?"acc-soft":""}">${a.icon} ${esc(a.text)}</span>`).join(" ")}</div></div>`).join(""):`<p class="hint">مفيش تنبيهات – كل العملاء بيسجلوا ومتابعاتهم متردّ عليها.</p>`);
+  $("#alerts").querySelectorAll("[data-id]").forEach(r=>r.onclick=async()=>{ const c=C.find(x=>x.id===r.dataset.id), a=AL[c.id][0]; await openClient(c);
+    if(/متابعة/.test(a.text)){ S.tab="body"; S.bodySeg="c"; const o=S.overview?.[c.id]; S.ciWeek=/ناقصة/.test(a.text)?currentWeek(c)-1:(o?.last_checkin_week||currentWeek(c)); } else if(/اشتراك|مدفوع/.test(a.text)){ S.tab="setup"; S.setupTab="data"; } else S.tab="home";
+    render(); window.scrollTo(0,0); });
   const draw=q=>{ const list=C.filter(c=>!q||(c.full_name||"").includes(q)||(c.email||"").includes(q));
     $("#cl").innerHTML=list.length?list.map(c=>{ const wk=currentWeek(c); return `<div class="client" data-id="${c.id}"><div class="av">${initials(c)}</div>
-      <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
-      <div class="bar" style="height:5px"><i style="width:${wk/12*100}%"></i></div></div><div style="text-align:center"><b class="num">${wk}</b><div class="muted" style="font-size:.66rem">/12</div></div>${c.active?"":`<span class="pill navy">موقوف</span>`}</div>`; }).join(""):emptyBox("🙋","ضيف أول عميل من الزرار اللي فوق");
+      <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${(s=>s?s.icon+" "+esc(s.text)+" · ":"")(subStatus(c))}${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
+      <div class="bar" style="height:5px"><i style="width:${wk/12*100}%"></i></div></div><div style="text-align:center"><b class="num">${wk}</b><div class="muted" style="font-size:.66rem">/12</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}</div>`; }).join(""):emptyBox("🙋","ضيف أول عميل من الزرار اللي فوق");
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
   draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
@@ -79,13 +90,14 @@ function addClientSheet(el){
    COACH: CLIENT CONTROL PANEL
    ====================================================================== */
 async function viewSetup(el){
-  const tabsH=[["data","👤 البيانات"],["program","🏋️ التمرين"],["diet","🥗 التغذية"],["account","🔐 الحساب"]];
+  const tabsH=[["data","👤 البيانات"],["program","🏋️ التمرين"],["diet","🥗 التغذية"],["report","📄 تقرير"],["account","🔐 الحساب"]];
   el.innerHTML=`<div class="seg" style="margin-bottom:14px">${tabsH.map(([k,l])=>`<button data-sub="${k}" class="${S.setupTab===k?"on":""}">${l}</button>`).join("")}</div><div id="sub"></div>`;
   el.querySelectorAll("[data-sub]").forEach(b=>b.onclick=()=>{ S.setupTab=b.dataset.sub; viewSetup(el); });
   const sub=$("#sub");
   if(S.setupTab==="data") return setupData(sub);
   if(S.setupTab==="program") return setupProgram(sub);
   if(S.setupTab==="diet") return setupDiet(sub);
+  if(S.setupTab==="report") return viewReport(sub);
   return setupAccount(sub);
 }
 function setupData(el){
@@ -93,10 +105,21 @@ function setupData(el){
   el.innerHTML=`<div class="card dark"><div class="card-h"><div class="ic">🧮</div><h2>الأهداف المحسوبة<small>Mifflin-St Jeor · TDEE = BMR × النشاط</small></h2></div>
       <div class="grid3"><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">BMR</div><div class="v num">${fmt(t.bmr)}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">TDEE</div><div class="v num">${fmt(t.tdee)}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">السعرات</div><div class="v num" style="color:var(--acc)">${fmt(t.kcal)}</div></div>
       <div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">بروتين</div><div class="v num">${fmt(t.P)}</div><div class="s">جم${t.P&&p.start_weight?" · "+fmt(t.P/p.start_weight,2)+" جم/كجم":""}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">كارب</div><div class="v num">${fmt(t.C)}</div><div class="s">جم</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">دهون</div><div class="v num">${fmt(t.F)}</div><div class="s">جم</div></div></div></div>
+    <div class="card"><div class="card-h"><div class="ic acc">💳</div><h2>الاشتراك<small>${(s=>s?s.icon+" "+esc(s.text):"لم يحدد")(subStatus(p))}</small></h2></div>
+      <div class="grid2"><label class="f">الباقة<input id="sPlan" placeholder="شهري / 3 شهور…" value="${esc(p.sub_plan??"")}"></label>
+      <label class="f">السعر<input id="sPrice" inputmode="decimal" value="${esc(p.sub_price??"")}"></label>
+      <label class="f">من<input type="date" id="sStart" value="${esc(p.sub_start??"")}"></label>
+      <label class="f">إلى<input type="date" id="sEnd" value="${esc(p.sub_end??"")}"></label></div>
+      <div class="row" style="margin-bottom:10px">${[1,3,6].map(m=>`<button class="chip" data-sm="${m}">+${m} شهر</button>`).join("")}<label class="row" style="gap:6px;margin-inline-start:auto;font-weight:700"><input type="checkbox" id="sPaid" style="width:auto;min-height:0" ${p.sub_paid?"checked":""}> مدفوع</label></div>
+      <label class="f">ملاحظات الدفع<input id="sNotes" value="${esc(p.sub_notes??"")}"></label>
+      <button class="btn navy block" id="sSave">حفظ الاشتراك</button></div>
     <div class="card"><div class="card-h"><div class="ic">👤</div><h2>بيانات العميل</h2></div>
       <label class="f">الاسم<input data-x="full_name" value="${esc(p.full_name??"")}"></label>${profileFields(p)}
       <label class="f">ملاحظات الكوتش (خاصة – العميل مش بيشوفها)<textarea rows="2" data-x="coach_notes">${esc(p.coach_notes??"")}</textarea></label>
       <button class="btn primary block" id="pSave">حفظ البيانات</button></div>`;
+  el.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{ const st=$("#sStart").value||today(); $("#sStart").value=st; const d=new Date(st+"T00:00:00"); d.setMonth(d.getMonth()+(+b.dataset.sm)); d.setDate(d.getDate()-1); $("#sEnd").value=d.toISOString().slice(0,10); $("#sPlan").value=$("#sPlan").value||(b.dataset.sm==="1"?"شهري":b.dataset.sm+" شهور"); });
+  $("#sSave").onclick=async()=>{ const { error } = await sb.from("profiles").update({sub_plan:$("#sPlan").value.trim()||null, sub_price:num($("#sPrice").value), sub_start:$("#sStart").value||null, sub_end:$("#sEnd").value||null, sub_paid:$("#sPaid").checked, sub_notes:$("#sNotes").value.trim()||null}).eq("id",p.id);
+    if(error) return toast(error.message); await refreshClient(); toast("✓ اتحفظ الاشتراك"); setupData(el); };
   $("#pSave").onclick=async()=>{
     const upd={...readProfile(el), full_name:el.querySelector('[data-x="full_name"]').value.trim(), coach_notes:el.querySelector('[data-x="coach_notes"]').value.trim()||null};
     const { error } = await sb.from("profiles").update(upd).eq("id",p.id); if(error) return toast(error.message);
@@ -110,6 +133,9 @@ function setupProgram(el){
       <div id="sysBox">${systemFields(p.training_days||3, p.level||"متوسط")}</div>
       <button class="btn primary block" id="sysApply" style="margin-top:10px">تطبيق على ${esc(p.full_name||"العميل")}</button>
       <p class="hint">⚠ التطبيق بيستبدل البرنامج الحالي ويمسح المجموعات المسجلة على التمارين القديمة.</p></div>
+    <div class="card"><div class="card-h"><div class="ic">🔄</div><h2>أسابيع الديلود<small>العميل بيشوف مجموعات أقل ~40% وRIR 3-4 في الأسابيع دي</small></h2></div>
+      <div class="row" style="gap:6px" id="dl">${[...Array(12)].map((_,i)=>`<button class="chip ${(p.deload_weeks||[]).includes(i+1)?"on":""}" data-dw="${i+1}">${i+1}</button>`).join("")}</div>
+      <div class="row" style="margin-top:10px"><span class="hint grow">الافتراضي حسب المستوى: مبتدئ بدون · متوسط أسبوع 6 · متقدم 4 و8</span><button class="btn sm navy" id="dlSave">حفظ</button></div></div>
     <div class="card"><div class="card-h"><div class="ic acc">📆</div><h2>جدول الأسبوع<small>اسحب الأيام ورتّبها – وحط أيام راحة بينها</small></h2></div>
       <div id="wk"></div>
       <div class="row" style="margin-top:10px"><button class="btn grow" id="wkAuto">⚡ توزيع تلقائي للراحة</button><button class="btn primary grow" id="wkSave">حفظ الجدول</button></div>
@@ -121,6 +147,8 @@ function setupProgram(el){
       <div class="row"><button class="btn navy grow" id="exAdd">+ تمرين ليوم ${S.day}</button>${S.program.length?`<button class="btn grow" id="tplSave">💾 حفظ كبرنامج كوتش</button>`:""}</div></div>`;
   const getSys=wireSystemPicker($("#sysBox"), p.split_key);
   weekEditor($("#wk"), el);
+  el.querySelectorAll("[data-dw]").forEach(b=>b.onclick=()=>b.classList.toggle("on"));
+  $("#dlSave").onclick=async()=>{ const w=[...el.querySelectorAll("[data-dw].on")].map(b=>+b.dataset.dw); const { error } = await sb.from("profiles").update({deload_weeks:w}).eq("id",p.id); if(error) return toast(error.message); await refreshClient(); toast("✓ اتحفظ"); };
   $("#sysApply").onclick=async()=>{
     const {sys,level}=getSys(); if(!sys) return toast("اختار نظام");
     if(S.program.length && !confirm(`استبدال برنامج ${p.full_name||""} الحالي بـ "${sys.name}" (${level})؟`)) return;
@@ -196,12 +224,28 @@ async function setupDiet(el){
       <div class="grid2"><label class="f">عدد الوجبات<select id="mCount">${[2,3,4,5,6].map(x=>`<option ${n===x?"selected":""}>${x}</option>`).join("")}</select></label>
       ${[...Array(n)].map((_,i)=>`<label class="f">${MEAL_ICONS[i]} اسم الوجبة ${i+1}<input data-mn="${i}" value="${esc(mealName(p,i+1))}"></label>`).join("")}</div>
       <button class="btn navy block" id="mSave">حفظ الوجبات</button></div>
+    <div class="card"><div class="card-h"><div class="ic dark">📚</div><h2>قوالب الدايت<small>احفظ الخطة كقالب وطبّقها على أي عميل – مع ضبط تلقائي لسعراته</small></h2></div>
+      <div id="dtList"></div>
+      <div class="row" style="margin-top:8px"><button class="btn grow" id="dtSave">💾 حفظ خطة ${esc(p.full_name||"العميل")} كقالب</button></div></div>
     <p class="hint" style="margin:0 4px 10px">📋 الخطة دي بتظهر للعميل في صفحة التغذية – يقدر يعلّم على اللي أكله بضغطة ✓، ويقدر يعدّل فيها.</p>
     <div id="planHost"></div>`;
   $("#mSave").onclick=async()=>{ const names=[...el.querySelectorAll("[data-mn]")].map(i=>i.value.trim()||null);
     const { error } = await sb.from("profiles").update({meals_per_day:+$("#mCount").value, meal_names:names}).eq("id",p.id); if(error) return toast(error.message);
     await refreshClient(); toast("✓ اتحفظ"); setupDiet(el); };
   $("#mCount").onchange=async()=>{ await sb.from("profiles").update({meals_per_day:+$("#mCount").value}).eq("id",p.id); await refreshClient(); setupDiet(el); };
+  const tk=targets(p).kcal;
+  $("#dtList").innerHTML=(S.dietTpl||[]).length?S.dietTpl.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>${esc(t.name)}</b><small>${fmt(t.kcal)} kcal · ${t.items.length} صنف · ${t.meals_per_day||"—"} وجبات</small></div>
+      <button class="btn sm primary" data-dta="${t.id}">تطبيق</button><button class="x" data-dtd="${t.id}">✕</button></div>`).join(""):`<p class="hint">مفيش قوالب لسه.</p>`;
+  el.querySelectorAll("[data-dta]").forEach(b=>b.onclick=async()=>{ const t=S.dietTpl.find(x=>x.id===b.dataset.dta);
+    const scale=tk&&t.kcal&&Math.abs(tk-t.kcal)/t.kcal>0.03 ? confirm(`القالب ${fmt(t.kcal)} kcal وهدف العميل ${fmt(tk)} kcal.\nأضبط الكميات تلقائياً على ${fmt(tk)}؟ (إلغاء = زي ما هو)`) : false;
+    if(!confirm("استبدال خطة الدايت الحالية بالقالب؟")) return;
+    if(await applyDietTemplate(p,t,scale?tk:null)){ await refreshClient(); toast("✓ اتطبق القالب"); setupDiet(el); } });
+  el.querySelectorAll("[data-dtd]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف القالب؟")) return; await sb.from("diet_templates").delete().eq("id",b.dataset.dtd); await loadDietTemplates(); setupDiet(el); });
+  $("#dtSave").onclick=async()=>{ const { data:items } = await sb.from("diet_plan_items").select("*").eq("client_id",p.id).order("meal_no").order("position");
+    if(!items?.length) return toast("الخطة فاضية"); const name=prompt("اسم القالب", `${fmt(sumMacros(items).kcal)} kcal – ${p.goal||""}`); if(!name) return;
+    const { error } = await sb.from("diet_templates").insert({name:name.trim(), kcal:Math.round(sumMacros(items).kcal), meals_per_day:+p.meals_per_day||3,
+      items:items.map(i=>({meal_no:i.meal_no,food_id:i.food_id,food_name:i.food_name,unit:i.unit,qty:+i.qty,kcal:+i.kcal,protein:+i.protein,carbs:+i.carbs,fat:+i.fat,notes:i.notes}))});
+    if(error) return toast(error.message); await loadDietTemplates(); toast("✓ اتحفظ القالب"); setupDiet(el); };
   renderMeals($("#planHost"),{mode:"plan"});
 }
 function setupAccount(el){
@@ -225,21 +269,23 @@ function setupAccount(el){
    ====================================================================== */
 async function viewVideos(el){
   const [{ data:lib }, { data:ex }] = await Promise.all([ sb.from("exercise_videos").select("*"), sb.from("program_exercises").select("name") ]);
+  const altMap=Object.fromEntries((lib||[]).map(v=>[v.name,v.alternatives||[]]));
   const names=new Set([...(ex||[]).map(e=>e.name.toUpperCase()), ...Object.values(B).flat().map(e=>e[0]), ...MOFIT_TEMPLATE.map(e=>e.name), ...(lib||[]).map(v=>v.name)]);
-  const map=Object.fromEntries((lib||[]).map(v=>[v.name,v.video_url]));
+  const map=Object.fromEntries((lib||[]).filter(v=>v.video_url).map(v=>[v.name,v.video_url]));
   const all=[...names].sort(), withVid=all.filter(n=>map[n]).length;
-  el.innerHTML=`<div class="card dark"><div class="card-h"><div class="ic">🎬</div><h2>مكتبة فيديوهات التمارين<small>حط الرابط مرة واحدة – يظهر عند كل العملاء</small></h2></div>
+  el.innerHTML=`<div class="card dark"><div class="card-h"><div class="ic">🎬</div><h2>مكتبة التمارين<small>فيديو الأداء + البدائل – مرة واحدة وتظهر عند كل العملاء</small></h2></div>
       <div class="bar" style="background:rgba(255,255,255,.15)"><i style="width:${all.length?withVid/all.length*100:0}%"></i></div><p class="hint">${withVid} من ${all.length} تمرين ليهم فيديو</p></div>
     <div class="card"><div class="row" style="margin-bottom:10px"><input id="vq" class="grow" placeholder="🔍 ابحث عن تمرين"><select id="vf" style="width:auto"><option value="">الكل</option><option value="no">بدون فيديو</option><option value="yes">بفيديو</option></select></div>
       <div class="row" style="margin-bottom:12px"><input id="vNew" class="grow" placeholder="+ تمرين جديد للمكتبة"><button class="btn sm navy" id="vAdd">إضافة</button></div><div id="vl"></div></div>`;
   const draw=()=>{ const q=$("#vq").value.trim().toUpperCase(), f=$("#vf").value;
     const list=all.filter(n=>(!q||n.includes(q))&&(!f||(f==="yes")===!!map[n])).slice(0,80);
     $("#vl").innerHTML=list.map(n=>`<div class="edit-ex" data-n="${esc(n)}"><div class="between"><b>${map[n]?"🎬":"⚪"} ${esc(n)}</b>${map[n]?`<button class="btn sm" data-play>▶</button>`:""}</div>
-      <div class="row" style="margin-top:6px"><input class="grow" data-url placeholder="https://youtu.be/…" value="${esc(map[n]||"")}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox("🔎","مفيش نتائج");
+      <div class="row" style="margin-top:6px"><input class="grow" data-url placeholder="🎬 https://youtu.be/…" value="${esc(map[n]||"")}"></div>
+      <div class="row" style="margin-top:6px"><input class="grow" data-alts placeholder="⇄ البدائل (افصل بفاصلة) – الافتراضي: ${esc((DEFAULT_ALTS[n]||[]).join("، ")||"لا يوجد")}" value="${esc((altMap[n]||[]).join(", "))}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox("🔎","مفيش نتائج");
     $("#vl").querySelectorAll("[data-n]").forEach(r=>{ const n=r.dataset.n;
-      r.querySelector("[data-save]").onclick=async()=>{ const url=r.querySelector("[data-url]").value.trim();
-        const { error } = url? await sb.from("exercise_videos").upsert({name:n,video_url:url,updated_at:new Date().toISOString()}) : await sb.from("exercise_videos").delete().eq("name",n);
-        if(error) return toast(error.message); if(url) map[n]=url; else delete map[n]; await loadVideos(); toast(url?"✓ اتحفظ الفيديو":"اتشال الفيديو"); draw(); };
+      r.querySelector("[data-save]").onclick=async()=>{ const url=r.querySelector("[data-url]").value.trim(), alts=r.querySelector("[data-alts]").value.split(/[,،]/).map(x=>x.trim().toUpperCase()).filter(Boolean);
+        const { error } = (url||alts.length)? await sb.from("exercise_videos").upsert({name:n,video_url:url||null,alternatives:alts.length?alts:null,updated_at:new Date().toISOString()}) : await sb.from("exercise_videos").delete().eq("name",n);
+        if(error) return toast(error.message); if(url) map[n]=url; else delete map[n]; altMap[n]=alts; await loadVideos(); toast("✓ اتحفظ"); draw(); };
       r.querySelector("[data-play]")&&(r.querySelector("[data-play]").onclick=()=>openVideo({name:n})); }); };
   $("#vq").oninput=draw; $("#vf").onchange=draw;
   $("#vAdd").onclick=()=>{ const n=$("#vNew").value.trim().toUpperCase(); if(!n) return; if(!all.includes(n)) all.unshift(n); $("#vq").value=n; $("#vNew").value=""; draw(); };
