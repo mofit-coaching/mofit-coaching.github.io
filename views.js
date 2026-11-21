@@ -18,7 +18,7 @@ async function boot(){
   S.me=me; $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
   await loadVideos(); flushQueue();
   if(me.role==="coach"){ S.tab="clients"; await Promise.all([loadClients(),loadCoachTemplates(),loadDietTemplates()]); }
-  else await openClient(me);
+  else { await ensureHealth(); await openClient(me); }
   render();
 }
 async function openClient(p){

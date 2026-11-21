@@ -250,3 +250,65 @@ async function viewReport(el){
   if($("#repPhotos")) for(const pose of ["front","side","back"]){ const a=firstPh["photo_"+pose], b=lastPh["photo_"+pose]; if(!a||!b) continue;
     const [ua,ub]=await Promise.all([photoUrl(a),photoUrl(b)]); $("#repPhotos").insertAdjacentHTML("beforeend",`<div class="cmp"><img src="${ua}"><small>قبل</small></div><div class="cmp"><img src="${ub}"><small>بعد</small></div>`); }
 }
+
+/* ---------- 10) health screening (PAR-Q) + consent ---------- */
+const PARQ=[
+  ["heart","هل قالك دكتور قبل كده إن عندك مشكلة في القلب أو ضغط عالي؟"],
+  ["chest","هل بتحس بألم في الصدر وانت مرتاح أو أثناء المجهود؟"],
+  ["dizzy","هل حصل إنك فقدت توازنك من دوخة أو أغمى عليك خلال آخر 12 شهر؟"],
+  ["chronic","هل عندك مرض مزمن متشخّص (سكر، ربو، غدة، كلى…) غير القلب والضغط؟"],
+  ["meds","هل بتاخد أدوية بشكل منتظم لمرض مزمن؟"],
+  ["joint","هل عندك إصابة أو مشكلة في عظمة/مفصل/غضروف ممكن تزيد مع التمرين؟"],
+  ["doctor","هل قالك دكتور إنك لازم تتمرن تحت إشراف طبي بس؟"],
+  ["preg","(للسيدات) هل في حمل حالياً أو ولادة خلال آخر 6 شهور؟"]
+];
+async function ensureHealth(){
+  const { data, error } = await sb.from("health_screens").select("client_id").eq("client_id",S.me.id).maybeSingle();
+  if(error || data) return;              // offline or already done → don't block
+  return new Promise(res=>{
+    const body=openSheet(`<b style="font-size:1.1rem">🩺 قبل ما نبدأ – استبيان الأمان</b>
+      <p class="hint">مطلوب مرة واحدة. لو أي إجابة "أيوه" الكوتش هيطلب تصريح من دكتور قبل التمارين التقيلة – ده لسلامتك.</p>
+      ${PARQ.map(([k,q])=>`<div class="item" style="padding:8px 0;display:block"><div style="margin-bottom:6px">${q}</div><div class="seg" data-q="${k}"><button data-v="0" class="on">لأ</button><button data-v="1">أيوه</button></div></div>`).join("")}
+      <label class="f">لو في "أيوه" – اكتب التفاصيل<textarea id="hDet" rows="2"></textarea></label>
+      <label class="row" style="gap:8px;align-items:flex-start;margin:10px 0"><input type="checkbox" id="hOk" style="width:auto;margin-top:4px"><span style="font-size:.85rem">أقر إن الإجابات صحيحة، وموافق إن الكوتش يحتفظ ببياناتي (القياسات، الصور، الأكل، التمرين) بشكل سري لمتابعة البرنامج فقط، وأقدر أطلب حذفها في أي وقت.</span></label>
+      <p class="err" id="hErr"></p><button class="btn primary block" id="hSave">حفظ والمتابعة ✓</button>`);
+    $("#sheet").dataset.lock="1";
+    body.querySelectorAll(".seg[data-q]").forEach(s=>s.querySelectorAll("button").forEach(b=>b.onclick=()=>{ s.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); }));
+    $("#hSave").onclick=async()=>{
+      if(!$("#hOk").checked){ $("#hErr").textContent="لازم توافق على الإقرار"; return; }
+      const answers=Object.fromEntries([...body.querySelectorAll(".seg[data-q]")].map(s=>[s.dataset.q,s.querySelector(".on").dataset.v==="1"]));
+      const flagged=Object.values(answers).some(Boolean), details=$("#hDet").value.trim();
+      if(flagged && !details){ $("#hErr").textContent="اكتب تفاصيل الإجابة اللي بـ أيوه"; return; }
+      const { error } = await sb.from("health_screens").upsert({ client_id:S.me.id, answers, flagged, details, consent_at:new Date().toISOString() });
+      if(error){ $("#hErr").textContent="تعذر الحفظ – تأكد من النت وحاول تاني"; return; }
+      delete $("#sheet").dataset.lock; closeSheet(); if(flagged) toast("تم – الكوتش هيراجع حالتك قبل التمارين التقيلة"); res();
+    };
+  });
+}
+function healthAlert(c){ const h=S.health?.[c.id];
+  if(!h) return c.active?{p:1,icon:"🩺",text:"لسه ما ملاش استبيان الصحة"}:null;
+  if(h.flagged && !h.cleared_at) return {p:3,icon:"⚕",text:"محتاج تصريح طبي قبل التمرين التقيل"};
+  return null; }
+function healthCard(p){ const h=S.health?.[p.id];
+  if(!h) return `<div class="card"><div class="card-h"><div class="ic">🩺</div><h2>استبيان الصحة<small>العميل لسه ما ملاهوش – هيظهرله أول ما يفتح التطبيق</small></h2></div></div>`;
+  const yes=PARQ.filter(([k])=>h.answers?.[k]);
+  return `<div class="card"><div class="card-h"><div class="ic ${h.flagged&&!h.cleared_at?"acc":""}">🩺</div><h2>استبيان الصحة<small>موافقة على البيانات: ${niceDate((h.consent_at||"").slice(0,10))}</small></h2></div>
+    ${yes.length?yes.map(([,q])=>`<div class="pill acc" style="display:block;margin:4px 0;white-space:normal">⚠ ${q}</div>`).join("")+(h.details?`<p style="margin-top:8px"><b>التفاصيل:</b> ${esc(h.details)}</p>`:""):`<p class="hint">✅ كل الإجابات "لأ" – مفيش موانع معروفة.</p>`}
+    ${h.flagged?(h.cleared_at?`<p class="hint">✅ تم استلام التصريح الطبي ${niceDate(h.cleared_at.slice(0,10))}</p>`:`<button class="btn navy block" id="hClear" style="margin-top:8px">استلمت التصريح الطبي ✓</button>`):""}</div>`; }
+async function loadHealth(){ const { data } = await sb.from("health_screens").select("*"); S.health=Object.fromEntries((data||[]).map(h=>[h.client_id,h])); }
+
+/* ---------- 11) full backup (coach) ---------- */
+const BACKUP_TABLES=["profiles","program_exercises","set_logs","habits","meal_items","body_logs","checkins","diet_plan_items","diet_templates","program_templates","exercise_videos","health_screens","foods"];
+function backupAge(){ const t=localStorage.getItem("mofit_last_backup"); return t?daysBetween(t.slice(0,10),today()):null; }
+async function exportBackup(btn){
+  btn.disabled=true; const out={ app:"mofit", exported_at:new Date().toISOString(), tables:{} };
+  try{
+    for(const t of BACKUP_TABLES){ btn.textContent="⏳ "+t; let rows=[], from=0;
+      while(true){ const { data, error } = await sb.from(t).select("*").range(from,from+999); if(error) throw new Error(t+": "+error.message); rows=rows.concat(data); if(data.length<1000) break; from+=1000; }
+      out.tables[t]=rows; }
+    const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify(out)],{type:"application/json"}));
+    a.download=`mofit-backup-${today()}.json`; document.body.appendChild(a); a.click(); a.remove();
+    localStorage.setItem("mofit_last_backup",new Date().toISOString()); toast("✅ تم تنزيل النسخة الاحتياطية"); if(!S.client) setTimeout(render,50);
+  }catch(e){ toast("تعذر عمل النسخة: "+e.message); }
+  btn.disabled=false; btn.textContent="📦 نزّل نسخة احتياطية كاملة";
+}

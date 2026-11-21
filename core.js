@@ -115,7 +115,7 @@ function emptyBox(icon, text){ return `<div class="empty"><div class="big">${ico
 /* ---------- bottom sheet ---------- */
 function openSheet(html){ $("#sheetBody").innerHTML=html; $("#sheet").classList.remove("hidden"); document.body.style.overflow="hidden"; return $("#sheetBody"); }
 function closeSheet(){ $("#sheet").classList.add("hidden"); $("#sheetBody").innerHTML=""; document.body.style.overflow=""; }
-document.addEventListener("click",e=>{ if(e.target.classList?.contains("sheet-bg")) closeSheet(); });
+document.addEventListener("click",e=>{ if(e.target.classList?.contains("sheet-bg") && !$("#sheet").dataset.lock) closeSheet(); });
 
 /* ---------- exercise videos ---------- */
 async function loadVideos(){ const { data, error } = await sb.from("exercise_videos").select("name,video_url,alternatives"); if(error) return; S.videos=Object.fromEntries((data||[]).filter(v=>v.video_url).map(v=>[v.name.toUpperCase(),v.video_url])); S.alts=Object.fromEntries((data||[]).filter(v=>v.alternatives?.length).map(v=>[v.name.toUpperCase(),v.alternatives])); }

@@ -3,7 +3,7 @@
    ====================================================================== */
 async function loadClients(){
   const [{ data }, { data:ov }] = await Promise.all([ sb.from("profiles").select("*").eq("role","client").order("created_at",{ascending:false}), sb.rpc("coach_overview") ]);
-  S.coachClients=data||[]; S.overview=Object.fromEntries((ov||[]).map(o=>[o.client_id,o]));
+  S.coachClients=data||[]; S.overview=Object.fromEntries((ov||[]).map(o=>[o.client_id,o])); await loadHealth();
 }
 function profileFields(p={}){
   return `<div class="grid2">
@@ -36,8 +36,9 @@ async function viewClients(el){
     <div class="card" id="alerts"></div>
     <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
       ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
+    <div class="card" id="bk"></div>
     <div class="card"><div class="card-h"><div class="ic acc">✍</div><h2>برامج الكوتش المحفوظة<small>بتظهر في قائمة "برنامج الكوتش" عند اختيار النظام</small></h2></div><div id="tplList"></div></div>`;
-  const AL=Object.fromEntries(C.map(c=>[c.id,clientAlerts(c,S.overview?.[c.id])]));
+  const AL=Object.fromEntries(C.map(c=>{ const a=clientAlerts(c,S.overview?.[c.id]), h=healthAlert(c); if(h) a.push(h); return [c.id,a.sort((x,y)=>y.p-x.p)]; }));
   const urgent=C.filter(c=>AL[c.id].length).sort((a,b)=>AL[b.id][0].p-AL[a.id][0].p||AL[b.id].length-AL[a.id].length);
   $("#alerts").innerHTML=`<div class="card-h"><div class="ic acc">🔔</div><h2>يحتاجوا اهتمامك النهارده<small>${urgent.length?urgent.length+" عميل":"كله تمام 👌"}</small></h2></div>`+
     (urgent.length?urgent.map(c=>`<div class="alert-row" data-id="${c.id}"><div class="av">${initials(c)}</div><div class="nm"><b>${esc(c.full_name||c.email)}</b>${AL[c.id].map(a=>`<span class="pill ${a.p>=3?"acc":a.p==2?"acc-soft":""}">${a.icon} ${esc(a.text)}</span>`).join(" ")}</div></div>`).join(""):`<p class="hint">مفيش تنبيهات – كل العملاء بيسجلوا ومتابعاتهم متردّ عليها.</p>`);
@@ -53,6 +54,10 @@ async function viewClients(el){
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
   $("#tplList").querySelectorAll("[data-tdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف البرنامج المحفوظ؟ (برامج العملاء الحالية مش هتتأثر)")) return; await sb.from("program_templates").delete().eq("id",b.dataset.tdel); await loadCoachTemplates(); viewClients(el); });
   $("#addBtn").onclick=()=>addClientSheet(el);
+  const age=backupAge();
+  $("#bk").innerHTML=`<div class="card-h"><div class="ic ${age===null||age>14?"acc":""}">📦</div><h2>النسخة الاحتياطية<small>${age===null?"⚠ عمرك ما نزّلت نسخة – اعمل واحدة دلوقتي":age>14?"⚠ آخر نسخة من "+age+" يوم":"✅ آخر نسخة من "+age+" يوم"}</small></h2></div>
+    <p class="hint">ملف واحد فيه كل العملاء والبرامج والتسجيلات والأطعمة. احفظه على Google Drive كل أسبوعين.</p><button class="btn navy block" id="bkBtn">📦 نزّل نسخة احتياطية كاملة</button>`;
+  $("#bkBtn").onclick=e=>exportBackup(e.currentTarget);
 }
 function addClientSheet(el){
   const body=openSheet(`<div class="between"><b style="font-size:1.1rem">عميل جديد</b><button class="btn sm ghost" data-close>✕</button></div>
@@ -118,6 +123,8 @@ function setupData(el){
       <label class="f">ملاحظات الكوتش (خاصة – العميل مش بيشوفها)<textarea rows="2" data-x="coach_notes">${esc(p.coach_notes??"")}</textarea></label>
       <button class="btn primary block" id="pSave">حفظ البيانات</button></div>`;
   el.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{ const st=$("#sStart").value||today(); $("#sStart").value=st; const d=new Date(st+"T00:00:00"); d.setMonth(d.getMonth()+(+b.dataset.sm)); d.setDate(d.getDate()-1); $("#sEnd").value=d.toISOString().slice(0,10); $("#sPlan").value=$("#sPlan").value||(b.dataset.sm==="1"?"شهري":b.dataset.sm+" شهور"); });
+  el.insertAdjacentHTML("afterbegin",healthCard(p));
+  $("#hClear")&&($("#hClear").onclick=async()=>{ const { error } = await sb.from("health_screens").update({cleared_at:new Date().toISOString()}).eq("client_id",p.id); if(error) return toast("تعذر الحفظ"); await loadHealth(); toast("تم ✓"); setupData(el); });
   $("#sSave").onclick=async()=>{ const { error } = await sb.from("profiles").update({sub_plan:$("#sPlan").value.trim()||null, sub_price:num($("#sPrice").value), sub_start:$("#sStart").value||null, sub_end:$("#sEnd").value||null, sub_paid:$("#sPaid").checked, sub_notes:$("#sNotes").value.trim()||null}).eq("id",p.id);
     if(error) return toast(error.message); await refreshClient(); toast("✓ اتحفظ الاشتراك"); setupData(el); };
   $("#pSave").onclick=async()=>{
