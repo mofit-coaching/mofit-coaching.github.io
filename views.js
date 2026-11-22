@@ -18,8 +18,9 @@ async function boot(){
   S.me=me; $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
   await loadVideos(); flushQueue();
   if(me.role==="coach"){ S.tab="clients"; await Promise.all([loadClients(),loadCoachTemplates(),loadDietTemplates()]); }
-  else { await ensureHealth(); await openClient(me); }
+  else { await ensureHealth(); await openClient(me); const qt=new URLSearchParams(location.search).get("tab"); if(qt==="train"||qt==="food"){ S.tab=qt; if(qt==="food") S.date=today(); } }
   render();
+  setTimeout(maybeOnboard,400);
 }
 async function openClient(p){
   S.client=p; S.week=currentWeek(p); S.date=today(); S.bodyWeek=null;
@@ -69,15 +70,17 @@ function render(){
 async function viewHome(el){
   const p=S.client, t=targets(p), wk=currentWeek(p), dn=todayDayNo();
   const todayEx=S.program.filter(e=>e.day_no===dn);
-  el.innerHTML=`
+  el.innerHTML=`${S.me.role==="client"?installCardHTML():""}
     <div class="card dark"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
       ${dn?`<div class="scroller">${todayEx.map(e=>`<span class="pill glass">${esc(e.name)}</span>`).join("")}</div><button class="btn primary block" style="margin-top:10px" id="goTrain">ابدأ التمرين ←</button>`
           :`<p class="hint">😴 الراحة جزء من التطور. سجّل نومك ومياهك وخطواتك في العادات.</p>`}</div>
-    <div id="hMiss"></div><div id="hCI"></div>
+    <div id="hToday"></div><div id="hMiss"></div><div id="hCI"></div>
     <div class="card" id="hN"><div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2></div><p class="muted">جارٍ التحميل…</p></div>
+    ${tipCardHTML()}
     <div class="card" id="hF"></div>
     <div class="card" id="hH"></div>
-    <div class="card" id="hB"></div>`;
+    <div class="card" id="hB"></div><div id="hGoal"></div><div id="hComp"></div><div id="hStr"></div><div id="hHr"></div>`;
+  wireInstall();
   $("#goTrain")&&($("#goTrain").onclick=()=>{ S.tab="train"; S.day=dn; S.week=wk; render(); });
   homeCheckinCard(p,wk);
   const id=p.id;
@@ -107,6 +110,14 @@ async function viewHome(el){
     <div class="grid3"><div class="stat dark"><div class="l">الوزن الحالي</div><div class="v num">${fmt(cur,1)}</div><div class="s">كجم</div></div>
     <div class="stat ${ch!==null&&ch<0?"acc":""}"><div class="l">التغيّر</div><div class="v num">${ch===null?"—":(ch>0?"+":"")+fmt(ch,1)}</div><div class="s">كجم منذ البداية</div></div>
     <div class="stat"><div class="l">BMI</div><div class="v num">${fmt(bmi,1)}</div></div></div>${lineChart(B.map(b=>({x:b.week,y:+b.weight})),"الوزن (كجم)")}`;
+  // v5: today's focus + science cards
+  const exIds=new Set(todayEx.map(e=>e.id)), sDay=(sets.data||[]).filter(s=>s.week===wk&&exIds.has(s.exercise_id)).length;
+  const ht=$("#hToday"); if(ht&&S.me.role==="client"){ ht.innerHTML=todayCardHTML(p,{dn,setsThisDay:sDay,meals:(meals.data||[]).length,habitToday:H.find(h=>h.log_date===today()),ready:readinessToday()}); wireToday(dn,wk); }
+  const lastM=[...(body.data||[])].reverse().find(b=>b.waist||b.bodyfat)||{}, mW={...lastM, weight:lastM.weight||cur};
+  $("#hGoal").innerHTML=goalCardHTML(p,body.data||[]);
+  $("#hComp").innerHTML=cur?bodyCompCard(p,mW):"";
+  $("#hStr").innerHTML=strengthCardHTML(p,sets.data||[],cur||p.start_weight);
+  const drawHr=()=>{ $("#hHr").innerHTML=hrCardHTML(p); wireHr(p,drawHr); }; drawHr();
 }
 function heatmap(p,H){
   const by=Object.fromEntries(H.map(h=>[h.log_date,dayScore(h)]));
@@ -143,7 +154,7 @@ async function viewTrain(el){
       <div class="scroller" id="dayCards">${[...Array(7)].map((_,i)=>{ const d=i+1, has=days.includes(d); return `<button class="daycard ${S.day===d?"on":""} ${has?"":"rest"}" data-d="${d}">${d===tdn?'<span class="dot"></span>':""}<b>${has?"يوم "+d:"راحة"}</b><small>${has?esc(dayLabel(d)||S.program.filter(e=>e.day_no===d).length+" تمارين"):"😴 استشفاء"}</small></button>`; }).join("")}</div>
       <div class="muted" style="margin:8px 0 6px;font-weight:700">الأسبوع</div>
       <div class="scroller" id="wkChips">${[...Array(12)].map((_,i)=>`<button class="chip ${S.week===i+1?"on":""} ${wkNow===i+1?"cur":""}" data-w="${i+1}">${i+1}</button>`).join("")}</div></div>
-    <div class="card tools hidden" id="tTools"></div><div id="exList"></div><div class="card" id="failCard"></div>`;
+    <div class="card tools hidden" id="tTools"></div><div id="tPrep"></div><div id="exList"></div><div class="card" id="failCard"></div>`;
   el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{S.day=+b.dataset.d; viewTrain(el);});
   el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{S.week=+b.dataset.w; viewTrain(el);});
   const allEx=S.program.filter(e=>e.day_no===S.day), exs=trainMode()==="quick"?allEx.slice(0,4):allEx, list=$("#exList");
@@ -151,6 +162,7 @@ async function viewTrain(el){
     tt.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ setTrainMode(trainMode()===b.dataset.mode?"":b.dataset.mode); viewTrain(el); });
     $("#rdyBtn").onclick=()=>openReadiness(()=>viewTrain(el)); }
   if(!exs.length){ list.innerHTML=`<div class="card">${emptyBox("😴","يوم راحة واستشفاء<br>سجّل نومك ومياهك وخطواتك في العادات.")}</div>`; $("#failCard").remove(); return; }
+  const tp=$("#tPrep"); if(tp) tp.innerHTML=prepCardHTML(p)+`<details class="card"><summary><span class="ic">🗺</span><b>العضلات المستهدفة النهارده</b><small>عدد المجموعات لكل عضلة</small></summary>${muscleMapSVG(muscleVol(exs.map(e=>[e.name,e.sets])))}</details>`;
   const ids=exs.map(e=>e.id);
   const { data, error:le } = await sb.from("set_logs").select("*").in("exercise_id",ids).in("week",[S.week,S.week-1].filter(w=>w>=1));
   const ck="logs_"+p.id+"_"+S.day+"_"+S.week, logs=le? (cacheGet(ck)||[]) : (data||[]); if(!le) cacheSet(ck,logs);
@@ -197,6 +209,7 @@ async function viewTrain(el){
         if(queued) toast("📴 اتحفظت على الموبايل");
         const i=logs.findIndex(l=>l.exercise_id===ex.id&&l.week===S.week&&l.set_no===n); if(i>=0) logs[i]=saved; else logs.push(saved);
         row.classList.toggle("done",logged(saved)); updBest(); renderFailCard();
+        try{ navigator.vibrate&&navigator.vibrate(25); }catch(e){}
         const pr=e1rm(saved)||0; if(bestPrev[ex.id]>0&&pr>bestPrev[ex.id]*1.005){ celebratePR(alt||ex.name,pr,bestPrev[ex.id]); bestPrev[ex.id]=pr; }
         cacheSet(ck,logs); if(startTimer && !wasDone && rec.reps!==null && n<nSets) startRest(rec.rest_sec||restS, `${ex.name} · بعد مجموعة ${n}`);
       };
@@ -377,7 +390,7 @@ async function viewMeasures(el){
   const p=S.client, { data } = await sb.from("body_logs").select("*").eq("client_id",p.id).order("week");
   const B=data||[], wk=currentWeek(p), sel=S.bodyWeek ?? (B.find(b=>b.week===0)?Math.min(wk,12):0);
   const cur=B.find(b=>b.week===sel)||{}, start=B.find(b=>b.week===0)||{};
-  const F=[["weight","⚖ الوزن","كجم"],["waist","الوسط","سم"],["chest","الصدر","سم"],["arm","الذراع","سم"],["thigh","الفخذ","سم"],["hips","الأرداف","سم"],["bodyfat","الدهون","%"]];
+  const F=[["weight","⚖ الوزن","كجم"],["waist","الوسط","سم"],["neck","الرقبة","سم"],["chest","الصدر","سم"],["arm","الذراع","سم"],["thigh","الفخذ","سم"],["hips","الأرداف","سم"],["bodyfat","الدهون","%"]];
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📏</div><h2>القياسات الأسبوعية<small>مرة في الأسبوع – نفس اليوم والتوقيت</small></h2></div>
       <div class="scroller">${[...Array(13)].map((_,i)=>`<button class="chip ${sel===i?"on":""} ${wk===i&&i?"cur":""}" data-w="${i}">${i?"أسبوع "+i:"البداية"}${B.find(b=>b.week===i&&b.weight)?" ✓":""}</button>`).join("")}</div>
       <div class="grid2" style="margin-top:12px"><label class="f">📅 التاريخ<input type="date" data-k="log_date" value="${esc(cur.log_date??today())}"></label>

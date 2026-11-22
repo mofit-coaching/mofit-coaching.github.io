@@ -280,3 +280,57 @@ svg text{font-family:inherit}
 .pr-pop div{font-size:2.6rem;line-height:1}.pr-pop b{display:block;color:var(--acc2);font-size:1.1rem;margin:4px 0}.pr-pop small{opacity:.85;font-size:.78rem}
 .pr-pop.out{opacity:0;transform:translate(50%,-30px) scale(.9)}
 @keyframes prIn{to{transform:translate(50%,0) scale(1)}}
+
+/* ===== v5: lab ===== */
+details.card>summary{list-style:none;display:flex;align-items:center;gap:10px;cursor:pointer;flex-wrap:wrap}
+details.card>summary::-webkit-details-marker{display:none}
+details.card>summary .ic{width:36px;height:36px;border-radius:12px;background:var(--soft2);display:grid;place-items:center;font-size:1.1rem;flex:none}
+details.card>summary .ic.acc{background:var(--acc-soft)}
+details.card>summary b{flex:1}
+details.card>summary small{width:100%;color:var(--slate);font-size:.75rem;margin-top:-6px;padding-inline-start:46px}
+details.card>summary::after{content:"⌄";color:var(--slate);font-size:1.1rem;position:absolute;inset-inline-end:16px;transition:transform .2s}
+details.card{position:relative}
+details.card[open]>summary::after{transform:rotate(180deg)}
+details.card[open]>summary{margin-bottom:10px}
+.prep-ph{border-inline-start:3px solid var(--acc-line);padding:4px 10px;margin:8px 0}
+.prep-ph>small{display:block;color:var(--slate);font-size:.75rem}
+.prep-ph .chips{margin-top:6px}
+.ohsa{display:grid;gap:8px;margin-bottom:10px}
+.ohsa-i{display:flex;gap:10px;align-items:flex-start;padding:10px;border:1.5px solid var(--soft);border-radius:14px;cursor:pointer;transition:.15s}
+.ohsa-i.on{border-color:var(--acc);background:var(--acc-soft)}
+.ohsa-i input{margin-top:4px;accent-color:var(--acc);width:18px;height:18px;flex:none}
+.ohsa-i small{display:block;color:var(--slate);font-size:.72rem;line-height:1.5}
+.card.goal.good{box-shadow:inset 0 0 0 2px var(--good-soft),var(--sh)}
+.card.goal.bad{box-shadow:inset 0 0 0 2px var(--bad-soft),var(--sh)}
+.verdict{margin:10px 0 0;font-weight:700;font-size:.88rem}
+.zones{display:grid;gap:6px;margin-top:8px}
+.zone{display:grid;grid-template-columns:10px 34px 78px 1fr;gap:8px;align-items:center;font-size:.82rem}
+.zone i{width:10px;height:28px;border-radius:5px}
+.zone small{color:var(--slate);font-size:.72rem;line-height:1.4}
+.lift{padding:8px 0;border-bottom:1px solid var(--soft2)}.lift:last-child{border:0}
+.lift-h{display:flex;align-items:center;gap:8px;margin-bottom:6px}.lift-h b{flex:1}
+.lift .bar{height:8px;background:var(--soft2);border-radius:6px;overflow:hidden}
+.lift .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc2),var(--acc));border-radius:6px}
+.lift small{color:var(--slate);font-size:.72rem}
+.card.tip{background:linear-gradient(135deg,#0F172A,#1E293B);color:#fff}
+.card.tip .tip-k{font-size:.72rem;color:#FDBA74;font-weight:700;margin-bottom:4px}
+.card.tip p{margin:4px 0 0;color:#CBD5E1;font-size:.86rem}
+.card.today .today-h{display:flex;gap:12px;align-items:center;margin-bottom:8px}
+.card.today .today-h small{display:block;color:var(--slate);font-size:.75rem}
+.todo{display:flex;align-items:center;gap:10px;width:100%;text-align:start;background:none;border:0;border-top:1px solid var(--soft2);padding:10px 2px;cursor:pointer}
+.todo .tick{width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:var(--soft2);flex:none;font-size:.95rem}
+.todo.ok .tick{background:var(--good);color:#fff;font-weight:800}
+.todo.ok b{text-decoration:line-through;color:var(--slate)}
+.todo small{display:block;color:var(--slate);font-size:.72rem}
+.todo>span:nth-child(2){flex:1}.todo .go{color:var(--acc);font-weight:800}
+.card.install{border:1.5px dashed var(--acc-line)}
+.onb{text-align:center;padding:10px 4px 4px}
+.onb-ic{font-size:3.2rem;line-height:1;margin:6px 0 10px;animation:prIn .4s ease}
+.onb h3{margin:0 0 6px;font-size:1.2rem}.onb p{color:var(--slate);margin:0 0 14px;font-size:.92rem}
+.dots{display:flex;gap:6px;justify-content:center;margin-bottom:14px}
+.dots i{width:8px;height:8px;border-radius:4px;background:var(--soft);transition:.2s}.dots i.on{width:22px;background:var(--acc)}
+.mmap{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.mmap svg{width:190px;max-width:55%;height:auto;flex:none}
+.mm-list{display:flex;flex-direction:column;gap:4px;font-size:.8rem;flex:1;min-width:110px}
+.mm-list i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;vertical-align:middle}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

@@ -11,6 +11,7 @@ function profileFields(p={}){
     <label class="f">العمر<input inputmode="numeric" data-p="age" value="${esc(p.age??"")}"></label>
     <label class="f">الطول (سم)<input inputmode="decimal" data-p="height_cm" value="${esc(p.height_cm??"")}"></label>
     <label class="f">الوزن عند البداية (كجم)<input inputmode="decimal" data-p="start_weight" value="${esc(p.start_weight??"")}"></label>
+    <label class="f">🎯 الوزن المستهدف (كجم)<input inputmode="decimal" data-p="target_weight" value="${esc(p.target_weight??"")}"></label>
     <label class="f">تاريخ البداية<input type="date" data-p="start_date" value="${esc(p.start_date??today())}"></label>
     <label class="f">عدد الوجبات<select data-p="meals_per_day">${[2,3,4,5,6].map(n=>`<option ${(+p.meals_per_day||3)===n?"selected":""}>${n}</option>`).join("")}</select></label>
     <label class="f">مستوى النشاط<select data-p="activity_factor">${ACTIVITY.map(([l,v])=>`<option value="${v}" ${(+p.activity_factor||1.2)===v?"selected":""}>${l}</option>`).join("")}</select></label>
@@ -23,7 +24,7 @@ function profileFields(p={}){
 }
 function readProfile(root){
   const v=k=>root.querySelector(`[data-p="${k}"]`).value, goal=v("goal");
-  return { sex:v("sex")||null, age:num(v("age")), height_cm:num(v("height_cm")), start_weight:num(v("start_weight")), start_date:v("start_date")||null,
+  return { sex:v("sex")||null, age:num(v("age")), height_cm:num(v("height_cm")), start_weight:num(v("start_weight")), target_weight:num(v("target_weight")), start_date:v("start_date")||null,
     meals_per_day:num(v("meals_per_day"))||3, activity_factor:+v("activity_factor"), goal, goal_adj:(GOALS.find(g=>g[0]===goal)||[0,0])[1],
     manual_kcal:num(v("manual_kcal")), protein_gpk:num(v("protein_gpk")), p_pct:(num(v("p_pct"))??30)/100, c_pct:(num(v("c_pct"))??40)/100, f_pct:(num(v("f_pct"))??30)/100 };
 }
@@ -38,7 +39,7 @@ async function viewClients(el){
       ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
     <div class="card" id="bk"></div>
     <div class="card"><div class="card-h"><div class="ic acc">✍</div><h2>برامج الكوتش المحفوظة<small>بتظهر في قائمة "برنامج الكوتش" عند اختيار النظام</small></h2></div><div id="tplList"></div></div>`;
-  const AL=Object.fromEntries(C.map(c=>{ const a=clientAlerts(c,S.overview?.[c.id]), h=healthAlert(c); if(h) a.push(h); a.push(...eventAlerts(c)); return [c.id,a.sort((x,y)=>y.p-x.p)]; }));
+  const AL=Object.fromEntries(C.map(c=>{ const a=clientAlerts(c,S.overview?.[c.id]), h=healthAlert(c); if(h) a.push(h); a.push(...eventAlerts(c)); const r=rateAlert(c); if(r) a.push(r); return [c.id,a.sort((x,y)=>y.p-x.p)]; }));
   const urgent=C.filter(c=>AL[c.id].length).sort((a,b)=>AL[b.id][0].p-AL[a.id][0].p||AL[b.id].length-AL[a.id].length);
   $("#alerts").innerHTML=`<div class="card-h"><div class="ic acc">🔔</div><h2>يحتاجوا اهتمامك النهارده<small>${urgent.length?urgent.length+" عميل":"كله تمام 👌"}</small></h2></div>`+
     (urgent.length?urgent.map(c=>`<div class="alert-row" data-id="${c.id}"><div class="av">${initials(c)}</div><div class="nm"><b>${esc(c.full_name||c.email)}</b>${AL[c.id].map(a=>`<span class="pill ${a.p>=3?"acc":a.p==2?"acc-soft":""}">${a.icon} ${esc(a.text)}</span>`).join(" ")}</div></div>`).join(""):`<p class="hint">مفيش تنبيهات – كل العملاء بيسجلوا ومتابعاتهم متردّ عليها.</p>`);
@@ -123,7 +124,7 @@ function setupData(el){
       <label class="f">ملاحظات الكوتش (خاصة – العميل مش بيشوفها)<textarea rows="2" data-x="coach_notes">${esc(p.coach_notes??"")}</textarea></label>
       <button class="btn primary block" id="pSave">حفظ البيانات</button></div>`;
   el.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{ const st=$("#sStart").value||today(); $("#sStart").value=st; const d=new Date(st+"T00:00:00"); d.setMonth(d.getMonth()+(+b.dataset.sm)); d.setDate(d.getDate()-1); $("#sEnd").value=d.toISOString().slice(0,10); $("#sPlan").value=$("#sPlan").value||(b.dataset.sm==="1"?"شهري":b.dataset.sm+" شهور"); });
-  el.insertAdjacentHTML("afterbegin",healthCard(p)+painCard(p));
+  el.insertAdjacentHTML("afterbegin",healthCard(p)+painCard(p)); el.insertAdjacentHTML("beforeend",assessmentCardHTML(p)); wireAssessment($("#ohsa"),p);
   el.querySelectorAll("[data-pres]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("client_events").update({resolved_at:new Date().toISOString()}).eq("id",b.dataset.pres); if(error) return toast("تعذر الحفظ"); await loadEvents(); toast("تم ✓"); setupData(el); });
   $("#hClear")&&($("#hClear").onclick=async()=>{ const { error } = await sb.from("health_screens").update({cleared_at:new Date().toISOString()}).eq("client_id",p.id); if(error) return toast("تعذر الحفظ"); await loadHealth(); toast("تم ✓"); setupData(el); });
   $("#sSave").onclick=async()=>{ const { error } = await sb.from("profiles").update({sub_plan:$("#sPlan").value.trim()||null, sub_price:num($("#sPrice").value), sub_start:$("#sStart").value||null, sub_end:$("#sEnd").value||null, sub_paid:$("#sPaid").checked, sub_notes:$("#sNotes").value.trim()||null}).eq("id",p.id);
