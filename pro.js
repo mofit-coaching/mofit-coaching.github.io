@@ -130,6 +130,7 @@ function clientAlerts(c, o){
     if(/تنشيف/.test(c.goal||"") && d>-0.2) out.push({p:2,icon:"⚖",text:`الوزن ثابت آخر أسبوعين (${d>0?"+":""}${fmt(d,1)})`});
     if(/زيادة/.test(c.goal||"") && d<0.1) out.push({p:2,icon:"⚖",text:`الوزن مش بيزيد آخر أسبوعين`}); }
   const s=subStatus(c); if(s&&s.cls!=="good") out.push({p:s.cls==="bad"?3:1,icon:s.icon,text:s.text});
+  const br=blockAlert(c); if(br) out.push(br);
   return out.sort((a,b)=>b.p-a.p);
 }
 
@@ -300,7 +301,7 @@ function healthCard(p){ const h=S.health?.[p.id];
 async function loadHealth(){ const { data } = await sb.from("health_screens").select("*"); S.health=Object.fromEntries((data||[]).map(h=>[h.client_id,h])); }
 
 /* ---------- 11) full backup (coach) ---------- */
-const BACKUP_TABLES=["profiles","program_exercises","set_logs","habits","meal_items","body_logs","checkins","diet_plan_items","diet_templates","program_templates","exercise_videos","health_screens","client_events","client_supplements","price_plans","coach_private","foods"];
+const BACKUP_TABLES=["profiles","program_exercises","set_logs","habits","meal_items","body_logs","checkins","diet_plan_items","diet_templates","program_templates","exercise_videos","health_screens","client_events","client_supplements","price_plans","workout_sessions","coach_private","foods"];
 function backupAge(){ const t=localStorage.getItem("mofit_last_backup"); return t?daysBetween(t.slice(0,10),today()):null; }
 async function exportBackup(btn){
   btn.disabled=true; const out={ app:"mofit", exported_at:new Date().toISOString(), tables:{} };

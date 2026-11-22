@@ -463,3 +463,16 @@ details.card.wu>summary::after{color:#94A3B8;top:14px}
 .blocknav b{text-align:center;font-size:.9rem;line-height:1.2}.blocknav b small{display:block;color:var(--slate);font-weight:600;font-size:.72rem}
 .blocknav .chip[disabled]{opacity:.35}
 .wa-mini{flex:none;align-self:center;width:38px;height:38px;border-radius:12px;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.05rem}
+
+/* v5.5 training extras */
+.cardio-plan{background:var(--acc-soft);border-radius:12px;padding:10px 12px;margin-bottom:10px;font-size:.88rem}
+.rpe{display:grid;grid-template-columns:repeat(10,1fr);gap:4px}
+.rpe button{border:1.5px solid var(--soft);background:#fff;border-radius:10px;min-height:40px;font-weight:800;cursor:pointer}
+.rpe button:nth-child(n+8){border-color:var(--acc-line)}
+.rpe button.on{background:var(--acc);border-color:var(--acc);color:#fff}
+.finish.done{background:var(--good-soft);box-shadow:none}
+.loadbars{display:flex;align-items:flex-end;gap:6px;height:90px;padding-top:6px}
+.loadbars div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.loadbars i{display:block;width:100%;background:var(--navy3);border-radius:6px 6px 2px 2px;min-height:3px}
+.loadbars .cur i{background:var(--acc)}
+.loadbars span{font-size:.66rem;color:var(--slate);margin-top:3px}

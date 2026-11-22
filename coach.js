@@ -45,7 +45,7 @@ async function viewClients(el){
   $("#alerts").innerHTML=`<div class="card-h"><div class="ic acc">🔔</div><h2>يحتاجوا اهتمامك النهارده<small>${urgent.length?urgent.length+" عميل":"كله تمام 👌"}</small></h2></div>`+
     (urgent.length?urgent.map(c=>`<div class="alert-row" data-id="${c.id}"><div class="av">${initials(c)}</div><div class="nm"><b>${esc(c.full_name||c.email)}</b>${AL[c.id].map(a=>`<span class="pill ${a.p>=3?"acc":a.p==2?"acc-soft":""}">${a.icon} ${esc(a.text)}</span>`).join(" ")}</div>${c.phone?`<a class="wa-mini" href="${esc(remindLink(c,AL[c.id][0]))}" target="_blank" rel="noopener" title="تذكير واتساب" onclick="event.stopPropagation()">💬</a>`:""}</div>`).join(""):`<p class="hint">مفيش تنبيهات – كل العملاء بيسجلوا ومتابعاتهم متردّ عليها.</p>`);
   $("#alerts").querySelectorAll("[data-id]").forEach(r=>r.onclick=async()=>{ const c=C.find(x=>x.id===r.dataset.id), a=AL[c.id][0]; await openClient(c);
-    if(/متابعة/.test(a.text)){ S.tab="body"; S.bodySeg="c"; const o=S.overview?.[c.id]; S.ciWeek=/ناقصة/.test(a.text)?currentWeek(c)-1:(o?.last_checkin_week||currentWeek(c)); } else if(/اشتراك|مدفوع/.test(a.text)){ S.tab="setup"; S.setupTab="data"; } else S.tab="home";
+    if(/متابعة/.test(a.text)){ S.tab="body"; S.bodySeg="c"; const o=S.overview?.[c.id]; S.ciWeek=/ناقصة/.test(a.text)?currentWeek(c)-1:(o?.last_checkin_week||currentWeek(c)); } else if(/البلوك/.test(a.text)){ S.tab="setup"; S.setupTab="program"; } else if(/اشتراك|مدفوع/.test(a.text)){ S.tab="setup"; S.setupTab="data"; } else S.tab="home";
     render(); window.scrollTo(0,0); });
   const draw=q=>{ const list=C.filter(c=>!q||(c.full_name||"").includes(q)||(c.email||"").includes(q));
     $("#cl").innerHTML=list.length?list.map(c=>{ const wk=currentWeek(c); return `<div class="client" data-id="${c.id}"><div class="av">${initials(c)}</div>
@@ -143,13 +143,14 @@ function setupData(el){
 function setupProgram(el){
   const p=S.client, days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
   if(!days.includes(S.day)&&days.length) S.day=days[0];
-  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
+  el.innerHTML=`<div id="brHost"></div><div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
       <div id="sysBox">${systemFields(p.training_days||3, p.level||"متوسط")}</div>
       <button class="btn primary block" id="sysApply" style="margin-top:10px">تطبيق على ${esc(p.full_name||"العميل")}</button>
       <p class="hint">⚠ التطبيق بيستبدل البرنامج الحالي ويمسح المجموعات المسجلة على التمارين القديمة.</p></div>
     <div class="card"><div class="card-h"><div class="ic">🔄</div><h2>أسابيع الديلود<small>العميل بيشوف مجموعات أقل ~40% وRIR 3-4 – بتتكرر في كل بلوك (كل 12 أسبوع)</small></h2></div>
       <div class="row" style="gap:6px" id="dl">${[...Array(12)].map((_,i)=>`<button class="chip ${(p.deload_weeks||[]).includes(i+1)?"on":""}" data-dw="${i+1}">${i+1}</button>`).join("")}</div>
       <div class="row" style="margin-top:10px"><span class="hint grow">الافتراضي حسب المستوى: مبتدئ بدون · متوسط أسبوع 6 · متقدم 4 و8</span><button class="btn sm navy" id="dlSave">حفظ</button></div></div>
+    ${cardioEditorHTML(p)}
     <div class="card"><div class="card-h"><div class="ic acc">📆</div><h2>جدول الأسبوع<small>اسحب الأيام ورتّبها – وحط أيام راحة بينها</small></h2></div>
       <div id="wk"></div>
       <div class="row" style="margin-top:10px"><button class="btn grow" id="wkAuto">⚡ توزيع تلقائي للراحة</button><button class="btn primary grow" id="wkSave">حفظ الجدول</button></div>
@@ -160,7 +161,8 @@ function setupProgram(el){
       <div id="pList"></div>
       <div class="row"><button class="btn navy grow" id="exAdd">+ تمرين ليوم ${S.day}</button>${S.program.length?`<button class="btn grow" id="tplSave">💾 حفظ كبرنامج كوتش</button>`:""}</div></div>`;
   const getSys=wireSystemPicker($("#sysBox"), p.split_key, p.id);
-  weekEditor($("#wk"), el);
+  weekEditor($("#wk"), el); wireCardioEditor(p);
+  blockReviewHTML(p).then(h=>{ const x=$("#brHost"); if(x){ x.innerHTML=h; wireBlockReview(p,el); } });
   el.querySelectorAll("[data-dw]").forEach(b=>b.onclick=()=>b.classList.toggle("on"));
   $("#dlSave").onclick=async()=>{ const w=[...el.querySelectorAll("[data-dw].on")].map(b=>+b.dataset.dw); const { error } = await sb.from("profiles").update({deload_weeks:w}).eq("id",p.id); if(error) return toast(error.message); await refreshClient(); toast("✓ اتحفظ"); };
   $("#sysApply").onclick=async()=>{
@@ -282,20 +284,26 @@ function setupAccount(el){
    COACH: EXERCISE VIDEO LIBRARY
    ====================================================================== */
 async function viewVideos(el){
-  const [{ data:lib }, { data:ex }] = await Promise.all([ sb.from("exercise_videos").select("*"), sb.from("program_exercises").select("name") ]);
+  const [{ data:lib }, { data:ex }] = await Promise.all([ sb.from("exercise_videos").select("*"), sb.from("program_exercises").select("name,client_id") ]);
+  const usedBy={}; (ex||[]).forEach(e=>{ const n=e.name.toUpperCase(); (usedBy[n]=usedBy[n]||new Set()).add(e.client_id); });
   const altMap=Object.fromEntries((lib||[]).map(v=>[v.name,v.alternatives||[]]));
   const names=new Set([...(ex||[]).map(e=>e.name.toUpperCase()), ...Object.values(B).flat().map(e=>e[0]), ...MOFIT_TEMPLATE.map(e=>e.name), ...(lib||[]).map(v=>v.name)]);
   const map=Object.fromEntries((lib||[]).filter(v=>v.video_url).map(v=>[v.name,v.video_url]));
-  const all=[...names].sort(), withVid=all.filter(n=>map[n]).length;
+  const all=[...names].sort((a,b)=>(usedBy[b]?.size||0)-(usedBy[a]?.size||0)||a.localeCompare(b)), withVid=all.filter(n=>map[n]).length;
+  const used=all.filter(n=>usedBy[n]), usedVid=used.filter(n=>map[n]).length;
   el.innerHTML=`<div class="card dark"><div class="card-h"><div class="ic">🎬</div><h2>مكتبة التمارين<small>فيديو الأداء + البدائل – مرة واحدة وتظهر عند كل العملاء</small></h2></div>
-      <div class="bar" style="background:rgba(255,255,255,.15)"><i style="width:${all.length?withVid/all.length*100:0}%"></i></div><p class="hint">${withVid} من ${all.length} تمرين ليهم فيديو</p></div>
-    <div class="card"><div class="row" style="margin-bottom:10px"><input id="vq" class="grow" placeholder="🔍 ابحث عن تمرين"><select id="vf" style="width:auto"><option value="">الكل</option><option value="no">بدون فيديو</option><option value="yes">بفيديو</option></select></div>
+      <div class="bar" style="background:rgba(255,255,255,.15)"><i style="width:${all.length?withVid/all.length*100:0}%"></i></div><p class="hint">${withVid} من ${all.length} تمرين في المكتبة ليهم فيديو</p></div>
+    <div class="card" style="border:1.5px solid var(--acc-line)"><div class="card-h"><div class="ic acc">🎯</div><h2>تمارين عملائك<small>${usedVid} من ${used.length} ليهم فيديو${used.length-usedVid?` · ناقص ${used.length-usedVid}`:" · كله تمام 👌"}</small></h2></div>
+      <div class="bar"><i style="width:${used.length?usedVid/used.length*100:0}%"></i></div>
+      <p class="hint" style="margin:8px 0 0">ابدأ بالناقص – مرتبين حسب عدد العملاء اللي عندهم التمرين. زرار 🔎 بيفتح بحث يوتيوب، اختار الفيديو وانسخ لينكه هنا.</p></div>
+    <div class="card"><div class="row" style="margin-bottom:10px"><input id="vq" class="grow" placeholder="🔍 ابحث عن تمرين"><select id="vf" style="width:auto"><option value="usedno">عملائي – بدون فيديو</option><option value="used">عملائي – الكل</option><option value="">المكتبة كلها</option><option value="no">بدون فيديو</option><option value="yes">بفيديو</option></select></div>
       <div class="row" style="margin-bottom:12px"><input id="vNew" class="grow" placeholder="+ تمرين جديد للمكتبة"><button class="btn sm navy" id="vAdd">إضافة</button></div><div id="vl"></div></div>`;
   const draw=()=>{ const q=$("#vq").value.trim().toUpperCase(), f=$("#vf").value;
-    const list=all.filter(n=>(!q||n.includes(q))&&(!f||(f==="yes")===!!map[n])).slice(0,80);
-    $("#vl").innerHTML=list.map(n=>`<div class="edit-ex" data-n="${esc(n)}"><div class="between"><b>${map[n]?"🎬":"⚪"} ${esc(n)}</b>${map[n]?`<button class="btn sm" data-play>▶</button>`:""}</div>
+    const ok=n=> f==="usedno"? usedBy[n]&&!map[n] : f==="used"? !!usedBy[n] : (!f||(f==="yes")===!!map[n]);
+    const list=all.filter(n=>(!q||n.includes(q))&&ok(n)).slice(0,80);
+    $("#vl").innerHTML=list.map(n=>`<div class="edit-ex" data-n="${esc(n)}"><div class="between"><b>${map[n]?"🎬":"⚪"} ${esc(n)}${usedBy[n]?` <span class="pill acc-soft">👥 ${usedBy[n].size}</span>`:""}</b><span class="row" style="gap:6px"><a class="btn sm" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${encodeURIComponent(n.toLowerCase()+" exercise proper form")}" title="بحث يوتيوب">🔎</a>${map[n]?`<button class="btn sm" data-play>▶</button>`:""}</span></div>
       <div class="row" style="margin-top:6px"><input class="grow" data-url placeholder="🎬 https://youtu.be/…" value="${esc(map[n]||"")}"></div>
-      <div class="row" style="margin-top:6px"><input class="grow" data-alts placeholder="⇄ البدائل (افصل بفاصلة) – الافتراضي: ${esc((DEFAULT_ALTS[n]||[]).join("، ")||"لا يوجد")}" value="${esc((altMap[n]||[]).join(", "))}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox("🔎","مفيش نتائج");
+      <div class="row" style="margin-top:6px"><input class="grow" data-alts placeholder="⇄ البدائل (افصل بفاصلة) – الافتراضي: ${esc((DEFAULT_ALTS[n]||[]).join("، ")||"لا يوجد")}" value="${esc((altMap[n]||[]).join(", "))}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox(f==="usedno"&&!q?"👌":"🔎",f==="usedno"&&!q?"كل تمارين عملائك ليها فيديو":"مفيش نتائج");
     $("#vl").querySelectorAll("[data-n]").forEach(r=>{ const n=r.dataset.n;
       r.querySelector("[data-save]").onclick=async()=>{ const url=r.querySelector("[data-url]").value.trim(), alts=r.querySelector("[data-alts]").value.split(/[,،]/).map(x=>x.trim().toUpperCase()).filter(Boolean);
         const { error } = (url||alts.length)? await sb.from("exercise_videos").upsert({name:n,video_url:url||null,alternatives:alts.length?alts:null,updated_at:new Date().toISOString()}) : await sb.from("exercise_videos").delete().eq("name",n);

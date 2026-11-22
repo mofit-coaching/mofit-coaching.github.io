@@ -76,12 +76,12 @@ async function viewHome(el){
     <div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
       ${dn?`<div class="hero-body">${anatomySVG(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<div>${muscleLegend(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<small class="hero-sub">${todayEx.length} تمارين · ${todayEx.reduce((a,e)=>a+(+e.sets||0),0)} مجموعة</small></div></div><button class="btn primary block" style="margin-top:10px" id="goTrain">ابدأ التمرين ←</button>`
           :`<p class="hint">😴 الراحة جزء من التطور. سجّل نومك ومياهك وخطواتك في العادات.</p>`}</div>
-    <div id="hToday"></div><div id="hMiss"></div><div id="hCI"></div>
+    <div id="hToday"></div><div id="hMiss"></div><div id="hCI"></div><div id="hCardio"></div>
     <div class="card" id="hN"><div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2></div><p class="muted">جارٍ التحميل…</p></div>
     ${tipCardHTML()}
     <div class="card" id="hF"></div>
     <div class="card" id="hH"></div>
-    <div class="card" id="hB"></div><div id="hGoal"></div><div id="hComp"></div><div id="hStr"></div><div id="hHr"></div>`;
+    <div class="card" id="hB"></div><div id="hLoad"></div><div id="hGoal"></div><div id="hComp"></div><div id="hStr"></div><div id="hHr"></div>`;
   wireInstall();
   $("#goTrain")&&($("#goTrain").onclick=()=>{ S.tab="train"; S.day=dn; S.week=wk; render(); });
   homeCheckinCard(p,wk);
@@ -100,6 +100,8 @@ async function viewHome(el){
   $("#goFood").onclick=()=>{ S.tab="food"; S.date=today(); render(); };
   $("#hF").innerHTML=`<div class="card-h"><div class="ic acc">🔥</div><h2>الفشل العضلي<small>الأسبوع ${wk}</small></h2></div>`+failureSummary((sets.data||[]).filter(s=>s.week===wk));
   const H=hab.data||[];
+  $("#hCardio").innerHTML=cardioCardHTML(p,H,wk); wireCardioCard();
+  loadCardHTML(p).then(h=>{ const x=$("#hLoad"); if(x) x.innerHTML=h; });
   $("#hH").innerHTML=`<div class="card-h"><div class="ic">✅</div><h2>الالتزام<small>${H.length} يوم مسجّل</small></h2></div>
     <div class="grid4"><div class="stat"><div class="l">🥗 الدايت</div><div class="v">${pct(avg(H.map(h=>h.diet)))}</div></div>
     <div class="stat"><div class="l">💪 التمرين</div><div class="v">${pct(avg(H.map(h=>h.training)))}</div></div>
@@ -181,13 +183,14 @@ async function viewTrain(el){
     const nSets=modeSets(weekSets(ex,p,S.week)), restS=modeRest(ex.rest_sec||90), alt=altChoice(ex.id), hint=progressionHint(ex,[...Array(ex.sets)].map((_,i)=>get(ex.id,S.week-1,i+1)).filter(Boolean),deload);
     const mus=muscleOf(ex.name); box.style.setProperty("--mc",mColor(mus));
     box.innerHTML=`<div class="ex-h"><div class="ex-n">${idx+1}</div><div class="ex-t">${mus!=="أخرى"?mChip(mus):""}<b data-vid>${esc(alt||ex.name)}</b>${alt?`<small style="display:block;color:#FDBA74;font-size:.7rem">بديل لـ ${esc(ex.name)}</small>`:""}
-        <div class="ex-tags"><span class="pill glass">🎯 ${nSets}×${esc(ex.target_reps||"—")}</span>${deload?`<span class="pill glass">RIR 3-4</span>`:ex.target_rir?`<span class="pill glass">RIR ${esc(modeRir(ex.target_rir))}</span>`:""}<button class="pill glass" data-alt style="border:0;cursor:pointer">⇄ بديل</button><button class="pill glass" data-pain style="border:0;cursor:pointer" title="حاسس بألم؟">🤕</button>${ex.rest_sec?`<span class="pill glass">⏱ ${restS}ث</span>`:""}${ex.tempo?`<span class="pill glass">🕒 ${esc(ex.tempo)}</span>`:""}<span class="pill acc" data-best></span></div></div>
+        <div class="ex-tags"><span class="pill glass">🎯 ${nSets}×${esc(ex.target_reps||"—")}</span>${deload?`<span class="pill glass">RIR 3-4</span>`:ex.target_rir?`<span class="pill glass">RIR ${esc(modeRir(ex.target_rir))}</span>`:""}<button class="pill glass" data-alt style="border:0;cursor:pointer">⇄ بديل</button><button class="pill glass" data-hist style="border:0;cursor:pointer">📈 السجل</button><button class="pill glass" data-pain style="border:0;cursor:pointer" title="حاسس بألم؟">🤕</button>${ex.rest_sec?`<span class="pill glass">⏱ ${restS}ث</span>`:""}${ex.tempo?`<span class="pill glass">🕒 ${esc(ex.tempo)}</span>`:""}<span class="pill acc" data-best></span></div></div>
         ${vid?`<button class="play" data-vid title="شاهد الأداء الصحيح">${ICON.play}</button>`:""}</div>
       <div class="ex-b">${hint?`<div class="prog ${hint.kind}">${hint.text}</div>`:""}${ex.tempo?tempoBlocks(ex.tempo):""}${ex.notes?`<p class="hint" style="margin:0 0 8px">📝 ${esc(ex.notes)}</p>`:""}${deload?"":idx===firstC?warmupHTML(hint?.w||prevW(ex)):firstOfM[idx]?feederHTML(hint?.w||prevW(ex),mus):""}
         <div class="set-head"><span>#</span><span>العدات</span><span>الوزن كجم</span><span>RIR</span><span>فشل</span><span></span></div><div data-sets></div>
         <button class="btn sm restbtn" data-rest>⏱ ابدأ الراحة (${restS} ث)</button></div>`;
     box.querySelectorAll("[data-vid]").forEach(b=>b.onclick=()=>openVideo(alt?{...ex,name:alt,video_url:null}:ex));
     box.querySelector("[data-alt]").onclick=()=>openAlts(ex,()=>viewTrain(el));
+    box.querySelector("[data-hist]").onclick=()=>openExHistory(ex);
     box.querySelector("[data-rest]").onclick=()=>startRest(restS, ex.name);
     box.querySelector("[data-pain]").onclick=()=>openPain(ex,()=>openAlts(ex,()=>viewTrain(el)));
     const setsEl=box.querySelector("[data-sets]");
@@ -213,6 +216,7 @@ async function viewTrain(el){
         const { data:saved, error, queued } = await dbWrite({op:"upsert",table:"set_logs",row:rec,onConflict:"exercise_id,week,set_no"});
         if(error){ toast("خطأ في الحفظ: "+error.message); return; }
         if(queued) toast("📴 اتحفظت على الموبايل");
+        if(S.me.role!=="coach"&&S.week===wkNow) markWorkoutStart(p.id,S.day);
         const i=logs.findIndex(l=>l.exercise_id===ex.id&&l.week===S.week&&l.set_no===n); if(i>=0) logs[i]=saved; else logs.push(saved);
         row.classList.toggle("done",logged(saved)); updBest(); renderFailCard();
         try{ navigator.vibrate&&navigator.vibrate(25); }catch(e){}
@@ -225,6 +229,9 @@ async function viewTrain(el){
     }
     updBest(); list.appendChild(box);
   });
+  if(S.week===wkNow){ const fin=document.createElement("div"); list.appendChild(fin);
+    const drawFin=async()=>{ fin.innerHTML=await finishCardHTML(p,S.day,S.week); const b=fin.querySelector("#finBtn"); if(b) b.onclick=()=>openFinish(p,S.day,S.week,exs,logs,drawFin); };
+    drawFin(); }
   const renderFailCard=async()=>{
     const fc=$("#failCard"); if(!fc) return;
     const { data:all } = await sb.from("set_logs").select("exercise_id,week,reps,weight,rir,failure").eq("client_id",p.id);
@@ -361,7 +368,8 @@ async function viewHabits(el){
       <div class="grid2"><label class="f">🤯 التوتر<select data-k="stress"><option value=""></option>${STRESS.map(s=>`<option ${cur.stress===s?"selected":""}>${s}</option>`).join("")}</select></label>
        <label class="f">💤 ساعات النوم<input inputmode="decimal" data-k="sleep_hours" value="${esc(cur.sleep_hours??"")}"></label>
        <label class="f">💧 المياه (لتر)<input inputmode="decimal" data-k="water_l" value="${esc(cur.water_l??"")}"></label>
-       <label class="f">👣 الخطوات<input inputmode="numeric" data-k="steps" value="${esc(cur.steps??"")}"></label>
+       <label class="f">👣 الخطوات${p.steps_goal?` <small>(الهدف ${fmt(p.steps_goal)})</small>`:""}<input inputmode="numeric" data-k="steps" value="${esc(cur.steps??"")}"></label>
+       <label class="f">🏃 دقايق الكارديو${p.cardio_plan?.minutes?` <small>(المطلوب ${fmt(p.cardio_plan.minutes)})</small>`:""}<input inputmode="numeric" data-k="cardio_min" value="${esc(cur.cardio_min??"")}"></label>
        ${p.sex==="أنثى"?`<label class="f">الدورة الشهرية<select data-k="cycle"><option value=""></option>${CYCLE.map(s=>`<option ${cur.cycle===s?"selected":""}>${s}</option>`).join("")}</select></label>`:""}</div>
       <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
       <button class="btn primary block" id="hSave">حفظ اليوم</button></div>
@@ -375,7 +383,7 @@ async function viewHabits(el){
   $("#hSave").onclick=async()=>{
     const v=k=>el.querySelector(`[data-k="${k}"]`);
     const out={client_id:p.id,log_date:S.date,diet:rec.diet??null,training:rec.training??null,cardio:rec.cardio??null,sleep_quality:rec.sleep_quality??null,
-      stress:v("stress").value||null,sleep_hours:num(v("sleep_hours").value),water_l:num(v("water_l").value),steps:num(v("steps").value),cycle:v("cycle")?.value||null,notes:v("notes").value.trim()||null,updated_at:new Date().toISOString()};
+      stress:v("stress").value||null,sleep_hours:num(v("sleep_hours").value),water_l:num(v("water_l").value),steps:num(v("steps").value),cardio_min:num(v("cardio_min").value),cycle:v("cycle")?.value||null,notes:v("notes").value.trim()||null,updated_at:new Date().toISOString()};
     const { error, queued } = await dbWrite({op:"upsert",table:"habits",row:out,onConflict:"client_id,log_date"}); if(error) return toast(error.message); toast(queued?"📴 اتحفظ على الموبايل":"✓ اتحفظ"); if(!queued) viewHabits(el);
   };
   const wk=currentWeek(p), by={}; H.forEach(h=>{ const x=weekOfDate(p,h.log_date); if(x) (by[x]=by[x]||[]).push(h); });

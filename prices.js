@@ -113,7 +113,8 @@ async function coachPricesCard(host){
 function normPhone(v){ let d=String(v||"").replace(/[^0-9]/g,""); if(!d) return null; if(d.startsWith("00")) d=d.slice(2); if(/^01\d{9}$/.test(d)) d="2"+d; return d.length>=8&&d.length<=15?d:null; }
 function remindLink(c,a){
   const first=(c.full_name||"").split(" ")[0], app=location.origin+location.pathname, t=a?.text||"";
-  const body = /اشتراك|مدفوع/.test(t) ? `اشتراكك في Mofit ${t}. تحب تجدد؟ العروض هنا 👇\n${app}#prices`
+  const body = /البلوك/.test(t) ? `خلّصنا بلوك كامل من البرنامج 🎉 بجهزلك البلوك الجاي – ابعتلي رأيك في البرنامج الحالي: إيه اللي حبيته وإيه اللي تعبك؟`
+    : /اشتراك|مدفوع/.test(t) ? `اشتراكك في Mofit ${t}. تحب تجدد؟ العروض هنا 👇\n${app}#prices`
     : /متابعة/.test(t) ? `متنساش تبعت متابعة الأسبوع من التطبيق (الوزن + الصور + إحساسك) 📸\n${app}`
     : /استبيان/.test(t) ? `محتاجك تملا استبيان الصحة في التطبيق عشان نكمّل البرنامج بأمان 🩺\n${app}`
     : /الالتزام|سجّل|سجل|تسجيل|ما سجل/.test(t) ? `وحشتنا تسجيلاتك 💪 يلا نرجع للالتزام النهارده – سجّل تمرينك وأكلك في التطبيق\n${app}`
