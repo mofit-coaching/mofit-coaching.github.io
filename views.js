@@ -71,8 +71,8 @@ async function viewHome(el){
   const p=S.client, t=targets(p), wk=currentWeek(p), dn=todayDayNo();
   const todayEx=S.program.filter(e=>e.day_no===dn);
   el.innerHTML=`${S.me.role==="client"?installCardHTML():""}
-    <div class="card dark"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
-      ${dn?`<div class="scroller">${todayEx.map(e=>`<span class="pill glass">${esc(e.name)}</span>`).join("")}</div><button class="btn primary block" style="margin-top:10px" id="goTrain">ابدأ التمرين ←</button>`
+    <div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
+      ${dn?`<div class="hero-body">${anatomySVG(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<div>${muscleLegend(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<small class="hero-sub">${todayEx.length} تمارين · ${todayEx.reduce((a,e)=>a+(+e.sets||0),0)} مجموعة</small></div></div><button class="btn primary block" style="margin-top:10px" id="goTrain">ابدأ التمرين ←</button>`
           :`<p class="hint">😴 الراحة جزء من التطور. سجّل نومك ومياهك وخطواتك في العادات.</p>`}</div>
     <div id="hToday"></div><div id="hMiss"></div><div id="hCI"></div>
     <div class="card" id="hN"><div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2></div><p class="muted">جارٍ التحميل…</p></div>
@@ -151,7 +151,7 @@ async function viewTrain(el){
   if(!days.length){ el.innerHTML=`<div class="card">${emptyBox("📋","الكوتش لسه ما حطش برنامج التمرين."+(S.me.role==="coach"?"<br>حطه من تبويب ⚙️ التحكم.":""))}</div>`; return; }
   const maxD=Math.max(...days);
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📅</div><h2>${esc(p.split_name||"برنامج التمرين")}<small>${p.level?LEVELS[p.level]?.icon+" "+esc(p.level)+" · ":""}${days.length} أيام في الأسبوع</small></h2></div>
-      <div class="scroller" id="dayCards">${[...Array(7)].map((_,i)=>{ const d=i+1, has=days.includes(d); return `<button class="daycard ${S.day===d?"on":""} ${has?"":"rest"}" data-d="${d}">${d===tdn?'<span class="dot"></span>':""}<b>${has?"يوم "+d:"راحة"}</b><small>${has?esc(dayLabel(d)||S.program.filter(e=>e.day_no===d).length+" تمارين"):"😴 استشفاء"}</small></button>`; }).join("")}</div>
+      <div class="scroller" id="dayCards">${[...Array(7)].map((_,i)=>{ const d=i+1, has=days.includes(d); return `<button class="daycard ${S.day===d?"on":""} ${has?"":"rest"}" data-d="${d}">${d===tdn?'<span class="dot"></span>':""}<b>${has?"يوم "+d:"راحة"}</b><small>${has?esc(dayLabel(d)||S.program.filter(e=>e.day_no===d).length+" تمارين"):"😴 استشفاء"}</small>${has?`<span class="dmus">${Object.entries(muscleVol(S.program.filter(e=>e.day_no===d).map(e=>[e.name,e.sets]))).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([m])=>`<i style="background:${mColor(m)}" title="${m}"></i>`).join("")}</span>`:""}</button>`; }).join("")}</div>
       <div class="muted" style="margin:8px 0 6px;font-weight:700">الأسبوع</div>
       <div class="scroller" id="wkChips">${[...Array(12)].map((_,i)=>`<button class="chip ${S.week===i+1?"on":""} ${wkNow===i+1?"cur":""}" data-w="${i+1}">${i+1}</button>`).join("")}</div></div>
     <div class="card tools hidden" id="tTools"></div><div id="tPrep"></div><div id="exList"></div><div class="card" id="failCard"></div>`;
@@ -162,22 +162,25 @@ async function viewTrain(el){
     tt.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ setTrainMode(trainMode()===b.dataset.mode?"":b.dataset.mode); viewTrain(el); });
     $("#rdyBtn").onclick=()=>openReadiness(()=>viewTrain(el)); }
   if(!exs.length){ list.innerHTML=`<div class="card">${emptyBox("😴","يوم راحة واستشفاء<br>سجّل نومك ومياهك وخطواتك في العادات.")}</div>`; $("#failCard").remove(); return; }
-  const tp=$("#tPrep"); if(tp) tp.innerHTML=prepCardHTML(p)+`<details class="card"><summary><span class="ic">🗺</span><b>العضلات المستهدفة النهارده</b><small>عدد المجموعات لكل عضلة</small></summary>${muscleMapSVG(muscleVol(exs.map(e=>[e.name,e.sets])))}</details>`;
   const ids=exs.map(e=>e.id);
   const { data, error:le } = await sb.from("set_logs").select("*").in("exercise_id",ids).in("week",[S.week,S.week-1].filter(w=>w>=1));
   const ck="logs_"+p.id+"_"+S.day+"_"+S.week, logs=le? (cacheGet(ck)||[]) : (data||[]); if(!le) cacheSet(ck,logs);
   const bestPrev={}; try{ const { data:hist } = await sb.from("set_logs").select("exercise_id,reps,weight,rir").in("exercise_id",ids).lt("week",S.week); (hist||[]).forEach(h=>{ const x=e1rm(h)||0; if(x>(bestPrev[h.exercise_id]||0)) bestPrev[h.exercise_id]=x; }); }catch(e){}
   const firstC=exs.findIndex(e=>isCompound(e.name));
+  const seenM=new Set(), firstOfM=exs.map(e=>{ const m=muscleOf(e.name); if(m==="أخرى"||seenM.has(m)) return false; seenM.add(m); return true; });
+  const prevW=ex=>Math.max(0,...[...Array(ex.sets)].map((_,i)=>+(get(ex.id,S.week-1,i+1)?.weight)||0));
   const deload=isDeload(p,S.week);
+  const tp=$("#tPrep"); if(tp&&!deload){ tp.innerHTML=warmupCardHTML(p,exs,S.day); wireWarmup(tp); }
   if(deload) list.insertAdjacentHTML("beforeend",`<div class="card dark"><div class="card-h"><div class="ic">🔄</div><h2>أسبوع ديلود (تخفيف)<small>مجموعات أقل بحوالي 40% · أوزان أخف ~10% · RIR 3-4 · الهدف استشفاء مش أرقام</small></h2></div></div>`);
   const get=(ex,w,n)=>logs.find(l=>l.exercise_id===ex&&l.week===w&&l.set_no===n);
   exs.forEach((ex,idx)=>{
     const box=document.createElement("div"); box.className="ex"; const vid=videoFor(ex);
     const nSets=modeSets(weekSets(ex,p,S.week)), restS=modeRest(ex.rest_sec||90), alt=altChoice(ex.id), hint=progressionHint(ex,[...Array(ex.sets)].map((_,i)=>get(ex.id,S.week-1,i+1)).filter(Boolean),deload);
-    box.innerHTML=`<div class="ex-h"><div class="ex-n">${idx+1}</div><div class="ex-t"><b data-vid>${esc(alt||ex.name)}</b>${alt?`<small style="display:block;color:#FDBA74;font-size:.7rem">بديل لـ ${esc(ex.name)}</small>`:""}
+    const mus=muscleOf(ex.name); box.style.setProperty("--mc",mColor(mus));
+    box.innerHTML=`<div class="ex-h"><div class="ex-n">${idx+1}</div><div class="ex-t">${mus!=="أخرى"?mChip(mus):""}<b data-vid>${esc(alt||ex.name)}</b>${alt?`<small style="display:block;color:#FDBA74;font-size:.7rem">بديل لـ ${esc(ex.name)}</small>`:""}
         <div class="ex-tags"><span class="pill glass">🎯 ${nSets}×${esc(ex.target_reps||"—")}</span>${deload?`<span class="pill glass">RIR 3-4</span>`:ex.target_rir?`<span class="pill glass">RIR ${esc(modeRir(ex.target_rir))}</span>`:""}<button class="pill glass" data-alt style="border:0;cursor:pointer">⇄ بديل</button><button class="pill glass" data-pain style="border:0;cursor:pointer" title="حاسس بألم؟">🤕</button>${ex.rest_sec?`<span class="pill glass">⏱ ${restS}ث</span>`:""}${ex.tempo?`<span class="pill glass">🕒 ${esc(ex.tempo)}</span>`:""}<span class="pill acc" data-best></span></div></div>
         ${vid?`<button class="play" data-vid title="شاهد الأداء الصحيح">${ICON.play}</button>`:""}</div>
-      <div class="ex-b">${hint?`<div class="prog ${hint.kind}">${hint.text}</div>`:""}${ex.tempo?tempoBlocks(ex.tempo):""}${ex.notes?`<p class="hint" style="margin:0 0 8px">📝 ${esc(ex.notes)}</p>`:""}${idx===firstC&&!deload?warmupHTML(hint?.w||Math.max(0,...[...Array(ex.sets)].map((_,i)=>+(get(ex.id,S.week-1,i+1)?.weight)||0))):""}
+      <div class="ex-b">${hint?`<div class="prog ${hint.kind}">${hint.text}</div>`:""}${ex.tempo?tempoBlocks(ex.tempo):""}${ex.notes?`<p class="hint" style="margin:0 0 8px">📝 ${esc(ex.notes)}</p>`:""}${deload?"":idx===firstC?warmupHTML(hint?.w||prevW(ex)):firstOfM[idx]?feederHTML(hint?.w||prevW(ex),mus):""}
         <div class="set-head"><span>#</span><span>العدات</span><span>الوزن كجم</span><span>RIR</span><span>فشل</span><span></span></div><div data-sets></div>
         <button class="btn sm restbtn" data-rest>⏱ ابدأ الراحة (${restS} ث)</button></div>`;
     box.querySelectorAll("[data-vid]").forEach(b=>b.onclick=()=>openVideo(alt?{...ex,name:alt,video_url:null}:ex));

@@ -287,7 +287,7 @@ details.card>summary::-webkit-details-marker{display:none}
 details.card>summary .ic{width:36px;height:36px;border-radius:12px;background:var(--soft2);display:grid;place-items:center;font-size:1.1rem;flex:none}
 details.card>summary .ic.acc{background:var(--acc-soft)}
 details.card>summary b{flex:1}
-details.card>summary small{width:100%;color:var(--slate);font-size:.75rem;margin-top:-6px;padding-inline-start:46px}
+details.card:not(.wu)>summary small{width:100%;color:var(--slate);font-size:.75rem;margin-top:-6px;padding-inline-start:46px}
 details.card>summary::after{content:"⌄";color:var(--slate);font-size:1.1rem;position:absolute;inset-inline-end:16px;transition:transform .2s}
 details.card{position:relative}
 details.card[open]>summary::after{transform:rotate(180deg)}
@@ -334,3 +334,90 @@ details.card[open]>summary{margin-bottom:10px}
 .mm-list{display:flex;flex-direction:column;gap:4px;font-size:.8rem;flex:1;min-width:110px}
 .mm-list i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-inline-end:6px;vertical-align:middle}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* ===== v5.1 visual system: icons · knurl · display type · muscle colour ===== */
+:root{--knurl:repeating-linear-gradient(45deg,rgba(255,255,255,.035) 0 1px,transparent 1px 7px),repeating-linear-gradient(-45deg,rgba(255,255,255,.035) 0 1px,transparent 1px 7px);--disp:"Lalezar","Cairo",system-ui,sans-serif}
+/* drawn icons */
+.ico{display:inline-flex;width:1.2em;height:1.2em;vertical-align:-.25em;flex:none}
+.ico svg{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;overflow:visible}
+.ico svg .a{fill:var(--acc);stroke:none;opacity:.95}
+.icx{display:contents}
+.card-h .ic,details.card>summary .ic{color:var(--navy)}
+.card-h .ic .ico,details.card>summary .ic .ico{width:21px;height:21px}
+.card-h .ic.acc{color:#9A3412}
+.card-h .ic.dark,.card.dark .card-h .ic{color:#fff}
+.card.dark .ico svg .a,.top .ico svg .a,.ex-h .ico svg .a{fill:#FB923C}
+.pill .ico{width:1.05em;height:1.05em;margin-inline-end:1px}
+.btn .ico{width:1.15em;height:1.15em}
+.onb-ic .ico{width:64px;height:64px;color:var(--navy)}
+.onb-ic{display:grid;place-items:center;width:104px;height:104px;margin:8px auto 14px;border-radius:32px;background:radial-gradient(circle at 30% 25%,#fff,var(--acc-soft));box-shadow:inset 0 0 0 1.5px var(--acc-line)}
+.todo .tick .ico{width:18px;height:18px}
+.seg .ico{width:1.5em;height:1.5em}
+/* knurl texture on the dark, "iron" surfaces */
+.top,.card.dark,.ex-h,.card.tip,.nav,.unitbox{background-image:var(--knurl),linear-gradient(135deg,var(--navy),var(--navy2))}
+/* display type: poster weight for headlines and the numbers people care about */
+.hello h1,.card.dark .card-h h2,.wu-title,.onb h3,.logo-big,.ex-n,.stat .v,.lift .num{font-family:var(--disp);font-weight:400;letter-spacing:0}
+.hello h1{font-size:1.5rem;line-height:1.25}
+.card.dark .card-h h2{font-size:1.2rem}
+.card.dark .card-h h2 small{font-family:"Cairo",sans-serif}
+.stat .v{font-size:1.45rem;line-height:1.2}
+/* nav: active tab as an ember capsule */
+.nav button.on{background:linear-gradient(135deg,var(--acc),#EA580C);color:#fff;box-shadow:0 6px 14px rgba(249,115,22,.35)}
+.nav button.on svg{color:#fff}
+/* muscle colour system */
+.mchip{display:inline-flex;align-items:center;gap:5px;font-size:.68rem;font-weight:700;color:#fff;background:color-mix(in srgb,var(--mc) 30%,transparent);border:1px solid color-mix(in srgb,var(--mc) 70%,transparent);border-radius:99px;padding:0 9px 0 7px;margin-bottom:4px}
+.mchip i{width:7px;height:7px;border-radius:50%;background:var(--mc);box-shadow:0 0 0 2px color-mix(in srgb,var(--mc) 35%,transparent)}
+.ex{border-inline-start:5px solid var(--mc,var(--acc))}
+.ex-n{background:var(--mc,var(--acc));font-size:1.15rem;box-shadow:0 0 0 3px color-mix(in srgb,var(--mc,var(--acc)) 30%,transparent)}
+.warm{border-inline-start:3px solid var(--mc,var(--acc))}
+.daycard .dmus{display:flex;gap:3px;margin-top:6px}
+.daycard .dmus i{width:9px;height:9px;border-radius:50%;box-shadow:0 0 0 1.5px #fff}
+.daycard.on .dmus i{box-shadow:0 0 0 1.5px var(--navy)}
+/* anatomy */
+.anat{display:block;width:100%;height:auto}
+.anat .mm-on{animation:mmIn .7s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--d,0s)}
+@keyframes mmIn{from{fill-opacity:0}}
+.mmap{display:grid;grid-template-columns:minmax(150px,46%) 1fr;gap:14px;align-items:center}
+.mmap svg{width:100%;max-width:none}
+.mlg{display:grid;gap:7px}
+.mlg-r{display:grid;grid-template-columns:10px 1fr auto;gap:2px 8px;align-items:center;font-size:.8rem}
+.mlg-r>i{width:10px;height:10px;border-radius:3px}
+.mlg-r b{font-family:var(--disp);font-weight:400;font-size:1rem}
+.mlg-r em{grid-column:2/4;height:4px;border-radius:4px;background:var(--soft2);overflow:hidden}
+.mlg-r em s{display:block;height:100%;border-radius:4px;text-decoration:none}
+.mlg.dk .mlg-r{color:#E2E8F0}.mlg.dk .mlg-r em{background:rgba(255,255,255,.1)}
+.hero-body{display:grid;grid-template-columns:44% 1fr;gap:14px;align-items:center;margin:4px 0 2px}
+.hero-sub{display:block;margin-top:8px;color:#94A3B8;font-size:.74rem}
+/* muscle-specific warm-up */
+details.card.wu{padding:0;overflow:hidden}
+details.card.wu>summary{display:block;padding:0}
+details.card.wu>summary::after{color:#94A3B8;top:14px}
+.wu-hero{display:grid;grid-template-columns:38% 1fr;gap:14px;align-items:center;padding:14px 16px;color:#fff;background-image:var(--knurl),radial-gradient(circle at 15% 20%,rgba(249,115,22,.28),transparent 55%),linear-gradient(135deg,var(--navy),var(--navy2))}
+.wu-k{display:block;color:#FDBA74;font-size:.74rem;font-weight:700}
+.wu-title{display:block;font-size:1.3rem;line-height:1.3;margin:2px 0}
+.wu-meta small{display:block;color:#CBD5E1;font-size:.74rem}
+.wu-prog{height:6px;border-radius:6px;background:rgba(255,255,255,.12);overflow:hidden;margin:10px 0 4px}
+.wu-prog i{display:block;height:100%;background:linear-gradient(90deg,#FDBA74,var(--acc));border-radius:6px;transition:width .4s}
+.wu-body{padding:6px 14px 12px}
+.wu-s{position:relative;padding:10px 0 4px 0;padding-inline-start:40px}
+.wu-s::before{content:"";position:absolute;inset-inline-start:14px;top:38px;bottom:-4px;width:2px;background:linear-gradient(var(--mc),transparent)}
+.wu-s:last-child::before{display:none}
+.wu-s header{display:flex;gap:10px;align-items:flex-start;margin-inline-start:-40px;margin-bottom:6px}
+.wu-n{width:30px;height:30px;border-radius:10px;display:grid;place-items:center;flex:none;font-family:var(--disp);font-size:1rem;color:#fff;background:var(--mc);box-shadow:0 4px 10px color-mix(in srgb,var(--mc) 35%,transparent)}
+.wu-s header b{display:block;font-size:.95rem}
+.wu-s header small{display:block;color:var(--slate);font-size:.74rem;line-height:1.45}
+.wu-i{display:flex;align-items:center;gap:10px;width:100%;text-align:start;background:#fff;border:1.5px solid var(--soft);border-radius:14px;padding:8px 10px;margin-bottom:6px;cursor:pointer;transition:border-color .15s,background .15s}
+.wu-i:active{transform:scale(.99)}
+.wu-c{width:26px;height:26px;border-radius:8px;border:2px solid color-mix(in srgb,var(--mc) 60%,#CBD5E1);display:grid;place-items:center;flex:none;font-weight:800;color:#fff;font-size:.85rem}
+.wu-t{flex:1;min-width:0}.wu-t b{display:block;font-size:.86rem}.wu-t small{display:block;color:var(--slate);font-size:.74rem}
+.wu-tag{font-size:.64rem;font-weight:700;border-radius:99px;padding:1px 8px;background:var(--soft2);color:var(--navy3);flex:none}
+.wu-tag.act{background:color-mix(in srgb,var(--mc) 14%,#fff);color:color-mix(in srgb,var(--mc) 80%,#000)}
+.wu-i.on{border-color:color-mix(in srgb,var(--mc) 55%,#fff);background:color-mix(in srgb,var(--mc) 7%,#fff)}
+.wu-i.on .wu-c{background:var(--mc);border-color:var(--mc)}
+.wu-i.on .wu-t b{color:var(--slate);text-decoration:line-through;text-decoration-color:color-mix(in srgb,var(--mc) 60%,transparent)}
+.wu-i:focus-visible,.todo:focus-visible,.nav button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+@media(max-width:380px){.wu-hero,.hero-body,.mmap{grid-template-columns:1fr 1fr}}
+.wu-hero{grid-template-columns:42% 1fr;padding-inline-end:34px}
+.wu-title{font-size:1.2rem}
+.wu-more{font-size:.85rem;background:rgba(255,255,255,.14);border-radius:99px;padding:0 7px;font-family:"Cairo",sans-serif;font-weight:700}
+.wu-title{font-size:1.1rem;white-space:normal}.wu-meta{min-width:0}

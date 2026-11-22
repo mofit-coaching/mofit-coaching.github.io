@@ -43,13 +43,6 @@ function correctiveRoutine(a){
   if(!items.length) return null;
   return CES_PHASES.map(([k,l,d])=>[l,d,[...new Set(items.flatMap(o=>o[k]))]]);
 }
-function prepCardHTML(p){
-  const R=correctiveRoutine(p.assessment);
-  const gen=`<div class="prep-ph"><b>🔥 إحماء عام (RAMP)</b><small>${N("5")} دقايق كارديو خفيف ← Leg swings · Hip circles · Arm circles · سكوات بوزن الجسم × ${N("10")} ← مجموعات إحماء للتمرين الأول</small></div>`;
-  if(!R) return `<details class="card prep"><summary><span class="ic">🧩</span><b>قبل التمرين</b><small>إحماء 5-8 دقايق</small></summary>${gen}</details>`;
-  return `<details class="card prep" open><summary><span class="ic acc">🧩</span><b>روتينك التصحيحي (NASM)</b><small>8-10 دقايق قبل كل تمرين · من تقييم ${niceDate(p.assessment.date)}</small></summary>
-    ${R.map(([l,d,list])=>`<div class="prep-ph"><b>${l}</b><small>${d}</small><div class="chips">${list.map(x=>`<span class="pill">${esc(x)}</span>`).join("")}</div></div>`).join("")}${gen}</details>`;
-}
 function assessmentCardHTML(p){
   const a=p.assessment||{}, on=k=>(a.items||[]).includes(k);
   return `<div class="card" id="ohsa"><div class="card-h"><div class="ic acc">🧍</div><h2>تقييم السكوات فوق الراس (NASM OHSA)<small>${a.date?"آخر تقييم "+niceDate(a.date):"العميل يعمل 5 سكوات بدراعات مرفوعة – صوّره من قدّام ومن الجنب"}</small></h2></div>
@@ -226,27 +219,82 @@ function wireInstall(){
   $("#instGo")&&($("#instGo").onclick=async()=>{ if(_bip){ _bip.prompt(); await _bip.userChoice; _bip=null; $(".install")?.remove(); } else toast("من قائمة المتصفح ⋮ اختار «تثبيت التطبيق»"); });
 }
 
-/* ---------- 10) muscle map (front + back) ---------- */
-function muscleVol(exs){ const v={}; exs.forEach(e=>{ const m=muscleOf(e[0]||e.name); v[m]=(v[m]||0)+(+(e[1]??e.sets)||0); }); return v; }
-function muscleMapSVG(vol){
-  const max=Math.max(1,...Object.values(vol)), f=m=>{ const x=vol[m]||0; return x?`rgba(249,115,22,${(0.3+0.7*x/max).toFixed(2)})`:"#E2E8F0"; };
-  const body=(cx,front)=>{ const B="#CBD5E1";
-    return `<g>
-      <circle cx="${cx}" cy="18" r="11" fill="${B}"/>
-      <rect x="${cx-6}" y="28" width="12" height="7" rx="3" fill="${B}"/>
-      <ellipse cx="${cx-23}" cy="42" rx="10" ry="8" fill="${f("أكتاف")}"/><ellipse cx="${cx+23}" cy="42" rx="10" ry="8" fill="${f("أكتاف")}"/>
-      ${front?`<rect x="${cx-19}" y="36" width="18" height="22" rx="6" fill="${f("صدر")}"/><rect x="${cx+1}" y="36" width="18" height="22" rx="6" fill="${f("صدر")}"/>
-        <rect x="${cx-14}" y="60" width="28" height="32" rx="7" fill="${f("بطن")}"/>`
-      :`<path d="M${cx-20} 36 h40 l-6 50 h-28 z" fill="${f("ضهر")}"/><rect x="${cx-13}" y="86" width="26" height="8" rx="4" fill="${B}"/>`}
-      <rect x="${cx-35}" y="50" width="11" height="28" rx="5" fill="${f(front?"باي":"تراي")}"/><rect x="${cx+24}" y="50" width="11" height="28" rx="5" fill="${f(front?"باي":"تراي")}"/>
-      <rect x="${cx-36}" y="80" width="9" height="26" rx="4" fill="${B}"/><rect x="${cx+27}" y="80" width="9" height="26" rx="4" fill="${B}"/>
-      ${front?`<rect x="${cx-16}" y="94" width="13" height="5" rx="2" fill="${B}"/><rect x="${cx+3}" y="94" width="13" height="5" rx="2" fill="${B}"/>`
-      :`<rect x="${cx-17}" y="94" width="16" height="16" rx="7" fill="${f("خلفية/أرداف")}"/><rect x="${cx+1}" y="94" width="16" height="16" rx="7" fill="${f("خلفية/أرداف")}"/>`}
-      <rect x="${cx-16}" y="${front?100:111}" width="14" height="${front?40:29}" rx="6" fill="${f(front?"أمامية":"خلفية/أرداف")}"/><rect x="${cx+2}" y="${front?100:111}" width="14" height="${front?40:29}" rx="6" fill="${f(front?"أمامية":"خلفية/أرداف")}"/>
-      <rect x="${cx-15}" y="143" width="12" height="30" rx="5" fill="${front?B:f("سمانة")}"/><rect x="${cx+3}" y="143" width="12" height="30" rx="5" fill="${front?B:f("سمانة")}"/>
-    </g>`; };
-  const top=Object.entries(vol).filter(([m])=>m!=="أخرى").sort((a,b)=>b[1]-a[1]);
-  return `<div class="mmap"><svg viewBox="0 0 220 186" role="img" aria-label="خريطة العضلات">${body(60,true)}${body(160,false)}
-    <text x="60" y="184" text-anchor="middle" font-size="9" fill="#64748B">أمام</text><text x="160" y="184" text-anchor="middle" font-size="9" fill="#64748B">خلف</text></svg>
-    <div class="mm-list">${top.map(([m,v])=>`<span><i style="background:${f(m)}"></i>${m} <b>${v}</b></span>`).join("")}</div></div>`;
+/* ---------- 10) muscle colour system + anatomical map ---------- */
+const MUSCLE_COLOR={"صدر":"#F97316","ضهر":"#2563EB","أكتاف":"#F59E0B","باي":"#059669","تراي":"#0891B2","أمامية":"#7C3AED","خلفية/أرداف":"#DB2777","سمانة":"#65A30D","بطن":"#DC2626","أخرى":"#64748B"};
+const mColor=m=>MUSCLE_COLOR[m]||MUSCLE_COLOR["أخرى"];
+const ARM="M22 72Q18 88 20 104Q26 108 31 104Q33 90 31 80Z", FOREARM="M19 106Q14 124 16 146Q20 148 24 146Q30 126 31 106Z", DELT="M36 54Q24 56 22 70Q24 80 30 82Q34 70 40 60Z";
+const BODY_FRONT=[[null,"M54 36h12v10H54z",1],["ضهر","M52 44Q44 48 36 54L50 55Z"],["أكتاف",DELT],["صدر","M58 58L40 58Q32 64 32 76Q36 88 50 88Q58 86 59 80Z"],["باي",ARM],[null,FOREARM],
+  ["بطن","M33 86Q34 112 40 140L46 140Q44 112 46 90Z"],["بطن","M48.5 92h9v13h-9z"],["بطن","M48.5 107h9v13h-9z"],["بطن","M48.5 122h9v14h-9z"],[null,"M40 142L59 142L59 156Q48 156 40 148Z"],
+  ["أمامية","M38 150Q32 175 36 205Q44 212 52 206Q58 180 58 158Q48 160 38 150Z"],[null,"M39 211a6 5 0 1012 0a6 5 0 10-12 0z"],[null,"M38 218Q36 240 40 252L48 252Q52 236 51 218Z"],[null,"M37 256a7 3 0 1014 0a7 3 0 10-14 0z"],[null,"M12 153a4 7 0 108 0a4 7 0 10-8 0z"]];
+const BODY_BACK=[[null,"M54 36h12v10H54z",1],["ضهر","M58 78Q48 66 36 62Q34 84 44 110Q52 116 58 118Z"],["ضهر","M58 120Q50 118 44 114Q44 128 46 139L58 139Z"],["ضهر","M60 38L52 44Q42 50 36 56Q48 60 60 76Z"],
+  ["أكتاف",DELT],["تراي",ARM],[null,FOREARM],["خلفية/أرداف","M59 141L42 141Q34 150 38 166Q50 172 59 166Z"],["خلفية/أرداف","M38 168Q34 190 38 208Q46 212 54 206Q58 188 58 170Q48 172 38 168Z"],
+  ["سمانة","M38 216Q32 230 38 246L48 248Q54 232 52 216Z"],[null,"M37 256a7 3 0 1014 0a7 3 0 10-14 0z"],[null,"M12 153a4 7 0 108 0a4 7 0 10-8 0z"]];
+function anatomySVG(vol,{dark=false}={}){
+  const max=Math.max(1,...Object.values(vol)), base=dark?"rgba(255,255,255,.09)":"#E2E8F0", gap=dark?"#16213A":"#FFFFFF";
+  let order=0; const ord={}; Object.entries(vol).sort((a,b)=>b[1]-a[1]).forEach(([m])=>ord[m]=order++);
+  const part=([m,d,center])=>{ const v=m?vol[m]||0:0;
+    const fill=v?mColor(m):base, op=v?(0.5+0.5*v/max).toFixed(2):1;
+    const el=`<path d="${d}" fill="${fill}" fill-opacity="${op}" ${v?`class="mm-on" style="--d:${ord[m]*.12}s"`:""}/>`;
+    return center?el:el+`<path d="${d}" fill="${fill}" fill-opacity="${op}" transform="translate(120 0) scale(-1 1)" ${v?`class="mm-on" style="--d:${ord[m]*.12}s"`:""}/>`; };
+  const fig=(parts,x,label)=>`<g transform="translate(${x} 0)" stroke="${gap}" stroke-width="1.4" stroke-linejoin="round"><ellipse cx="60" cy="21" rx="12.5" ry="15" fill="${base}" stroke="none"/>${parts.map(part).join("")}</g>
+    <text x="${x+60}" y="276" text-anchor="middle" font-size="11" fill="${dark?"#94A3B8":"#64748B"}">${label}</text>`;
+  return `<svg class="anat" viewBox="0 0 250 282" role="img" aria-label="خريطة العضلات المستهدفة">${fig(BODY_FRONT,0,"أمام")}${fig(BODY_BACK,130,"خلف")}</svg>`;
+}
+function muscleVol(exs){ const v={}; exs.forEach(e=>{ const m=muscleOf(e[0]||e.name); if(m==="أخرى") return; v[m]=(v[m]||0)+(+(e[1]??e.sets)||0); }); return v; }
+function muscleLegend(vol,{dark=false}={}){ const tot=Object.values(vol).reduce((a,b)=>a+b,0)||1;
+  return `<div class="mlg ${dark?"dk":""}">${Object.entries(vol).sort((a,b)=>b[1]-a[1]).map(([m,v])=>`<div class="mlg-r"><i style="background:${mColor(m)}"></i><span>${m}</span><b class="num">${v}</b><em><s style="width:${Math.round(v/tot*100)}%;background:${mColor(m)}"></s></em></div>`).join("")}</div>`; }
+function muscleMapSVG(vol){ return `<div class="mmap">${anatomySVG(vol)}${muscleLegend(vol)}</div>`; }
+const mChip=m=>`<span class="mchip" style="--mc:${mColor(m)}"><i></i>${m}</span>`;
+
+/* ---------- 11) muscle-specific warm-up (RAMP: Raise · Activate/Mobilise · Potentiate) ---------- */
+const WU={
+  "صدر":{mob:[["فتح الصدر ديناميكي على الحيطة","10 لكل ناحية"],["T-spine rotation على الجنب","6 لكل ناحية"]],act:[["Scap push-ups","2 × 10"],["Band chest fly خفيف","15"]],why:"يفتح الكتف الأمامي ويثبّت لوح الكتف قبل الضغط"},
+  "ضهر":{mob:[["Cat-camel","8 ببطء"],["Thread the needle","6 لكل ناحية"]],act:[["Band pull-apart","2 × 15"],["Scap pull-ups على العقلة","8"]],why:"يشغّل عضلات لوح الكتف عشان السحب يكون من الضهر مش الدراع"},
+  "أكتاف":{mob:[["Band dislocates (عصاية/باند)","10"],["Arm circles كبيرة","10 لكل اتجاه"]],act:[["Band external rotation","12 لكل دراع"],["Prone Y-raise","10"]],why:"يجهّز الروتيتور كاف – أكتر مفصل بيتصاب في الجيم"},
+  "باي":{mob:[["دوران الكوع والرسغ","10 لكل اتجاه"]],act:[["Band curls خفيف","20"]],why:"يدفّي وتر الكوع قبل الأوزان"},
+  "تراي":{mob:[["إطالة تراي فوق الراس ديناميكي","8 لكل دراع"]],act:[["Band pushdowns","20"]],why:"يحمي الكوع في الضغط والتراي"},
+  "أمامية":{mob:[["Leg swings قدام-ورا","10 لكل رجل"],["Walking lunge + reach لفوق","6 لكل رجل"]],act:[["سكوات بوزن الجسم تمبو 3-1-1","10"],["Goblet squat hold تحت","20 ثانية"]],why:"يفتح الحوض والكاحل ويعلّم الجسم العمق الصح"},
+  "خلفية/أرداف":{mob:[["World's greatest stretch","4 لكل ناحية"],["90/90 hip switches","8"]],act:[["Glute bridge مع وقفة ثانيتين","2 × 12"],["Band lateral walk","10 خطوات لكل ناحية"],["Hip hinge بالعصاية","10"]],why:"يصحّي الجلوت والخلفية ويحمي أسفل الضهر في الديدلفت"},
+  "سمانة":{mob:[["Ankle rocks (الركبة للحيطة)","10 لكل رجل"]],act:[["Pogo hops خفيف","20"]],why:"مرونة الكاحل = سكوات أعمق وركبة أأمن"},
+  "بطن":{mob:[["Cat-camel","6"]],act:[["Dead bug","8 لكل ناحية"],["Plank مع شد البطن","20-30 ثانية"]],why:"ثبات الجذع قبل أي حمل تقيل"},
+};
+const LOWER=new Set(["أمامية","خلفية/أرداف","سمانة"]);
+function warmupPlan(p,exs){
+  const vol=muscleVol(exs.map(e=>[e.name,e.sets])), ms=Object.entries(vol).sort((a,b)=>b[1]-a[1]).map(([m])=>m).filter(m=>WU[m]).slice(0,4);
+  const tot=Object.values(vol).reduce((a,b)=>a+b,0)||1, low=ms.reduce((a,m)=>a+(LOWER.has(m)?vol[m]:0),0)/tot;
+  const raise=low>.6?["عجلة ثابتة أو مشي على ميل","4 دقايق · تعرّق خفيف"]:low<.3?["Rower أو Jumping jacks + دوران دراعات","4 دقايق · نَفَس أسرع شوية"]:["Rower أو Elliptical","4 دقايق · الجسم كله"];
+  const blocks=ms.map((m,i)=>{ const w=WU[m]; return {m,why:w.why,items:[...w.mob.slice(0,1).map(x=>["mob",...x]),...w.act.slice(0,i===0?2:1).map(x=>["act",...x])]}; });
+  const R=correctiveRoutine(p.assessment);
+  const corr=R?[[R[0][2],R[0][1].replace(/^\S+\s/,"")],[R[1][2],R[1][1].replace(/^\S+\s/,"")],[R[2][2],R[2][1].replace(/^\S+\s/,"")]]:null;
+  const drills=blocks.reduce((a,b)=>a+b.items.length,0)+(corr?corr.length:0);
+  return {vol,ms,raise,blocks,corr,mins:Math.round(4+drills*0.6)};
+}
+function warmupCardHTML(p,exs,dayNo){
+  const W=warmupPlan(p,exs); if(!W.ms.length) return "";
+  const key=`mofit_wu_${p.id}_${today()}_${dayNo}`; let done=[]; try{ done=JSON.parse(localStorage.getItem(key)||"[]"); }catch(e){}
+  let n=0; const row=(id,t,d,tag)=>{ n++; const on=done.includes(id); return `<button class="wu-i ${on?"on":""}" data-wu="${id}"><span class="wu-c">${on?"✓":""}</span><span class="wu-t"><b>${esc(t)}</b><small>${esc(d)}</small></span>${tag?`<span class="wu-tag ${tag}">${tag==="mob"?"مرونة":"تنشيط"}</span>`:""}</button>`; };
+  let step=0; const sec=(t,sub,body,color)=>{ step++; return `<section class="wu-s" style="--mc:${color||"var(--acc)"}"><header><span class="wu-n">${step}</span><div><b>${t}</b>${sub?`<small>${sub}</small>`:""}</div></header>${body}</section>`; };
+  const html=[
+    sec("تسخين عام",W.raise[1],row("raise",W.raise[0],"لحد ما تحس بدفا وتعرّق خفيف")),
+    W.corr?sec("روتينك التصحيحي (NASM)","من تقييم "+niceDate(p.assessment.date),W.corr.map(([list,d],i)=>row(`c${i}`,list[0],d.replace(/<[^>]+>/g,""))).join("")):"",
+    ...W.blocks.map(b=>sec(b.m,b.why,b.items.map(([k,t,d],j)=>row(`${b.m}${j}`,t,d,k)).join(""),mColor(b.m))),
+    sec("مجموعات التهيئة","جوّه أول تمرين لكل عضلة – بأوزان خفيفة وعدات قليلة",`<p class="hint" style="margin:0">الأوزان محسوبة من وزن شغلك الأسبوع اللي فات. مابتتحسبش في التسجيل.</p>`)
+  ].join("");
+  const pctDone=Math.round(done.length/n*100);
+  return `<details class="card wu" ${pctDone<100?"open":""} data-wukey="${key}" data-wun="${n}">
+    <summary><div class="wu-hero"><div class="wu-map">${anatomySVG(W.vol,{dark:true})}</div><div class="wu-meta"><span class="wu-k">إحماء النهارده</span><b class="wu-title">${W.ms.slice(0,3).join(" · ")}${W.ms.length>3?` <span class="wu-more">+${W.ms.length-3}</span>`:""}</b><small>${W.mins} دقيقة · ${n} خطوات · مبني على العضلات اللي هتشتغل</small>
+      <div class="wu-prog"><i style="width:${pctDone}%"></i></div><small class="wu-pt">${pctDone===100?"✅ جاهز – يلا على أول تمرين":pctDone?`${pctDone}% خلصت`:"دوس على كل خطوة لما تخلّصها"}</small></div></div></summary>
+    <div class="wu-body">${html}</div></details>`;
+}
+function wireWarmup(root){
+  const card=root.querySelector("details.wu"); if(!card) return; const key=card.dataset.wukey, n=+card.dataset.wun;
+  card.querySelectorAll("[data-wu]").forEach(b=>b.onclick=()=>{ let done=[]; try{ done=JSON.parse(localStorage.getItem(key)||"[]"); }catch(e){}
+    const id=b.dataset.wu, on=!done.includes(id); done=on?[...done,id]:done.filter(x=>x!==id); localStorage.setItem(key,JSON.stringify(done));
+    b.classList.toggle("on",on); b.querySelector(".wu-c").textContent=on?"✓":""; try{ on&&navigator.vibrate&&navigator.vibrate(15); }catch(e){}
+    const pc=Math.round(done.length/n*100); card.querySelector(".wu-prog i").style.width=pc+"%"; card.querySelector(".wu-pt").textContent=pc===100?"✅ جاهز – يلا على أول تمرين":pc+"% خلصت"; });
+}
+function feederHTML(workW,m){
+  const r=v=>Math.max(2.5,Math.round(v/2.5)*2.5);
+  const steps=workW>=15?[[0.5,8],[0.75,3]].map(([p,n])=>`<span class="pill">${fmt(r(workW*p),1)} كجم × ${n}</span>`).join(""):`<span class="pill">وزن خفيف × 10</span><span class="pill">+ مجموعة متوسطة × 4</span>`;
+  return `<div class="warm" style="--mc:${mColor(m)}"><b>🔥 تهيئة ${m}</b><div class="scroller">${steps}</div><small>أول تمرين ${m} النهارده · راحة 45-60 ثانية</small></div>`;
 }
