@@ -18,7 +18,7 @@ async function boot(){
   S.me=me; $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
   await loadVideos(); flushQueue();
   if(me.role==="coach"){ S.tab="clients"; await Promise.all([loadClients(),loadCoachTemplates(),loadDietTemplates()]); }
-  else { await ensureHealth(); await openClient(me); const qt=new URLSearchParams(location.search).get("tab"); if(qt==="train"||qt==="food"){ S.tab=qt; if(qt==="food") S.date=today(); } }
+  else { await ensureHealth(); await openClient(me); const qt=new URLSearchParams(location.search).get("tab"); if(qt==="supps"&&S.supps?.length){ S.tab="supps"; } else if(qt==="train"||qt==="food"){ S.tab=qt; if(qt==="food") S.date=today(); } }
   render();
   setTimeout(maybeOnboard,400);
 }
@@ -28,11 +28,13 @@ async function openClient(p){
   S.program=error? (cacheGet("prog_"+p.id)||[]) : (data||[]); if(!error) cacheSet("prog_"+p.id,S.program);
   const days=[...new Set(S.program.map(e=>e.day_no))];
   S.day = todayDayNo() || days[0] || 1;
+  S.supps=[]; if(S.me?.role!=="coach") await loadSupps(p);
 }
 async function refreshClient(){ const { data } = await sb.from("profiles").select("*").eq("id",S.client.id).single(); const tab=S.tab, day=S.day, wk=S.week; await openClient(data); S.tab=tab; S.day=day; S.week=wk; }
 function tabs(){
   if(S.me.role==="coach" && !S.client) return [["clients","العملاء"],["videos","التمارين"],["foods","الأطعمة"]];
   const t=[["home","الرئيسية"],["train","التمرين"],["food","التغذية"],["habits","العادات"],["body","التقدم"]];
+  if(S.me.role!=="coach" && S.supps?.length) t.push(["supps","المكملات"]);
   if(S.me.role==="coach") t.push(["setup","التحكم"]);
   return t;
 }
@@ -61,7 +63,7 @@ function render(){
     m.appendChild(bar);
   }
   const host=document.createElement("div"); m.appendChild(host);
-  ({home:viewHome,train:viewTrain,food:viewFood,habits:viewHabits,body:viewBody,setup:viewSetup,clients:viewClients,videos:viewVideos,foods:viewFoods}[S.tab]||viewHome)(host);
+  ({home:viewHome,train:viewTrain,food:viewFood,habits:viewHabits,body:viewBody,setup:viewSetup,supps:viewSupps,clients:viewClients,videos:viewVideos,foods:viewFoods}[S.tab]||viewHome)(host);
 }
 
 /* ======================================================================
@@ -280,7 +282,7 @@ function openFoodPicker(title, onPick, opts={}){
     $("#fpAdd").onclick=async()=>{ const qv=num(qi.value); if(!qv||qv<=0) return toast("اكتب الكمية"); await onPick(food,qv); closeSheet(); };
   }
 }
-function qtyText(i){ return `${fmt(i.qty,COUNT_UNITS(i.unit)?2:0)} ${i.unit||"جم"}`; }
+function qtyText(i){ return `${fmt(i.qty,COUNT_UNITS(i.unit)?2:0)} ${esc(i.unit||"جم")}`; }
 
 async function viewFood(el){ return renderMeals(el,{mode:"day"}); }
 async function renderMeals(el,{mode}){

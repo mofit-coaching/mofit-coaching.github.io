@@ -96,13 +96,14 @@ function addClientSheet(el){
    COACH: CLIENT CONTROL PANEL
    ====================================================================== */
 async function viewSetup(el){
-  const tabsH=[["data","👤 البيانات"],["program","🏋️ التمرين"],["diet","🥗 التغذية"],["report","📄 تقرير"],["account","🔐 الحساب"]];
+  const tabsH=[["data","👤 البيانات"],["program","🏋️ التمرين"],["diet","🥗 التغذية"],["supps","💊 المكملات"],["report","📄 تقرير"],["account","🔐 الحساب"]];
   el.innerHTML=`<div class="seg" style="margin-bottom:14px">${tabsH.map(([k,l])=>`<button data-sub="${k}" class="${S.setupTab===k?"on":""}">${l}</button>`).join("")}</div><div id="sub"></div>`;
   el.querySelectorAll("[data-sub]").forEach(b=>b.onclick=()=>{ S.setupTab=b.dataset.sub; viewSetup(el); });
   const sub=$("#sub");
   if(S.setupTab==="data") return setupData(sub);
   if(S.setupTab==="program") return setupProgram(sub);
   if(S.setupTab==="diet") return setupDiet(sub);
+  if(S.setupTab==="supps") return setupSupps(sub);
   if(S.setupTab==="report") return viewReport(sub);
   return setupAccount(sub);
 }
@@ -121,16 +122,17 @@ function setupData(el){
       <button class="btn navy block" id="sSave">حفظ الاشتراك</button></div>
     <div class="card"><div class="card-h"><div class="ic">👤</div><h2>بيانات العميل</h2></div>
       <label class="f">الاسم<input data-x="full_name" value="${esc(p.full_name??"")}"></label>${profileFields(p)}
-      <label class="f">ملاحظات الكوتش (خاصة – العميل مش بيشوفها)<textarea rows="2" data-x="coach_notes">${esc(p.coach_notes??"")}</textarea></label>
+      <label class="f">ملاحظات الكوتش (خاصة – العميل مش بيشوفها)<textarea rows="2" data-x="coach_notes" placeholder="بيتحمل…"></textarea></label>
       <button class="btn primary block" id="pSave">حفظ البيانات</button></div>`;
   el.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{ const st=$("#sStart").value||today(); $("#sStart").value=st; const d=new Date(st+"T00:00:00"); d.setMonth(d.getMonth()+(+b.dataset.sm)); d.setDate(d.getDate()-1); $("#sEnd").value=d.toISOString().slice(0,10); $("#sPlan").value=$("#sPlan").value||(b.dataset.sm==="1"?"شهري":b.dataset.sm+" شهور"); });
-  el.insertAdjacentHTML("afterbegin",healthCard(p)+painCard(p)); el.insertAdjacentHTML("beforeend",assessmentCardHTML(p)); wireAssessment($("#ohsa"),p);
+  el.insertAdjacentHTML("afterbegin",healthCard(p)+painCard(p)); fillCoachNote(el,p); el.insertAdjacentHTML("beforeend",assessmentCardHTML(p)); wireAssessment($("#ohsa"),p);
   el.querySelectorAll("[data-pres]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("client_events").update({resolved_at:new Date().toISOString()}).eq("id",b.dataset.pres); if(error) return toast("تعذر الحفظ"); await loadEvents(); toast("تم ✓"); setupData(el); });
   $("#hClear")&&($("#hClear").onclick=async()=>{ const { error } = await sb.from("health_screens").update({cleared_at:new Date().toISOString()}).eq("client_id",p.id); if(error) return toast("تعذر الحفظ"); await loadHealth(); toast("تم ✓"); setupData(el); });
   $("#sSave").onclick=async()=>{ const { error } = await sb.from("profiles").update({sub_plan:$("#sPlan").value.trim()||null, sub_price:num($("#sPrice").value), sub_start:$("#sStart").value||null, sub_end:$("#sEnd").value||null, sub_paid:$("#sPaid").checked, sub_notes:$("#sNotes").value.trim()||null}).eq("id",p.id);
     if(error) return toast(error.message); await refreshClient(); toast("✓ اتحفظ الاشتراك"); setupData(el); };
   $("#pSave").onclick=async()=>{
-    const upd={...readProfile(el), full_name:el.querySelector('[data-x="full_name"]').value.trim(), coach_notes:el.querySelector('[data-x="coach_notes"]').value.trim()||null};
+    const upd={...readProfile(el), full_name:el.querySelector('[data-x="full_name"]').value.trim(), };
+    const { error:ne } = await sb.from("coach_private").upsert({client_id:p.id, notes:el.querySelector('[data-x="coach_notes"]').value.trim()||null, updated_at:new Date().toISOString()},{onConflict:"client_id"}); if(ne) return toast(ne.message);
     const { error } = await sb.from("profiles").update(upd).eq("id",p.id); if(error) return toast(error.message);
     await refreshClient(); toast("✓ اتحفظت"); render();
   };
@@ -330,3 +332,6 @@ async function viewFoods(el){
 }
 
 boot();
+
+/* coach-only notes live in coach_private (clients cannot read them) */
+async function fillCoachNote(el,p){ const t=el.querySelector('[data-x="coach_notes"]'); if(!t) return; const { data } = await sb.from("coach_private").select("notes").eq("client_id",p.id).maybeSingle(); t.value=data?.notes||""; t.placeholder=""; }

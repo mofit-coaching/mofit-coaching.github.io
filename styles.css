@@ -421,3 +421,17 @@ details.card.wu>summary::after{color:#94A3B8;top:14px}
 .wu-title{font-size:1.2rem}
 .wu-more{font-size:.85rem;background:rgba(255,255,255,.14);border-radius:99px;padding:0 7px;font-family:"Cairo",sans-serif;font-weight:700}
 .wu-title{font-size:1.1rem;white-space:normal}.wu-meta{min-width:0}
+
+/* ---------- supplements ---------- */
+.supp .card-h{margin-bottom:8px}
+.supp-dose{font-weight:800;font-size:1.15rem;color:var(--acc);white-space:nowrap;text-align:center}
+.supp-dose small{display:block;font-size:.68rem;font-weight:600;color:var(--slate)}
+.supp-meta{display:flex;flex-wrap:wrap;gap:6px;align-items:center;font-size:.8rem;color:var(--navy3)}
+.supp-warn{margin:8px 0 0;padding:8px 10px;border-radius:10px;background:var(--acc-soft);color:#9A3412;font-size:.78rem;line-height:1.5}
+.supp-row{border-top:1px solid var(--soft2);padding:10px 0}
+.supp-row:first-of-type{border-top:0}
+.supp-top{gap:8px;align-items:center;flex-wrap:wrap;cursor:pointer}
+.supp-top input{width:auto;min-height:0}
+.supp-calc{font-size:.74rem;margin-inline-start:auto}
+.supp-edit{display:none;margin-top:8px}
+.supp-row.on .supp-edit{display:grid}

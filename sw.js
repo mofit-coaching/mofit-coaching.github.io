@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-453a4297";
-const SHELL=["./","index.html","styles.css?v=453a4297","core.js?v=453a4297","data.js?v=453a4297","pro.js?v=453a4297","lab.js?v=453a4297","icons.js?v=453a4297","views.js?v=453a4297","coach.js?v=453a4297","manifest.json","icon.svg","icon-192.png"];
+const C="mofit-5a1c0e22";
+const SHELL=["./","index.html","styles.css?v=5a1c0e22","core.js?v=5a1c0e22","data.js?v=5a1c0e22","pro.js?v=5a1c0e22","lab.js?v=5a1c0e22","icons.js?v=5a1c0e22","supps.js?v=5a1c0e22","views.js?v=5a1c0e22","coach.js?v=5a1c0e22","manifest.json","icon.svg","icon-192.png"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
