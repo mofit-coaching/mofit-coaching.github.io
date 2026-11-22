@@ -128,7 +128,22 @@ async function suppWeight(p){
 async function loadSupps(p){
   const { data, error } = await sb.from("client_supplements").select("*").eq("client_id",p.id).order("position");
   if(error){ S.supps = cacheGet("supps_"+p.id) || []; return S.supps; }
-  S.supps = (data||[]).filter(r=>SUPP[r.supp_key]); cacheSet("supps_"+p.id, S.supps); return S.supps;
+  S.supps = (data||[]).filter(r=>SUPP[r.supp_key]||r.custom_name); cacheSet("supps_"+p.id, S.supps); return S.supps;
+}
+
+/* ---------- coach-written (custom) supplements ----------
+   supp_key "c_xxxxxxxx" + custom_name / custom_unit. No auto-calculation and no
+   cap: the dose is exactly what the coach wrote (his responsibility). */
+const isCustom = r => !!(r && r.custom_name && !SUPP[r.supp_key]);
+function customKey(){ const c="abcdefghijkmnpqrstuvwxyz23456789", a=new Uint32Array(10); crypto.getRandomValues(a); return "c_"+[...a].map(x=>c[x%c.length]).join(""); }
+function customCardHTML(r){
+  const dose = r.dose!==null&&r.dose!==undefined ? `${fmt(r.dose,2)} ${esc(r.custom_unit||"")}` : `<small>حسب الكوتش</small>`;
+  return `<div class="card supp">
+    <div class="card-h"><div class="ic acc">💊</div><h2>${esc(r.custom_name)}<small>من اختيار الكوتش</small></h2>
+      <div class="supp-dose num">${dose}</div></div>
+    ${r.timing?`<div class="supp-meta"><span>🕒 ${esc(r.timing)}</span></div>`:""}
+    ${r.note?`<p class="hint">📝 ${esc(r.note)}</p>`:""}
+  </div>`;
 }
 
 /* ---------- client view ---------- */
@@ -143,7 +158,7 @@ function suppsClientHTML(p, rows, W){
   if(!rows.length) return `<div class="card">${emptyBox("💊","الكوتش لسه ما حددلكش مكملات.")}</div>`;
   if(p.age && +p.age<18) return `<div class="card">${emptyBox("🔒","المكملات دي للبالغين فقط – كلم الكوتش.")}</div>`;
   const flagged = S.health?.[p.id]?.flagged;
-  const cards = rows.map(r=>{ const s=SUPP[r.supp_key], d=suppDose(s, W.w, p.sex, r.dose), ev=EV[s.ev];
+  const cards = rows.map(r=>{ if(isCustom(r)) return customCardHTML(r); const s=SUPP[r.supp_key], d=suppDose(s, W.w, p.sex, r.dose), ev=EV[s.ev];
     const how=(s.how||"").replace("{load}", W.w&&s.load? fmt(roundTo(s.load*W.w,1)) : "20");
     return `<div class="card supp">
       <div class="card-h"><div class="ic acc">💊</div><h2>${esc(s.ar)}<small dir="ltr" style="text-align:right">${esc(s.en)}</small></h2>
@@ -179,20 +194,33 @@ async function setupSupps(el){
           </div>
           ${d.warn&&r?`<p class="supp-warn">الجرعة قريبة من الحد الأقصى – الأكل كمان بيضيف من نفس العنصر.</p>`:""}
         </div>`; }).join("")}</div>`).join("")}
+    <div class="card"><div class="card-h"><div class="ic acc">✍️</div><h2>مكملات تكتبها بنفسك<small>أي مكمل أو منتج مش في القايمة – اكتب الاسم والجرعة والوحدة</small></h2></div>
+      <div id="custList">${rows.filter(isCustom).map(customRowHTML).join("")}</div>
+      <button class="btn block" id="custAdd" type="button">+ إضافة مكمل جديد</button>
+      <p class="hint" style="margin:8px 0 0">الجرعة هنا بتظهر للعميل زي ما كتبتها بالظبط (مفيش حساب على الوزن ولا حد أقصى تلقائي) – راجعها كويس.</p></div>
     <button class="btn primary block" id="suppSave">💾 حفظ المكملات</button>
     <details class="card" style="margin-top:14px"><summary><b>👁 معاينة اللي العميل هيشوفه</b></summary><div id="suppPrev" style="margin-top:12px"></div></details>`;
   const preview=()=>{ $("#suppPrev").innerHTML = suppsClientHTML(p, collect(), W); };
+  const wireCust=row=>{ row.querySelectorAll("input").forEach(i=>i.oninput=preview); row.querySelector("[data-cdel]").onclick=()=>{ row.remove(); preview(); }; };
+  el.querySelectorAll(".cust-row").forEach(wireCust);
+  $("#custAdd").onclick=()=>{ const box=$("#custList"); box.insertAdjacentHTML("beforeend", customRowHTML({supp_key:customKey()})); const row=box.lastElementChild; wireCust(row); row.querySelector("[data-cname]").focus(); };
   el.querySelectorAll(".supp-row [data-on]").forEach(cb=>cb.onchange=()=>{ cb.closest(".supp-row").classList.toggle("on",cb.checked); preview(); });
   el.querySelectorAll(".supp-row input:not([data-on])").forEach(i=>i.oninput=preview);
   function collect(){
-    return [...el.querySelectorAll(".supp-row")].filter(x=>x.querySelector("[data-on]").checked).map((x,i)=>({
+    return [...el.querySelectorAll(".supp-row:not(.cust-row)")].filter(x=>x.querySelector("[data-on]").checked).map((x,i)=>({
       client_id:p.id, supp_key:x.dataset.k, position:i, dose:num(x.querySelector("[data-dose]").value),
-      timing:x.querySelector("[data-timing]").value.trim()||null, note:x.querySelector("[data-note]").value.trim()||null, updated_at:new Date().toISOString() }));
+      timing:x.querySelector("[data-timing]").value.trim()||null, note:x.querySelector("[data-note]").value.trim()||null, custom_name:null, custom_unit:null, updated_at:new Date().toISOString() }))
+    .concat([...el.querySelectorAll(".cust-row")].filter(x=>x.querySelector("[data-cname]").value.trim()).map(x=>({
+      client_id:p.id, supp_key:x.dataset.k, position:0, dose:num(x.querySelector("[data-cdose]").value),
+      custom_name:x.querySelector("[data-cname]").value.trim().slice(0,80), custom_unit:x.querySelector("[data-cunit]").value.trim().slice(0,20)||null,
+      timing:x.querySelector("[data-ctiming]").value.trim().slice(0,120)||null, note:x.querySelector("[data-cnote]").value.trim().slice(0,300)||null, updated_at:new Date().toISOString() })))
+    .map((r,i)=>({...r, position:i}));
   }
   preview();
   $("#suppSave").onclick=async()=>{
     const out=collect();
-    const bad=out.find(r=>{ const s=SUPP[r.supp_key]; return r.dose!==null && (r.dose<0 || (s.cap && r.dose>s.cap)); });
+    const badC=out.find(r=>isCustom(r) && r.dose!==null && (r.dose<0||r.dose>=100000)); if(badC) return toast(`جرعة ${badC.custom_name} مش صحيحة`);
+    const bad=out.filter(r=>!isCustom(r)).find(r=>{ const s=SUPP[r.supp_key]; return r.dose!==null && (r.dose<0 || (s.cap && r.dose>s.cap)); });
     if(bad){ const s=SUPP[bad.supp_key]; return toast(`جرعة ${s.ar} أكبر من الحد الأقصى (${fmt(s.cap,1)} ${unitAr(s.unit)})`); }
     const keep=out.map(r=>r.supp_key);
     const del=rows.filter(r=>!keep.includes(r.supp_key)).map(r=>r.supp_key);
@@ -200,4 +228,18 @@ async function setupSupps(el){
     if(out.length){ const { error } = await sb.from("client_supplements").upsert(out,{onConflict:"client_id,supp_key"}); if(error) return toast(error.message); }
     toast("✓ اتحفظت المكملات"); setupSupps(el);
   };
+}
+
+function customRowHTML(r){
+  return `<div class="supp-row on cust-row" data-k="${esc(r.supp_key)}">
+    <div class="row" style="gap:8px;align-items:flex-end">
+      <label class="f" style="flex:1">اسم المكمل<input data-cname maxlength="80" value="${esc(r.custom_name??"")}" placeholder="مثلاً: أوميجا 3"></label>
+      <button class="btn sm danger" type="button" data-cdel title="حذف" style="margin-bottom:10px">✕</button></div>
+    <div class="grid3 supp-edit" style="display:grid">
+      <label class="f">الجرعة اليومية<input type="number" inputmode="decimal" step="any" min="0" data-cdose value="${r.dose??""}"></label>
+      <label class="f">الوحدة<input data-cunit maxlength="20" value="${esc(r.custom_unit??"")}" placeholder="جم / مجم / كبسولة"></label>
+      <label class="f">التوقيت<input data-ctiming maxlength="120" value="${esc(r.timing??"")}" placeholder="مع الفطار"></label>
+    </div>
+    <label class="f">ملاحظة للعميل<input data-cnote maxlength="300" value="${esc(r.note??"")}"></label>
+  </div>`;
 }

@@ -298,7 +298,7 @@ function healthCard(p){ const h=S.health?.[p.id];
 async function loadHealth(){ const { data } = await sb.from("health_screens").select("*"); S.health=Object.fromEntries((data||[]).map(h=>[h.client_id,h])); }
 
 /* ---------- 11) full backup (coach) ---------- */
-const BACKUP_TABLES=["profiles","program_exercises","set_logs","habits","meal_items","body_logs","checkins","diet_plan_items","diet_templates","program_templates","exercise_videos","health_screens","foods"];
+const BACKUP_TABLES=["profiles","program_exercises","set_logs","habits","meal_items","body_logs","checkins","diet_plan_items","diet_templates","program_templates","exercise_videos","health_screens","client_events","client_supplements","price_plans","coach_private","foods"];
 function backupAge(){ const t=localStorage.getItem("mofit_last_backup"); return t?daysBetween(t.slice(0,10),today()):null; }
 async function exportBackup(btn){
   btn.disabled=true; const out={ app:"mofit", exported_at:new Date().toISOString(), tables:{} };

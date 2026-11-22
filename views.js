@@ -46,7 +46,7 @@ function renderTop(){
     return;
   }
   const wk=currentWeek(c), t=targets(c);
-  $("#top").innerHTML=`<div class="top-row"><div class="logo">MO<b>FIT</b></div><div class="sp"></div>${S.me.role==="coach"?"":`<button class="ibtn" onclick="logout()">خروج</button>`}</div>
+  $("#top").innerHTML=`<div class="top-row"><div class="logo">MO<b>FIT</b></div><div class="sp"></div>${S.me.role==="coach"?"":`<button class="ibtn" onclick="contactCoach()" title="كلّم الكوتش">💬 الكوتش</button><button class="ibtn" onclick="logout()">خروج</button>`}</div>
     <div class="hello"><div class="av">${initials(c)}</div><div><h1>${S.me.role==="coach"?esc(c.full_name||c.email):"أهلاً، "+esc((c.full_name||"").split(" ")[0])+" 👋"}</h1>
       <p>${esc(c.goal||"")}${c.level?" · "+LEVELS[c.level]?.icon+" "+esc(c.level):""}${t.kcal?" · "+fmt(t.kcal)+" kcal":""}</p></div>
       <div class="ringwrap">${ring(wk,12,{size:64,stroke:7,color:"#F97316",track:"rgba(255,255,255,.15)",label:wk,sub:"من 12",textColor:"#fff"})}</div></div>`;
@@ -417,7 +417,7 @@ async function homeCheckinCard(p,wk){
   const host=$("#hCI"); if(!host) return;
   const { data } = await sb.from("checkins").select("week,reviewed_at,coach_reply").eq("client_id",p.id).order("week",{ascending:false}).limit(3);
   const C=data||[], thisW=C.find(c=>c.week===wk), lastReply=C.find(c=>c.coach_reply), sub=S.me.role==="client"?subStatus(p):null;
-  host.innerHTML=(sub&&sub.cls!=="good"?`<div class="card" style="border:1.5px solid var(--acc-line)"><div class="card-h"><div class="ic acc">${sub.icon}</div><h2>اشتراكك<small>${esc(sub.text)} – تواصل مع الكوتش للتجديد</small></h2></div></div>`:"")+
+  host.innerHTML=(sub&&sub.cls!=="good"?`<div class="card" style="border:1.5px solid var(--acc-line)"><div class="card-h"><div class="ic acc">${sub.icon}</div><h2>اشتراكك<small>${esc(sub.text)}</small></h2><button class="btn sm primary" onclick="openPlansSheet()">جدّد</button></div></div>`:"")+
     `<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>متابعة الأسبوع ${wk}<small>${thisW?(thisW.reviewed_at?"✓✓ الكوتش رد":"✓ اتبعتت – مستنية رد الكوتش"):"لسه ما اتبعتتش – وزن + صور + إحساسك"}</small></h2><button class="btn sm ${thisW?"":"primary"}" id="goCI">${thisW?"عرض":"ابعت"}</button></div>
      ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
   $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };

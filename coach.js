@@ -38,6 +38,7 @@ async function viewClients(el){
     <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
       ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
     <div class="card" id="bk"></div>
+    <div class="card" id="prices"></div>
     <div class="card"><div class="card-h"><div class="ic acc">✍</div><h2>برامج الكوتش المحفوظة<small>بتظهر في قائمة "برنامج الكوتش" عند اختيار النظام</small></h2></div><div id="tplList"></div></div>`;
   const AL=Object.fromEntries(C.map(c=>{ const a=clientAlerts(c,S.overview?.[c.id]), h=healthAlert(c); if(h) a.push(h); a.push(...eventAlerts(c)); const r=rateAlert(c); if(r) a.push(r); return [c.id,a.sort((x,y)=>y.p-x.p)]; }));
   const urgent=C.filter(c=>AL[c.id].length).sort((a,b)=>AL[b.id][0].p-AL[a.id][0].p||AL[b.id].length-AL[a.id].length);
@@ -59,6 +60,7 @@ async function viewClients(el){
   $("#bk").innerHTML=`<div class="card-h"><div class="ic ${age===null||age>14?"acc":""}">📦</div><h2>النسخة الاحتياطية<small>${age===null?"⚠ عمرك ما نزّلت نسخة – اعمل واحدة دلوقتي":age>14?"⚠ آخر نسخة من "+age+" يوم":"✅ آخر نسخة من "+age+" يوم"}</small></h2></div>
     <p class="hint">ملف واحد فيه كل العملاء والبرامج والتسجيلات والأطعمة. احفظه على Google Drive كل أسبوعين.</p><button class="btn navy block" id="bkBtn">📦 نزّل نسخة احتياطية كاملة</button>`;
   $("#bkBtn").onclick=e=>exportBackup(e.currentTarget);
+  coachPricesCard($("#prices"));
 }
 function addClientSheet(el){
   const body=openSheet(`<div class="between"><b style="font-size:1.1rem">عميل جديد</b><button class="btn sm ghost" data-close>✕</button></div>

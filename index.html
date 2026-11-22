@@ -17,18 +17,27 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Lalezar&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=5a1c0e22">
+<link rel="stylesheet" href="styles.css?v=7322f01d">
 </head>
 <body>
 <section id="loginView" class="login hidden">
   <div class="login-art"><div class="logo-big">MO<b>FIT</b></div><p>برنامجك · تغذيتك · تطورك — في مكان واحد</p></div>
-  <form id="loginForm" class="login-card">
-    <h2>تسجيل الدخول</h2>
+  <div class="login-card">
+  <div class="ltabs" role="tablist"><button type="button" class="ltab on" data-lt="login" role="tab">🔐 تسجيل الدخول</button><button type="button" class="ltab" data-lt="plans" role="tab">💰 الأسعار والعروض</button></div>
+  <form id="loginForm">
     <label class="f">الإيميل<input id="loginEmail" type="email" autocomplete="username" required></label>
     <label class="f">كلمة السر<input id="loginPass" type="password" autocomplete="current-password" required></label>
     <p class="err" id="loginErr"></p>
     <button class="btn primary block" type="submit">دخول</button>
+    <p class="login-links"><a id="forgotLink" target="_blank" rel="noopener">نسيت كلمة السر؟</a> · <a href="#prices" onclick="loginTab('plans');return false">لسه مش مشترك؟ شوف العروض</a></p>
   </form>
+  <div id="plansPane" class="hidden">
+    <p class="hint" style="margin-top:0">اختار العرض المناسب ليك – هيفتحلك واتساب برسالة جاهزة للكوتش.</p>
+    <div id="plansBox"></div>
+    <ul class="plan-feats"><li>برنامج تمرين مخصص ليك</li><li>نظام غذائي محسوب على هدفك</li><li>متابعة أسبوعية مع الكوتش</li><li>تطبيق Mofit لتسجيل تمرينك وأكلك وتقدمك</li></ul>
+    <a class="btn block wa-btn" id="askLink" target="_blank" rel="noopener">💬 عندك سؤال؟ كلّم الكوتش واتساب</a>
+  </div>
+  </div>
 </section>
 <section id="appView" class="hidden">
   <header class="top" id="top"></header>
@@ -37,13 +46,14 @@
 </section>
 <div id="timer" class="timer hidden"></div>
 <div id="sheet" class="sheet hidden"><div class="sheet-bg"></div><div class="sheet-card"><div class="sheet-grab"></div><div id="sheetBody"></div></div></div>
-<script src="core.js?v=5a1c0e22"></script>
-<script src="icons.js?v=5a1c0e22"></script>
-<script src="data.js?v=5a1c0e22"></script>
-<script src="pro.js?v=5a1c0e22"></script>
-<script src="lab.js?v=5a1c0e22"></script>
-<script src="supps.js?v=5a1c0e22"></script>
-<script src="views.js?v=5a1c0e22"></script>
-<script src="coach.js?v=5a1c0e22"></script>
+<script src="core.js?v=7322f01d"></script>
+<script src="icons.js?v=7322f01d"></script>
+<script src="data.js?v=7322f01d"></script>
+<script src="pro.js?v=7322f01d"></script>
+<script src="lab.js?v=7322f01d"></script>
+<script src="supps.js?v=7322f01d"></script>
+<script src="prices.js?v=7322f01d"></script>
+<script src="views.js?v=7322f01d"></script>
+<script src="coach.js?v=7322f01d"></script>
 </body>
 </html>
