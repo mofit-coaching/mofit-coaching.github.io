@@ -49,7 +49,7 @@ function renderTop(){
   $("#top").innerHTML=`<div class="top-row"><div class="logo">MO<b>FIT</b></div><div class="sp"></div>${S.me.role==="coach"?"":`<button class="ibtn" onclick="contactCoach()" title="كلّم الكوتش">💬 الكوتش</button><button class="ibtn" onclick="logout()">خروج</button>`}</div>
     <div class="hello"><div class="av">${initials(c)}</div><div><h1>${S.me.role==="coach"?esc(c.full_name||c.email):"أهلاً، "+esc((c.full_name||"").split(" ")[0])+" 👋"}</h1>
       <p>${esc(c.goal||"")}${c.level?" · "+LEVELS[c.level]?.icon+" "+esc(c.level):""}${t.kcal?" · "+fmt(t.kcal)+" kcal":""}</p></div>
-      <div class="ringwrap">${ring(wk,12,{size:64,stroke:7,color:"#F97316",track:"rgba(255,255,255,.15)",label:wk,sub:"من 12",textColor:"#fff"})}</div></div>`;
+      <div class="ringwrap">${ring(wInBlock(wk),BLOCK,{size:64,stroke:7,color:"#F97316",track:"rgba(255,255,255,.15)",label:wInBlock(wk),sub:wk>BLOCK?"بلوك "+blockOf(wk):"من 12",textColor:"#fff"})}</div></div>`;
 }
 function render(){
   renderTop();
@@ -125,7 +125,8 @@ function heatmap(p,H){
   const by=Object.fromEntries(H.map(h=>[h.log_date,dayScore(h)]));
   const start=p.start_date||today(), wk=currentWeek(p);
   let html=`<div class="heat"><span></span>${["1","2","3","4","5","6","7"].map(d=>`<span style="text-align:center">${d}</span>`).join("")}`;
-  for(let w=1;w<=Math.max(wk,4)&&w<=12;w++){
+  const b0=(blockOf(wk)-1)*BLOCK;
+  for(let w=b0+1;w<=Math.max(wk,b0+4)&&w<=b0+BLOCK;w++){
     html+=`<span>أ${w}</span>`;
     for(let d=0;d<7;d++){ const iso=addDays(start,(w-1)*7+d), s=by[iso]; const lv=s===undefined||s===null?"":s>=.9?"l4":s>=.7?"l3":s>=.45?"l2":"l1"; html+=`<i class="${lv} ${iso===today()?"today":""}" title="${iso}"></i>`; }
   }
@@ -155,7 +156,7 @@ async function viewTrain(el){
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📅</div><h2>${esc(p.split_name||"برنامج التمرين")}<small>${p.level?LEVELS[p.level]?.icon+" "+esc(p.level)+" · ":""}${days.length} أيام في الأسبوع</small></h2></div>
       <div class="scroller" id="dayCards">${[...Array(7)].map((_,i)=>{ const d=i+1, has=days.includes(d); return `<button class="daycard ${S.day===d?"on":""} ${has?"":"rest"}" data-d="${d}">${d===tdn?'<span class="dot"></span>':""}<b>${has?"يوم "+d:"راحة"}</b><small>${has?esc(dayLabel(d)||S.program.filter(e=>e.day_no===d).length+" تمارين"):"😴 استشفاء"}</small>${has?`<span class="dmus">${Object.entries(muscleVol(S.program.filter(e=>e.day_no===d).map(e=>[e.name,e.sets]))).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([m])=>`<i style="background:${mColor(m)}" title="${m}"></i>`).join("")}</span>`:""}</button>`; }).join("")}</div>
       <div class="muted" style="margin:8px 0 6px;font-weight:700">الأسبوع</div>
-      <div class="scroller" id="wkChips">${[...Array(12)].map((_,i)=>`<button class="chip ${S.week===i+1?"on":""} ${wkNow===i+1?"cur":""}" data-w="${i+1}">${i+1}</button>`).join("")}</div></div>
+      ${blockNavHTML(S.week,p)}<div class="scroller" id="wkChips">${blockWeeks(S.week).map(w=>`<button class="chip ${S.week===w?"on":""} ${wkNow===w?"cur":""}" data-w="${w}">${w}${isDeload(p,w)?" 🔄":""}</button>`).join("")}</div></div>
     <div class="card tools hidden" id="tTools"></div><div id="tPrep"></div><div id="exList"></div><div class="card" id="failCard"></div>`;
   el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{S.day=+b.dataset.d; viewTrain(el);});
   el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{S.week=+b.dataset.w; viewTrain(el);});
@@ -379,7 +380,7 @@ async function viewHabits(el){
   };
   const wk=currentWeek(p), by={}; H.forEach(h=>{ const x=weekOfDate(p,h.log_date); if(x) (by[x]=by[x]||[]).push(h); });
   $("#hWeeks").innerHTML=`<div class="card-h"><div class="ic">📊</div><h2>المتوسط الأسبوعي</h2></div><div class="scrollx"><table><tr><th>أسبوع</th><th>دايت</th><th>تمرين</th><th>كارديو</th><th>نوم</th><th>ساعات</th><th>خطوات</th><th>أيام</th></tr>
-    ${[...Array(12)].map((_,i)=>{ const a=by[i+1]||[], c=i+1===wk?"cur":""; return `<tr><td class="${c}"><b>${i+1}</b></td><td class="${c}">${pct(avg(a.map(h=>h.diet)))}</td><td class="${c}">${pct(avg(a.map(h=>h.training)))}</td><td class="${c}">${pct(avg(a.map(h=>h.cardio)))}</td><td class="${c}">${pct(avg(a.map(h=>h.sleep_quality)))}</td><td class="${c} num">${fmt(avg(a.map(h=>h.sleep_hours)),1)}</td><td class="${c} num">${fmt(avg(a.map(h=>h.steps)))}</td><td class="${c}">${a.length||""}</td></tr>`; }).join("")}</table></div>`;
+    ${blockWeeks(wk).filter(w=>w<=Math.max(wk,BLOCK)).map(w=>{ const a=by[w]||[], c=w===wk?"cur":""; return `<tr><td class="${c}"><b>${w}</b></td><td class="${c}">${pct(avg(a.map(h=>h.diet)))}</td><td class="${c}">${pct(avg(a.map(h=>h.training)))}</td><td class="${c}">${pct(avg(a.map(h=>h.cardio)))}</td><td class="${c}">${pct(avg(a.map(h=>h.sleep_quality)))}</td><td class="${c} num">${fmt(avg(a.map(h=>h.sleep_hours)),1)}</td><td class="${c} num">${fmt(avg(a.map(h=>h.steps)))}</td><td class="${c}">${a.length||""}</td></tr>`; }).join("")}</table></div>`;
 }
 
 /* ======================================================================
@@ -393,11 +394,11 @@ async function viewBody(el){
 }
 async function viewMeasures(el){
   const p=S.client, { data } = await sb.from("body_logs").select("*").eq("client_id",p.id).order("week");
-  const B=data||[], wk=currentWeek(p), sel=S.bodyWeek ?? (B.find(b=>b.week===0)?Math.min(wk,12):0);
+  const B=data||[], wk=currentWeek(p), sel=S.bodyWeek ?? (B.find(b=>b.week===0)?wk:0);
   const cur=B.find(b=>b.week===sel)||{}, start=B.find(b=>b.week===0)||{};
   const F=[["weight","⚖ الوزن","كجم"],["waist","الوسط","سم"],["neck","الرقبة","سم"],["chest","الصدر","سم"],["arm","الذراع","سم"],["thigh","الفخذ","سم"],["hips","الأرداف","سم"],["bodyfat","الدهون","%"]];
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📏</div><h2>القياسات الأسبوعية<small>مرة في الأسبوع – نفس اليوم والتوقيت</small></h2></div>
-      <div class="scroller">${[...Array(13)].map((_,i)=>`<button class="chip ${sel===i?"on":""} ${wk===i&&i?"cur":""}" data-w="${i}">${i?"أسبوع "+i:"البداية"}${B.find(b=>b.week===i&&b.weight)?" ✓":""}</button>`).join("")}</div>
+      ${blockNavHTML(sel||1,p)}<div class="scroller">${[0,...blockWeeks(sel||wk||1)].map(i=>`<button class="chip ${sel===i?"on":""} ${wk===i&&i?"cur":""}" data-w="${i}">${i?"أسبوع "+i:"البداية"}${B.find(b=>b.week===i&&b.weight)?" ✓":""}</button>`).join("")}</div>
       <div class="grid2" style="margin-top:12px"><label class="f">📅 التاريخ<input type="date" data-k="log_date" value="${esc(cur.log_date??today())}"></label>
       ${F.map(([k,l,u])=>{ const d=sel&&start[k]&&cur[k]?cur[k]-start[k]:null; return `<label class="f">${l} (${u})<input inputmode="decimal" data-k="${k}" value="${esc(cur[k]??"")}">${d!==null?`<span class="pill ${d<0?"acc-soft":""}" style="margin-top:4px">${d>0?"▲":"▼"} ${fmt(Math.abs(d),1)} منذ البداية</span>`:""}</label>`; }).join("")}</div>
       <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>

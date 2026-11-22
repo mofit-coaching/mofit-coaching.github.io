@@ -32,8 +32,23 @@ function initials(p){ return esc(((p?.full_name||p?.email||"?").trim()[0]||"?").
 async function fnErr(error, data){ if(error){ try{ const j=await error.context.json(); return j.error||error.message; }catch{ return error.message; } } return data?.error||null; }
 
 /* ---------- calculations (same formulas as the Mofit sheet) ---------- */
-function currentWeek(p){ if(!p?.start_date) return 1; return Math.min(Math.max(Math.floor(daysBetween(p.start_date,today())/7)+1,1),12); }
-function weekOfDate(p,iso){ if(!p?.start_date) return null; const w=Math.floor(daysBetween(p.start_date,iso)/7)+1; return w>=1&&w<=12?w:null; }
+/* Weeks are absolute from start_date (1, 2 … 13, 14 …) and are shown in blocks of 12.
+   Program length follows the subscription end date (min 12 weeks); with no end date it keeps counting. */
+const BLOCK=12, MAX_WEEKS=260;
+function maxWeek(p){ if(p?.start_date&&p?.sub_end){ const w=Math.ceil((daysBetween(p.start_date,p.sub_end)+1)/7); return Math.min(Math.max(w,BLOCK),MAX_WEEKS); } return MAX_WEEKS; }
+function currentWeek(p){ if(!p?.start_date) return 1; return Math.min(Math.max(Math.floor(daysBetween(p.start_date,today())/7)+1,1),maxWeek(p)); }
+function weekOfDate(p,iso){ if(!p?.start_date) return null; const w=Math.floor(daysBetween(p.start_date,iso)/7)+1; return w>=1&&w<=MAX_WEEKS?w:null; }
+const blockOf=w=>Math.ceil(Math.max(+w||1,1)/BLOCK), wInBlock=w=>((Math.max(+w||1,1)-1)%BLOCK)+1;
+function blockWeeks(w){ const b=blockOf(w); return [...Array(BLOCK)].map((_,i)=>(b-1)*BLOCK+i+1); }
+/* "‹ block N ›" switcher; buttons carry data-w so every existing [data-w] handler works. Hidden while the client is still in block 1. */
+function blockNavHTML(sel,p){
+  const now=currentWeek(p), b=blockOf(sel), last=Math.max(blockOf(now),b);
+  if(last===1) return "";
+  const go=x=> blockOf(now)===x? now : (x-1)*BLOCK+1, r=blockWeeks(sel);
+  return `<div class="blocknav"><button class="chip" ${b>1?`data-w="${go(b-1)}"`:"disabled"}>→ السابق</button>
+    <b>البلوك ${b}<small>أسابيع ${r[0]}–${r[BLOCK-1]}</small></b>
+    <button class="chip" ${b<last?`data-w="${go(b+1)}"`:"disabled"}>التالي ←</button></div>`;
+}
 function targets(p){
   const r={bmr:null,tdee:null,kcal:null,P:null,C:null,F:null};
   if(p.sex&&p.age&&p.height_cm&&p.start_weight){

@@ -459,3 +459,7 @@ details.card.wu>summary::after{color:#94A3B8;top:14px}
 .wa-btn{display:flex!important;align-items:center;justify-content:center;text-decoration:none;color:#128C7E;border-color:#25D36655}
 .pr-row{border-top:1px solid var(--soft2);padding:12px 0}.pr-row:first-child{border-top:0}
 .pr-head{gap:8px;margin-bottom:8px;align-items:center;cursor:pointer}.pr-head input{width:20px;height:20px;min-height:0;accent-color:var(--acc)}.pr-head .muted{font-size:.75rem}
+.blocknav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:2px 0 8px}
+.blocknav b{text-align:center;font-size:.9rem;line-height:1.2}.blocknav b small{display:block;color:var(--slate);font-weight:600;font-size:.72rem}
+.blocknav .chip[disabled]{opacity:.35}
+.wa-mini{flex:none;align-self:center;width:38px;height:38px;border-radius:12px;background:#25D366;color:#fff;display:flex;align-items:center;justify-content:center;text-decoration:none;font-size:1.05rem}

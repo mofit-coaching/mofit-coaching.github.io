@@ -43,14 +43,14 @@ async function viewClients(el){
   const AL=Object.fromEntries(C.map(c=>{ const a=clientAlerts(c,S.overview?.[c.id]), h=healthAlert(c); if(h) a.push(h); a.push(...eventAlerts(c)); const r=rateAlert(c); if(r) a.push(r); return [c.id,a.sort((x,y)=>y.p-x.p)]; }));
   const urgent=C.filter(c=>AL[c.id].length).sort((a,b)=>AL[b.id][0].p-AL[a.id][0].p||AL[b.id].length-AL[a.id].length);
   $("#alerts").innerHTML=`<div class="card-h"><div class="ic acc">🔔</div><h2>يحتاجوا اهتمامك النهارده<small>${urgent.length?urgent.length+" عميل":"كله تمام 👌"}</small></h2></div>`+
-    (urgent.length?urgent.map(c=>`<div class="alert-row" data-id="${c.id}"><div class="av">${initials(c)}</div><div class="nm"><b>${esc(c.full_name||c.email)}</b>${AL[c.id].map(a=>`<span class="pill ${a.p>=3?"acc":a.p==2?"acc-soft":""}">${a.icon} ${esc(a.text)}</span>`).join(" ")}</div></div>`).join(""):`<p class="hint">مفيش تنبيهات – كل العملاء بيسجلوا ومتابعاتهم متردّ عليها.</p>`);
+    (urgent.length?urgent.map(c=>`<div class="alert-row" data-id="${c.id}"><div class="av">${initials(c)}</div><div class="nm"><b>${esc(c.full_name||c.email)}</b>${AL[c.id].map(a=>`<span class="pill ${a.p>=3?"acc":a.p==2?"acc-soft":""}">${a.icon} ${esc(a.text)}</span>`).join(" ")}</div>${c.phone?`<a class="wa-mini" href="${esc(remindLink(c,AL[c.id][0]))}" target="_blank" rel="noopener" title="تذكير واتساب" onclick="event.stopPropagation()">💬</a>`:""}</div>`).join(""):`<p class="hint">مفيش تنبيهات – كل العملاء بيسجلوا ومتابعاتهم متردّ عليها.</p>`);
   $("#alerts").querySelectorAll("[data-id]").forEach(r=>r.onclick=async()=>{ const c=C.find(x=>x.id===r.dataset.id), a=AL[c.id][0]; await openClient(c);
     if(/متابعة/.test(a.text)){ S.tab="body"; S.bodySeg="c"; const o=S.overview?.[c.id]; S.ciWeek=/ناقصة/.test(a.text)?currentWeek(c)-1:(o?.last_checkin_week||currentWeek(c)); } else if(/اشتراك|مدفوع/.test(a.text)){ S.tab="setup"; S.setupTab="data"; } else S.tab="home";
     render(); window.scrollTo(0,0); });
   const draw=q=>{ const list=C.filter(c=>!q||(c.full_name||"").includes(q)||(c.email||"").includes(q));
     $("#cl").innerHTML=list.length?list.map(c=>{ const wk=currentWeek(c); return `<div class="client" data-id="${c.id}"><div class="av">${initials(c)}</div>
       <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${(s=>s?s.icon+" "+esc(s.text)+" · ":"")(subStatus(c))}${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
-      <div class="bar" style="height:5px"><i style="width:${wk/12*100}%"></i></div></div><div style="text-align:center"><b class="num">${wk}</b><div class="muted" style="font-size:.66rem">/12</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}</div>`; }).join(""):emptyBox("🙋","ضيف أول عميل من الزرار اللي فوق");
+      <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}</div>`; }).join(""):emptyBox("🙋","ضيف أول عميل من الزرار اللي فوق");
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
   draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
@@ -119,18 +119,19 @@ function setupData(el){
       <label class="f">السعر<input id="sPrice" inputmode="decimal" value="${esc(p.sub_price??"")}"></label>
       <label class="f">من<input type="date" id="sStart" value="${esc(p.sub_start??"")}"></label>
       <label class="f">إلى<input type="date" id="sEnd" value="${esc(p.sub_end??"")}"></label></div>
-      <div class="row" style="margin-bottom:10px">${[1,3,6].map(m=>`<button class="chip" data-sm="${m}">+${m} شهر</button>`).join("")}<label class="row" style="gap:6px;margin-inline-start:auto;font-weight:700"><input type="checkbox" id="sPaid" style="width:auto;min-height:0" ${p.sub_paid?"checked":""}> مدفوع</label></div>
+      <div class="row" style="margin-bottom:10px">${[[1,0],[3,1],[6,2],[12,6]].map(([m,f])=>`<button class="chip" data-sm="${m+f}" data-plan="${f?esc(planTitle({months:m,free_months:f})):"شهري"}">${f?`${m}+${f} 🎁`:"+1 شهر"}</button>`).join("")}<label class="row" style="gap:6px;margin-inline-start:auto;font-weight:700"><input type="checkbox" id="sPaid" style="width:auto;min-height:0" ${p.sub_paid?"checked":""}> مدفوع</label></div>
       <label class="f">ملاحظات الدفع<input id="sNotes" value="${esc(p.sub_notes??"")}"></label>
+      <label class="f">📱 رقم واتساب العميل (للتذكيرات)<input id="sPhone" inputmode="tel" dir="ltr" placeholder="01xxxxxxxxx" value="${esc(p.phone??"")}"></label>
       <button class="btn navy block" id="sSave">حفظ الاشتراك</button></div>
     <div class="card"><div class="card-h"><div class="ic">👤</div><h2>بيانات العميل</h2></div>
       <label class="f">الاسم<input data-x="full_name" value="${esc(p.full_name??"")}"></label>${profileFields(p)}
       <label class="f">ملاحظات الكوتش (خاصة – العميل مش بيشوفها)<textarea rows="2" data-x="coach_notes" placeholder="بيتحمل…"></textarea></label>
       <button class="btn primary block" id="pSave">حفظ البيانات</button></div>`;
-  el.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{ const st=$("#sStart").value||today(); $("#sStart").value=st; const d=new Date(st+"T00:00:00"); d.setMonth(d.getMonth()+(+b.dataset.sm)); d.setDate(d.getDate()-1); $("#sEnd").value=d.toISOString().slice(0,10); $("#sPlan").value=$("#sPlan").value||(b.dataset.sm==="1"?"شهري":b.dataset.sm+" شهور"); });
+  el.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{ const st=$("#sStart").value||today(); $("#sStart").value=st; const d=new Date(st+"T00:00:00"); d.setMonth(d.getMonth()+(+b.dataset.sm)); d.setDate(d.getDate()-1); $("#sEnd").value=d.toISOString().slice(0,10); $("#sPlan").value=b.dataset.plan; });
   el.insertAdjacentHTML("afterbegin",healthCard(p)+painCard(p)); fillCoachNote(el,p); el.insertAdjacentHTML("beforeend",assessmentCardHTML(p)); wireAssessment($("#ohsa"),p);
   el.querySelectorAll("[data-pres]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("client_events").update({resolved_at:new Date().toISOString()}).eq("id",b.dataset.pres); if(error) return toast("تعذر الحفظ"); await loadEvents(); toast("تم ✓"); setupData(el); });
   $("#hClear")&&($("#hClear").onclick=async()=>{ const { error } = await sb.from("health_screens").update({cleared_at:new Date().toISOString()}).eq("client_id",p.id); if(error) return toast("تعذر الحفظ"); await loadHealth(); toast("تم ✓"); setupData(el); });
-  $("#sSave").onclick=async()=>{ const { error } = await sb.from("profiles").update({sub_plan:$("#sPlan").value.trim()||null, sub_price:num($("#sPrice").value), sub_start:$("#sStart").value||null, sub_end:$("#sEnd").value||null, sub_paid:$("#sPaid").checked, sub_notes:$("#sNotes").value.trim()||null}).eq("id",p.id);
+  $("#sSave").onclick=async()=>{ if($("#sPhone").value.trim()&&!normPhone($("#sPhone").value)) return toast("رقم الواتساب مش صحيح"); const { error } = await sb.from("profiles").update({sub_plan:$("#sPlan").value.trim()||null, sub_price:num($("#sPrice").value), sub_start:$("#sStart").value||null, sub_end:$("#sEnd").value||null, sub_paid:$("#sPaid").checked, sub_notes:$("#sNotes").value.trim()||null, phone:normPhone($("#sPhone").value)}).eq("id",p.id);
     if(error) return toast(error.message); await refreshClient(); toast("✓ اتحفظ الاشتراك"); setupData(el); };
   $("#pSave").onclick=async()=>{
     const upd={...readProfile(el), full_name:el.querySelector('[data-x="full_name"]').value.trim(), };
@@ -146,7 +147,7 @@ function setupProgram(el){
       <div id="sysBox">${systemFields(p.training_days||3, p.level||"متوسط")}</div>
       <button class="btn primary block" id="sysApply" style="margin-top:10px">تطبيق على ${esc(p.full_name||"العميل")}</button>
       <p class="hint">⚠ التطبيق بيستبدل البرنامج الحالي ويمسح المجموعات المسجلة على التمارين القديمة.</p></div>
-    <div class="card"><div class="card-h"><div class="ic">🔄</div><h2>أسابيع الديلود<small>العميل بيشوف مجموعات أقل ~40% وRIR 3-4 في الأسابيع دي</small></h2></div>
+    <div class="card"><div class="card-h"><div class="ic">🔄</div><h2>أسابيع الديلود<small>العميل بيشوف مجموعات أقل ~40% وRIR 3-4 – بتتكرر في كل بلوك (كل 12 أسبوع)</small></h2></div>
       <div class="row" style="gap:6px" id="dl">${[...Array(12)].map((_,i)=>`<button class="chip ${(p.deload_weeks||[]).includes(i+1)?"on":""}" data-dw="${i+1}">${i+1}</button>`).join("")}</div>
       <div class="row" style="margin-top:10px"><span class="hint grow">الافتراضي حسب المستوى: مبتدئ بدون · متوسط أسبوع 6 · متقدم 4 و8</span><button class="btn sm navy" id="dlSave">حفظ</button></div></div>
     <div class="card"><div class="card-h"><div class="ic acc">📆</div><h2>جدول الأسبوع<small>اسحب الأيام ورتّبها – وحط أيام راحة بينها</small></h2></div>
