@@ -189,3 +189,17 @@ document.addEventListener("pointerdown",e=>{
   s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
   if(getComputedStyle(t).position==="static") t.style.position="relative"; t.style.overflow=t.style.overflow||"hidden"; t.appendChild(s); setTimeout(()=>s.remove(),600);
 },{passive:true});
+
+/* campaign tracking: ?src=instagram is remembered and sent with the signup */
+try{ const _s=new URLSearchParams(location.search).get("src"); if(_s) localStorage.setItem("mofit_src",_s.slice(0,40)); }catch(e){}
+
+/* v5.6: stagger index + number count-up on freshly rendered screens */
+(function(){ const m=document.getElementById("main"); if(!m||!window.MutationObserver) return;
+  const rm=()=>window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  new MutationObserver(()=>{ if(rm()) return;
+    [...m.children].forEach((el,i)=>{ if(el.style&&!el.style.getPropertyValue("--i")) el.style.setProperty("--i",Math.min(i,8)); });
+    m.querySelectorAll(".stat .v.num,.stat .v").forEach(el=>{ if(el.dataset.cu) return; el.dataset.cu=1; const t=el.textContent.trim(); if(!/^\d{1,6}(\.\d)?$/.test(t)) return;
+      const end=parseFloat(t), dec=t.includes(".")?1:0, t0=performance.now()+300; el.textContent=dec?"0.0":"0";
+      (function f(n){ const k=Math.max(0,Math.min(1,(n-t0)/800)), e=1-Math.pow(1-k,3); el.textContent=(end*e).toFixed(dec); if(k<1) requestAnimationFrame(f); })(performance.now()); });
+  }).observe(m,{childList:true,subtree:true});
+})();
