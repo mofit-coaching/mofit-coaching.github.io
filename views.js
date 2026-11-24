@@ -176,7 +176,7 @@ async function viewTrain(el){
   const ids=exs.map(e=>e.id);
   const { data, error:le } = await sb.from("set_logs").select("*").in("exercise_id",ids).in("week",[S.week,S.week-1].filter(w=>w>=1));
   const ck="logs_"+p.id+"_"+S.day+"_"+S.week, logs=le? (cacheGet(ck)||[]) : (data||[]); if(!le) cacheSet(ck,logs);
-  const bestPrev={}; try{ const { data:hist } = await sb.from("set_logs").select("exercise_id,reps,weight,rir").in("exercise_id",ids).lt("week",S.week); (hist||[]).forEach(h=>{ const x=e1rm(h)||0; if(x>(bestPrev[h.exercise_id]||0)) bestPrev[h.exercise_id]=x; }); }catch(e){}
+  const lastBy={}, bestPrev={}; try{ const { data:hist } = await sb.from("set_logs").select("exercise_id,week,set_no,reps,weight,rir,failure").in("exercise_id",ids).lt("week",S.week); (hist||[]).forEach(h=>{ if(logged(h)){ const k=h.exercise_id+"_"+h.set_no; if(!lastBy[k]||h.week>lastBy[k].week) lastBy[k]=h; } const x=e1rm(h)||0; if(x>(bestPrev[h.exercise_id]||0)) bestPrev[h.exercise_id]=x; }); }catch(e){}
   const firstC=exs.findIndex(e=>isCompound(e.name));
   const seenM=new Set(), firstOfM=exs.map(e=>{ const m=muscleOf(e.name); if(m==="أخرى"||seenM.has(m)) return false; seenM.add(m); return true; });
   const prevW=ex=>Math.max(0,...[...Array(ex.sets)].map((_,i)=>+(get(ex.id,S.week-1,i+1)?.weight)||0));
@@ -202,7 +202,7 @@ async function viewTrain(el){
     const setsEl=box.querySelector("[data-sets]");
     const updBest=()=>{ const best=Math.max(0,...[...Array(nSets)].map((_,i)=>e1rm(get(ex.id,S.week,i+1)||{})||0)); box.querySelector("[data-best]").textContent=best?"1RM≈"+fmt(best,1):""; };
     for(let n=1;n<=nSets;n++){
-      const cur=get(ex.id,S.week,n)||{}, prev=get(ex.id,S.week-1,n);
+      const cur=get(ex.id,S.week,n)||{}, prev0=get(ex.id,S.week-1,n), prev=(prev0&&logged(prev0))?prev0:(lastBy[ex.id+"_"+n]||prev0), prevOld=prev&&prev.week!==S.week-1;
       const row=document.createElement("div"); row.className="set"+(logged(cur)?" done":"");
       row.innerHTML=`<div class="no">${n}</div>
         <input inputmode="numeric" placeholder="${esc(ex.target_reps||"عدات")}" value="${esc(cur.reps??"")}" data-k="reps">
@@ -210,7 +210,7 @@ async function viewTrain(el){
         <select data-k="rir"><option value="">—</option>${[0,1,2,3,4,5].map(v=>`<option value="${v}" ${cur.rir!==null&&cur.rir!==undefined&&+cur.rir===v?"selected":""}>${v}</option>`).join("")}</select>
         <button class="fail ${cur.failure?"on":""}" data-k="failure" title="وصلت للفشل">🔥</button>
         <button class="more" title="تمبو / راحة / ملاحظات">⋯</button>
-        ${prev&&logged(prev)?`<div class="prev">الأسبوع اللي فات: <b class="num">${fmt(prev.reps)}×${fmt(prev.weight,1)}</b>${prev.rir!==null?" · RIR "+prev.rir:""}${isFailure(prev)?" · 🔥":""}</div>`:""}
+        ${prev&&logged(prev)?`<div class="prev">${prevOld?"آخر مرة (أسبوع "+prev.week+")":"الأسبوع اللي فات"}: <b class="num">${fmt(prev.reps)}×${fmt(prev.weight,1)}</b>${prev.rir!==null?" · RIR "+prev.rir:""}${isFailure(prev)?" · 🔥":""}</div>`:""}
         <div class="set-x hidden"><input placeholder="تمبو ${esc(ex.tempo||"")}" value="${esc(cur.tempo??"")}" data-k="tempo"><input inputmode="numeric" placeholder="راحة ث" value="${esc(cur.rest_sec??"")}" data-k="rest_sec"><input placeholder="ملاحظات" value="${esc(cur.notes??"")}" data-k="notes"></div>`;
       row.querySelector(".more").onclick=()=>row.querySelector(".set-x").classList.toggle("hidden");
       const save=async(startTimer)=>{
