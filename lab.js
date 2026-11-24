@@ -198,7 +198,7 @@ const ONB=[
 function maybeOnboard(){
   if(S.me.role!=="client") return; const key="mofit_onb_"+S.me.id; if(localStorage.getItem(key)) return;
   let i=0; const draw=()=>{ const [ic,t,b]=ONB[i];
-    const body=openSheet(`<div class="onb"><div class="onb-ic">${ic}</div><h3>${t}</h3><p>${b}</p><div class="dots">${ONB.map((_,j)=>`<i class="${j===i?"on":""}"></i>`).join("")}</div>
+    const body=openSheet(`<div class="onb"><div class="onb-step">خطوة ${i+1} من ${ONB.length}</div><div class="onb-ic">${ic}</div><h3>${t}</h3><p>${b}</p><div class="dots">${ONB.map((_,j)=>`<i class="${j===i?"on":""}"></i>`).join("")}</div>
       <button class="btn primary block" id="onbN">${i<ONB.length-1?"التالي ←":"يلا نبدأ 💪"}</button>${i<ONB.length-1?`<button class="btn ghost block" id="onbS" style="margin-top:6px">تخطّي</button>`:""}</div>`);
     $("#onbN").onclick=()=>{ if(i<ONB.length-1){ i++; draw(); } else { localStorage.setItem(key,"1"); closeSheet(); } };
     $("#onbS")&&($("#onbS").onclick=()=>{ localStorage.setItem(key,"1"); closeSheet(); });
@@ -298,3 +298,4 @@ function feederHTML(workW,m){
   const steps=workW>=15?[[0.5,8],[0.75,3]].map(([p,n])=>`<span class="pill">${fmt(r(workW*p),1)} كجم × ${n}</span>`).join(""):`<span class="pill">وزن خفيف × 10</span><span class="pill">+ مجموعة متوسطة × 4</span>`;
   return `<div class="warm" style="--mc:${mColor(m)}"><b>🔥 تهيئة ${m}</b><div class="scroller">${steps}</div><small>أول تمرين ${m} النهارده · راحة 45-60 ثانية</small></div>`;
 }
+
