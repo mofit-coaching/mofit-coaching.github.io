@@ -9,6 +9,7 @@
    ====================================================================== */
 const COACH_WA = "201093047225";
 const PLAN_DEFAULTS = [
+  {id:"p1",  position:0, months:1,  free_months:0, price:null, old_price:null, currency:"ج.م", badge:null,          note:null, active:true},
   {id:"p3",  position:1, months:3,  free_months:1, price:null, old_price:null, currency:"ج.م", badge:null,          note:null, active:true},
   {id:"p6",  position:2, months:6,  free_months:2, price:null, old_price:null, currency:"ج.م", badge:"الأكثر طلباً", note:null, active:true},
   {id:"p12", position:3, months:12, free_months:6, price:null, old_price:null, currency:"ج.م", badge:"أفضل قيمة",   note:null, active:true},
