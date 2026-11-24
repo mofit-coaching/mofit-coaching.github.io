@@ -51,8 +51,9 @@ function plansHTML(plans, who){
 /* ---------- public: tab next to login ---------- */
 function loginTab(t){
   document.querySelectorAll(".ltab").forEach(b=>b.classList.toggle("on",b.dataset.lt===t));
-  $("#loginForm").classList.toggle("hidden",t!=="login"); $("#plansPane").classList.toggle("hidden",t!=="plans");
+  $("#loginForm").classList.toggle("hidden",t!=="login"); $("#plansPane").classList.toggle("hidden",t!=="plans"); $("#signupPane").classList.toggle("hidden",t!=="signup");
   if(t==="plans") drawPublicPlans();
+  if(t==="signup" && typeof drawSignup==="function") drawSignup();
 }
 async function drawPublicPlans(){
   const box=$("#plansBox"); if(!box.dataset.done) box.innerHTML=`<p class="hint">⏳ بيتحمل…</p>`;
@@ -121,3 +122,4 @@ function remindLink(c,a){
     : `عايز أطمن عليك بخصوص آخر حاجة سجلتها في التطبيق – كلمني لما تفضى 🙏`;
   return `https://wa.me/${normPhone(c.phone)}?text=${encodeURIComponent(`أهلاً ${first} 👋\n${body}`)}`;
 }
+
