@@ -112,7 +112,7 @@ async function openChat(clientId, title){
   const L=$("#chatL"); if(!L || CHAT.open!==clientId) return;
   L.innerHTML="";
   if(error){ L.innerHTML=`<div class="chat-empty">تعذر تحميل الرسايل</div>`; return; }
-  if(!data.length) L.innerHTML=`<div class="chat-empty">ابدأ المحادثة 👋<br><small>الرسايل بتوصل للكوتش مباشرة</small></div>`;
+  if(!data.length) L.innerHTML=emptyBox("👋","ابدأ المحادثة",S.me.role==="coach"?"ابعت أول رسالة لعميلك – كلمة تشجيع في الأول بتفرق.":"الرسايل بتوصل للكوتش مباشرة – اسأل عن تمرينك أو أكلك في أي وقت.","","es-sm");
   data.reverse().forEach(chatAppend);
   chatMarkRead(clientId);
   const send=async(f)=>{ const { data:m, error:er } = await sb.from("messages").insert({client_id:clientId, sender_role:chatMine(), ...f}).select().single(); if(er){ toast("تعذر الإرسال، جرّب تاني"); return null; } chatAppend(m); return m; };
@@ -236,7 +236,7 @@ async function viewChats(el){
   const C=(S.coachClients||[]).slice().sort((a,b)=>{ const x=last[a.id],y=last[b.id]; if(x&&y) return new Date(y.created_at)-new Date(x.created_at); if(x) return -1; if(y) return 1; return String(a.full_name||"").localeCompare(String(b.full_name||""),"ar"); });
   const draw=()=>{ const q=($("#mq").value||"").trim().toLowerCase(); const R=C.filter(c=>!q||String(c.full_name||c.email||"").toLowerCase().includes(q));
     $("#mrows").innerHTML=R.length?R.map(c=>{ const m=last[c.id], un=CHAT.unread[c.id]||0; const pv=!m?"ابدأ محادثة":(m.sender_role==="coach"?"أنت: ":"")+(m.kind==="image"?"📷 صورة":m.kind==="voice"?"🎤 رسالة صوتية":m.body);
-      return `<button type="button" class="mrow ${un?"unread":""} ${m?"":"none"}" data-id="${esc(c.id)}"><span class="av mav">${initials(c)}</span><span class="mb"><b>${esc(c.full_name||c.email||"عميل")}</b><small>${esc(pv)}</small></span><span class="mm">${m?`<em>${chatWhen(m.created_at)}</em>`:""}${un?`<i class="mdot">${un>9?"9+":un}</i>`:""}</span></button>`; }).join(""):`<div class="chat-empty">مفيش نتايج</div>`; };
+      return `<button type="button" class="mrow ${un?"unread":""} ${m?"":"none"}" data-id="${esc(c.id)}"><span class="av mav">${initials(c)}</span><span class="mb"><b>${esc(c.full_name||c.email||"عميل")}</b><small>${esc(pv)}</small></span><span class="mm">${m?`<em>${chatWhen(m.created_at)}</em>`:""}${un?`<i class="mdot">${un>9?"9+":un}</i>`:""}</span></button>`; }).join(""):emptyBox("🔎","مفيش نتايج","جرّب اسم تاني.","","es-sm"); };
   draw(); $("#mq").oninput=draw;
   $("#mrows").onclick=e=>{ const b=e.target.closest("[data-id]"); if(!b) return; const c=C.find(x=>x.id===b.dataset.id); openChat(b.dataset.id,c?.full_name||c?.email||"العميل"); };
 }

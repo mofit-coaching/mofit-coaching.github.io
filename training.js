@@ -61,7 +61,7 @@ async function openExHistory(ex){
   const body=openSheet(`<div class="between" style="margin-bottom:8px"><b>📈 ${esc(ex.name)}</b><button class="btn sm ghost" onclick="closeSheet()">✕</button></div><div id="exH"><p class="hint">⏳ بيتحمل…</p></div>`);
   const { data } = await sb.from("set_logs").select("week,set_no,reps,weight,rir,failure,notes").eq("exercise_id",ex.id).order("week").order("set_no");
   const L=(data||[]).filter(logged), host=body.querySelector("#exH");
-  if(!L.length){ host.innerHTML=emptyBox("📈","لسه مفيش مجموعات مسجلة للتمرين ده."); return; }
+  if(!L.length){ host.innerHTML=emptyBox("📈","لسه مفيش سجل للتمرين ده","أول مجموعة تسجلها هتظهر هنا مع أفضل 1RM والتطور أسبوع بأسبوع.","","es-sm"); return; }
   const weeks=[...new Set(L.map(s=>s.week))].sort((a,b)=>a-b);
   const rows=weeks.map(w=>{ const ws=L.filter(s=>s.week===w), best=ws.reduce((m,s)=>(e1rm(s)||0)>(e1rm(m)||0)?s:m, ws[0]);
     return {w, best:e1rm(best)||0, top:best, sets:ws.length, vol:ws.reduce((a,s)=>a+(+s.reps||0)*(+s.weight||0),0), fail:ws.filter(isFailure).length}; });

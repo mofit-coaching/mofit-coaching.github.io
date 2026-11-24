@@ -138,7 +138,7 @@ function heatmap(p,H){
 }
 function failureSummary(sets){
   const done=sets.filter(logged);
-  if(!done.length) return emptyBox("🏋️","لسه مفيش مجموعات مسجلة الأسبوع ده");
+  if(!done.length) return emptyBox("🏋️","لسه مفيش مجموعات الأسبوع ده","سجّل أول مجموعة في تمرينك وهتلاقي ملخص الفشل والـRIR هنا.","","es-sm");
   const fail=done.filter(isFailure).length, near=done.filter(s=>!isFailure(s)&&s.rir!==null&&+s.rir<=2).length, far=done.length-fail-near;
   const w=v=>(v/done.length*100).toFixed(1)+"%";
   return `<div class="grid4"><div class="stat"><div class="l">مجموعات</div><div class="v">${done.length}</div></div>
@@ -155,7 +155,7 @@ function failureSummary(sets){
 async function viewTrain(el){
   const p=S.client, wkNow=currentWeek(p), tdn=todayDayNo();
   const days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
-  if(!days.length){ el.innerHTML=`<div class="card">${emptyBox("📋","الكوتش لسه ما حطش برنامج التمرين."+(S.me.role==="coach"?"<br>حطه من تبويب ⚙️ التحكم.":""))}</div>`; return; }
+  if(!days.length){ el.innerHTML=`<div class="card">${S.me.role==="coach"?emptyBox("📋","العميل ده لسه مالوش برنامج","حط برنامج التمرين من تبويب التحكم وهيظهرله هنا.",{label:"⚙️ روح للتحكم",go:"setup"}):emptyBox("📋","برنامجك بيتجهّز","الكوتش لسه ما حطش برنامج التمرين – هيظهر هنا أول ما يخلص.")}</div>`; return; }
   const maxD=Math.max(...days);
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📅</div><h2>${esc(p.split_name||"برنامج التمرين")}<small>${p.level?LEVELS[p.level]?.icon+" "+esc(p.level)+" · ":""}${days.length} أيام في الأسبوع</small></h2></div>
       <div class="scroller" id="dayCards">${[...Array(7)].map((_,i)=>{ const d=i+1, has=days.includes(d); return `<button class="daycard ${S.day===d?"on":""} ${has?"":"rest"}" data-d="${d}">${d===tdn?'<span class="dot"></span>':""}<b>${has?"يوم "+d:"راحة"}</b><small>${has?esc(dayLabel(d)||S.program.filter(e=>e.day_no===d).length+" تمارين"):"😴 استشفاء"}</small>${has?`<span class="dmus">${Object.entries(muscleVol(S.program.filter(e=>e.day_no===d).map(e=>[e.name,e.sets]))).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([m])=>`<i style="background:${mColor(m)}" title="${m}"></i>`).join("")}</span>`:""}</button>`; }).join("")}</div>
@@ -173,7 +173,7 @@ async function viewTrain(el){
   const tt=$("#tTools"); if(allEx.length&&S.me.role!=="coach"&&S.week===wkNow){ tt.classList.remove("hidden"); tt.innerHTML=trainToolsHTML();
     tt.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ setTrainMode(trainMode()===b.dataset.mode?"":b.dataset.mode); viewTrain(el); });
     $("#rdyBtn").onclick=()=>openReadiness(()=>viewTrain(el)); }
-  if(!exs.length){ list.innerHTML=`<div class="card">${emptyBox("😴","يوم راحة واستشفاء<br>سجّل نومك ومياهك وخطواتك في العادات.")}</div>`; $("#failCard").remove(); return; }
+  if(!exs.length){ list.innerHTML=`<div class="card">${emptyBox("😴","يوم راحة واستشفاء","الراحة جزء من التطور – سجّل نومك ومياهك وخطواتك النهارده.",{label:"✅ سجّل عاداتك",go:"habits"})}</div>`; $("#failCard").remove(); return; }
   const ids=exs.map(e=>e.id);
   const { data, error:le } = await sb.from("set_logs").select("*").in("exercise_id",ids).in("week",[S.week,S.week-1].filter(w=>w>=1));
   const ck="logs_"+p.id+"_"+S.day+"_"+S.week, logs=le? (cacheGet(ck)||[]) : (data||[]); if(!le) cacheSet(ck,logs);
@@ -269,7 +269,7 @@ function openFoodPicker(title, onPick, opts={}){
     const term=q.value.trim(); if(term.length<2){ res.innerHTML=""; return; }
     const { data:f } = await sb.rpc("search_foods",{q:term});
     res.innerHTML=(f||[]).length?f.map(x=>{ const u=unitInfo(x); return `<div class="food-r" data-id="${x.id}"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(x.name)}<small>${u.base}: <b>${fmt(u.per.kcal)} kcal</b> · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}</small></div><span class="pill">${esc(x.unit)}</span></div>`; }).join("")
-      :emptyBox("🔎","مفيش نتائج"+(S.me.role==="coach"?" – أضف الصنف من تبويب الأطعمة":""));
+      :emptyBox("🔎","مفيش نتائج","اكتب اسم الصنف بشكل تاني"+(S.me.role==="coach"?"، أو ضيفه من تبويب الأطعمة":"")+".","","es-sm");
     res.querySelectorAll("[data-id]").forEach(d=>d.onclick=()=>pickQty(f.find(x=>x.id==d.dataset.id)));
   },250); };
   if(opts.match) body.querySelector("#fpQ").insertAdjacentHTML("beforebegin",`<div class="prog reps" style="margin-top:8px">⇄ تبديل ${esc(opts.match.food_name)} (${fmt(opts.match.kcal)} kcal) – الكمية هتتحسب تلقائياً بنفس السعرات</div>`);
@@ -460,5 +460,4 @@ async function homeCheckinCard(p,wk){
      ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
   $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
 }
-
 

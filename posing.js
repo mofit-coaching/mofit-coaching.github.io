@@ -9,16 +9,16 @@ const isCoachMe=()=>S.me?.role==="coach";
 /* ---------------- posing ---------------- */
 async function viewPosing(el){
   const p=S.client, coach=isCoachMe();
-  el.innerHTML=emptyBox("⏳","جاري التحميل…");
+  el.innerHTML=emptyBox("⏳","جاري التحميل…","","","es-load es-sm");
   const { data, error } = await sb.from("posing_checkins").select("*").eq("client_id",p.id).order("created_at",{ascending:false});
-  if(error){ el.innerHTML=emptyBox("⚠️","تعذر التحميل"); return; }
+  if(error){ el.innerHTML=emptyBox("⚠️","تعذر التحميل","جرّب تاني بعد شوية.","","es-sm"); return; }
   const rows=data||[];
   el.innerHTML=`${coach?"":`<div class="card"><div class="card-h"><div class="ic acc">🎬</div><h2>فيديو بوزينج جديد<small>خاص بينك وبين الكوتش بس · أقصى حجم 50 ميجا · mp4 / mov / webm</small></h2></div>
       <label class="f">ملاحظة (اختياري)<input id="poN" placeholder="مثلاً: البوزات الإلزامية، إضاءة الجيم"></label>
       <input type="file" id="poF" accept="video/mp4,video/quicktime,video/webm" style="margin:8px 0">
       <div class="prog" id="poP" style="display:none"><i style="width:0%"></i></div>
       <button class="btn primary block" id="poGo">رفع للكوتش</button></div>`}
-    <div id="poL">${rows.length?rows.map(r=>poseCard(r,coach)).join(""):emptyBox("🎬",coach?"العميل لسه مارفعش فيديوهات":"مفيش فيديوهات لسه")}</div>`;
+    <div id="poL">${rows.length?rows.map(r=>poseCard(r,coach)).join(""):emptyBox("🎬","لسه مفيش فيديوهات",coach?"العميل لسه مارفعش فيديوهات بوزينج.":"صوّر البوزات وارفعها من فوق عشان الكوتش يراجع وقفتك.")}</div>`;
   el.querySelectorAll("[data-pv]").forEach(async v=>{ const u=await poseUrl(v.dataset.pv); if(u){ v.src=u; } else v.replaceWith(Object.assign(document.createElement("p"),{className:"hint",textContent:"الفيديو مش متاح"})); });
   if(!coach){
     $("#poGo").onclick=async()=>{
@@ -56,12 +56,12 @@ function poseCard(r,coach){
 /* ---------------- peak week ---------------- */
 async function viewPeak(el){
   const p=S.client, coach=isCoachMe();
-  el.innerHTML=emptyBox("⏳","جاري التحميل…");
+  el.innerHTML=emptyBox("⏳","جاري التحميل…","","","es-load es-sm");
   const { data, error } = await sb.from("peak_week_plans").select("*").eq("client_id",p.id).maybeSingle();
-  if(error){ el.innerHTML=emptyBox("⚠️","تعذر التحميل"); return; }
+  if(error){ el.innerHTML=emptyBox("⚠️","تعذر التحميل","جرّب تاني بعد شوية.","","es-sm"); return; }
   const days=Array.from({length:7},(_,i)=>({label:PW_DAYS[i],...((data?.days||[])[i]||{})}));
   if(!coach){
-    if(!data) { el.innerHTML=emptyBox("🏁","الكوتش لسه ماكتبش خطة البيك ويك"); return; }
+    if(!data) { el.innerHTML=emptyBox("🏁","خطة البيك ويك لسه","الكوتش لسه ما كتبش الخطة – هتظهر هنا أول ما تجهز."); return; }
     el.innerHTML=`<div class="card dark"><div class="card-h"><div class="ic acc">🏁</div><h2>بيك ويك${data.show_date?`<small>العرض: ${esc(data.show_date)}</small>`:""}</h2></div><p class="hint">الخطة دي من الكوتش بس. التزم بيها زي ما هي.</p></div>`+days.map(dayView).join("");
     return;
   }

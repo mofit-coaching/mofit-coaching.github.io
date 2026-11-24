@@ -70,7 +70,7 @@ async function coachHealthHTML(p){
   const con=c.data; const shared=con&&(con.share_steps||con.share_hr);
   const rows=(r.data||[]).sort((a,b)=>a.log_date<b.log_date?1:-1);
   return `<div class="card"><div class="card-h"><div class="ic acc">🩺</div><h2>الصحة (اللي العميل شاركه)<small>${shared?[con.share_steps?"الخطوات":null,con.share_hr?"نبض الراحة":null].filter(Boolean).join(" + "):"العميل مش مشارك أي بيانات"}</small></h2></div>
-    ${rows.length?rows.map(x=>`<div class="row" style="justify-content:space-between;font-size:.85rem;padding:4px 0"><span class="num muted">${x.log_date}</span><span class="num">${x.steps!=null?"👟 "+fmt(x.steps):""} ${x.resting_hr!=null?"❤️ "+x.resting_hr:""}</span></div>`).join(""):emptyBox("🩺",shared?"مفيش أرقام لسه":"العميل ماشاركش بيانات")}</div>`;
+    ${rows.length?rows.map(x=>`<div class="row" style="justify-content:space-between;font-size:.85rem;padding:4px 0"><span class="num muted">${x.log_date}</span><span class="num">${x.steps!=null?"👟 "+fmt(x.steps):""} ${x.resting_hr!=null?"❤️ "+x.resting_hr:""}</span></div>`).join(""):emptyBox("🩺",shared?"مفيش أرقام لسه":"البيانات مش متشاركة",shared?"أول ما تتسجل خطوات أو نبض من الساعة هتظهر هنا.":"العميل لسه ماشاركش بيانات صحته معاك.","","es-sm")}</div>`;
 }
 
 async function drawHealth(p){
