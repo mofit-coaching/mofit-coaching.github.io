@@ -63,8 +63,10 @@ async function _scRecord(d,ms){
   await document.fonts.ready;
   const stream=s.cv.captureStream(30);
   const cands=["video/mp4;codecs=avc1.640028,mp4a.40.2","video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9","video/webm"];
-  const mime=cands.find(m=>MediaRecorder.isTypeSupported(m))||"";
-  const rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:4000000}:{videoBitsPerSecond:4000000});
+  let rec=null;
+  for(const m of cands){ if(!MediaRecorder.isTypeSupported(m)) continue;
+    try{ rec=new MediaRecorder(stream,{mimeType:m,videoBitsPerSecond:4000000}); break; }catch(e){} }
+  if(!rec) rec=new MediaRecorder(stream,{videoBitsPerSecond:4000000});
   const chunks=[];rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
   const done=new Promise(r=>rec.onstop=r);
   const t0=performance.now();
