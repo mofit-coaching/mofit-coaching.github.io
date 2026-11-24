@@ -114,15 +114,29 @@ async function coachPricesCard(host){
 
 /* ---------- coach → client WhatsApp reminders ---------- */
 function normPhone(v){ let d=String(v||"").replace(/[^0-9]/g,""); if(!d) return null; if(d.startsWith("00")) d=d.slice(2); if(/^01\d{9}$/.test(d)) d="2"+d; return d.length>=8&&d.length<=15?d:null; }
-function remindLink(c,a){
-  const first=(c.full_name||"").split(" ")[0], app=location.origin+location.pathname, t=a?.text||"";
-  const body = /البلوك/.test(t) ? `خلّصنا بلوك كامل من البرنامج 🎉 بجهزلك البلوك الجاي – ابعتلي رأيك في البرنامج الحالي: إيه اللي حبيته وإيه اللي تعبك؟`
+function remindBody(c,a){
+  const app=location.origin+location.pathname, t=a?.text||"";
+  return /لسه ما سجلش/.test(t) ? `شايف إنك لسه ما سجلت أول تمرين 💪 أول خطوة هي الأصعب – ابدأ بأي يوم النهارده ولو خفيف، ولو محتاج مساعدة قولي وأظبطلك أي حاجة.\n${app}`
+    : /البلوك/.test(t) ? `خلّصنا بلوك كامل من البرنامج 🎉 بجهزلك البلوك الجاي – ابعتلي رأيك في البرنامج الحالي: إيه اللي حبيته وإيه اللي تعبك؟`
     : /اشتراك|مدفوع/.test(t) ? `اشتراكك في Mofit ${t}. تحب تجدد؟ العروض هنا 👇\n${app}#prices`
     : /متابعة/.test(t) ? `متنساش تبعت متابعة الأسبوع من التطبيق (الوزن + الصور + إحساسك) 📸\n${app}`
     : /استبيان/.test(t) ? `محتاجك تملا استبيان الصحة في التطبيق عشان نكمّل البرنامج بأمان 🩺\n${app}`
-    : /الالتزام|سجّل|سجل|تسجيل|ما سجل/.test(t) ? `وحشتنا تسجيلاتك 💪 يلا نرجع للالتزام النهارده – سجّل تمرينك وأكلك في التطبيق\n${app}`
+    : /الالتزام|سجّل|سجل|تسجيل|ما سجل|تمرين/.test(t) ? `وحشتنا تسجيلاتك 💪 يلا نرجع للالتزام النهارده – سجّل تمرينك وأكلك في التطبيق\n${app}`
     : `عايز أطمن عليك بخصوص آخر حاجة سجلتها في التطبيق – كلمني لما تفضى 🙏`;
-  return `https://wa.me/${normPhone(c.phone)}?text=${encodeURIComponent(`أهلاً ${first} 👋\n${body}`)}`;
 }
+function remindLink(c,a){
+  const first=(c.full_name||"").split(" ")[0];
+  return `https://wa.me/${normPhone(c.phone)}?text=${encodeURIComponent(`أهلاً ${first} 👋\n${remindBody(c,a)}`)}`;
+}
+async function nudgeClient(c,a,btn){
+  const first=(c.full_name||"").split(" ")[0], body=`أهلاً ${first} 👋\n${remindBody(c,a)}`;
+  if(!confirm(`نبعت لـ ${c.full_name||"العميل"} في الشات؟\n\n${body}`)) return;
+  btn&&(btn.disabled=true);
+  const { error } = await sb.from("messages").insert({client_id:c.id, sender_role:chatMine(), body});
+  btn&&(btn.disabled=false);
+  if(error) return toast("تعذر الإرسال، جرّب تاني");
+  btn&&btn.classList.add("sent"); toast("✓ اتبعتت في الشات");
+}
+
 
 
