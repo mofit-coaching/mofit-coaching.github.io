@@ -102,7 +102,7 @@ async function viewHome(el){
   const H=hab.data||[];
   $("#hCardio").innerHTML=cardioCardHTML(p,H,wk); wireCardioCard();
   loadCardHTML(p).then(h=>{ const x=$("#hLoad"); if(x) x.innerHTML=h; });
-  if(S.me.role==="client"&&typeof streakCardHTML==="function") streakCardHTML(p).then(h=>{ const x=$("#hStreak"); if(x){ x.innerHTML=h; if(window.streakAfter) streakAfter(p); } }).catch(()=>{});
+  if(typeof streakCardHTML==="function") streakCardHTML(p).then(h=>{ const x=$("#hStreak"); if(x){ x.innerHTML=h; if(window.streakAfter&&S.me.role==="client") streakAfter(p); } }).catch(()=>{});
   $("#hH").innerHTML=`<div class="card-h"><div class="ic">✅</div><h2>الالتزام<small>${H.length} يوم مسجّل</small></h2></div>
     <div class="grid4"><div class="stat"><div class="l">🥗 الدايت</div><div class="v">${pct(avg(H.map(h=>h.diet)))}</div></div>
     <div class="stat"><div class="l">💪 التمرين</div><div class="v">${pct(avg(H.map(h=>h.training)))}</div></div>
@@ -460,4 +460,3 @@ async function homeCheckinCard(p,wk){
      ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
   $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
 }
-
