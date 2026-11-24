@@ -23,3 +23,8 @@
 @keyframes wmin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .logo-big{animation:none}
 @media(prefers-reduced-motion:reduce){.wm *,.wm{animation:none!important}.wm-sig{stroke-dashoffset:0}}
+/* anatomy figure polish */
+.anat .mm-on{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--mc,#FF6B1A) 55%,transparent))}
+.anat .mm-top{animation:mmIn .7s cubic-bezier(.2,.8,.2,1) both,mmPulse 2.8s ease-in-out 1s infinite;animation-delay:var(--d,0s),1s}
+@keyframes mmPulse{0%,100%{filter:drop-shadow(0 0 2px color-mix(in srgb,var(--mc) 40%,transparent))}50%{filter:drop-shadow(0 0 9px var(--mc))}}
+@media(prefers-reduced-motion:reduce){.anat .mm-top{animation:none}}
