@@ -257,3 +257,12 @@ document.addEventListener("scroll",s,{passive:true,capture:true});document.addEv
   function init(){ scan(document); new MutationObserver(function(recs){ for(var i=0;i<recs.length;i++){ var a=recs[i].addedNodes; for(var j=0;j<a.length;j++){ if(a[j].nodeType===1&&!(a[j].classList&&a[j].classList.contains("rip"))) scan(a[j]); } } }).observe(document.body,{childList:true,subtree:true}); }
   if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
 })();
+
+/* v9 rest timer motion: bouncy entrance, live shimmering progress bar, hot last-5-seconds pulse, confetti when time is up */
+(function(){
+  const _d=drawTimer, _s=startRest;
+  drawTimer=function(){ _d.apply(this,arguments); const el=$("#timer"); if(!el) return; const left=Math.max(0,Math.round((T.end-Date.now())/1000));
+    el.style.setProperty("--p",(T.total?Math.max(0,Math.min(1,left/T.total)):0)); el.classList.toggle("hot",left>0&&left<=5);
+    if(left===0){ if(!el._fin){ el._fin=1; try{ burst(); }catch(e){} } } else el._fin=0; };
+  startRest=function(){ const r=_s.apply(this,arguments); const el=$("#timer"); if(el){ el._fin=0; el.classList.remove("t-in"); void el.offsetWidth; el.classList.add("t-in"); clearTimeout(el._tin); el._tin=setTimeout(()=>el.classList.remove("t-in"),1000); } return r; };
+})();
