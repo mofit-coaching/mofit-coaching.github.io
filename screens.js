@@ -32,6 +32,22 @@ const st=document.createElement("style"); st.textContent=`
 @keyframes esfloat{50%{transform:translateY(-6px)}}
 @keyframes espulse{50%{transform:scale(.94);opacity:.75}}
 @media(prefers-reduced-motion:reduce){.es-art,.es-art::after{animation:none}}
+/* before/after photo frames (ba-*) */
+.ba-grid{display:grid;gap:14px}
+.ba{margin:0;background:linear-gradient(180deg,#fff,#FFF4EA);border:1px solid rgba(249,115,22,.16);border-radius:var(--r);padding:10px;box-shadow:0 16px 30px -20px rgba(15,23,42,.3)}
+.ba-row{position:relative;display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.ba-shot{position:relative;aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:var(--soft2)}
+.ba-shot img{width:100%;height:100%;object-fit:cover;display:block}
+.ba-after{box-shadow:inset 0 0 0 2px rgba(249,115,22,.6)}
+.ba-tag{position:absolute;top:8px;inset-inline-start:8px;padding:3px 12px 4px;border-radius:99px;font-size:.74rem;font-weight:800;color:#fff;box-shadow:0 5px 12px -4px rgba(15,23,42,.55)}
+.ba-before .ba-tag{background:linear-gradient(135deg,#64748B,#334155)}
+.ba-after .ba-tag{background:linear-gradient(135deg,#FF8A3C,#F97316)}
+.ba-div{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:2;width:30px;height:30px;border-radius:99px;background:var(--navy);border:2px solid #fff;display:grid;place-items:center;box-shadow:0 8px 16px -5px rgba(15,23,42,.6)}
+.ba-div svg{width:14px;height:14px}
+.ba-cap{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 4px 1px}
+.ba-cap b{color:var(--navy);font-size:.86rem}
+.ba-cap span{font-size:.76rem;color:var(--slate)}
+@media print{.ba{box-shadow:none;background:#fff}}
 `; document.head.appendChild(st);
 })();
 
@@ -55,3 +71,16 @@ document.addEventListener("click",e=>{
   if(b.dataset.esClick){ const t=document.querySelector(b.dataset.esClick); if(t) t.click(); return; }
   if(b.dataset.esGo&&window.S){ S.tab=b.dataset.esGo; render(); window.scrollTo(0,0); }
 });
+
+/* Branded before/after frame for progress photos.
+   baPair(urlBefore, urlAfter, poseLabel, weekA, weekB)
+   RTL: first child (قبل) renders on the right, بعد on the left,
+   and the navy chevron points the direction of progress. */
+function baPair(ua, ub, pose, weekA, weekB){
+  return `<figure class="ba"><div class="ba-row">
+    <div class="ba-shot ba-before"><img src="${ua}" alt="قبل"><span class="ba-tag">قبل</span></div>
+    <span class="ba-div" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none"><path d="M14.5 5.5 8 12l6.5 6.5" stroke="#fff" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+    <div class="ba-shot ba-after"><img src="${ub}" alt="بعد"><span class="ba-tag">بعد</span></div>
+  </div>
+  <figcaption class="ba-cap"><b>${pose}</b><span>أسبوع ${weekA} ← أسبوع ${weekB}</span></figcaption></figure>`;
+}
