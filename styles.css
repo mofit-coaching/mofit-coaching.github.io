@@ -1150,3 +1150,9 @@ body.scrolling *,body.scrolling *::before,body.scrolling *::after{animation-play
   .heat::after{animation-duration:9s}
   .wu-prog i,.btn.primary.block::after{animation:none!important}
 }
+
+/* v7.6 touch devices: no looping decoration inside screens, rows isolated from page repaints */
+@media(hover:none){
+  #main *,#main *::before,#main *::after{animation-iteration-count:1!important}
+  .scroller,.seg,.chat-q{contain:layout paint;will-change:scroll-position;transform:translateZ(0)}
+}
