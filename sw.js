@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-c83a41de";
-const SHELL=["./","index.html","styles.css?v=c83a41de","design.css?v=c83a41de","design.js?v=c83a41de","core.js?v=c83a41de","data.js?v=c83a41de","pro.js?v=c83a41de","lab.js?v=c83a41de","anatomy.js?v=c83a41de","health.js?v=c83a41de","posing.js?v=c83a41de","minerals.js?v=c83a41de","icons.js?v=c83a41de","supps.js?v=c83a41de","views.js?v=c83a41de","coach.js?v=c83a41de","signup.js?v=c83a41de","chat.js?v=c83a41de","inbox.js?v=c83a41de","screens.js?v=c83a41de","prices.js?v=c83a41de","training.js?v=c83a41de","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-7f3e9c21";
+const SHELL=["./","index.html","styles.css?v=7f3e9c21","design.css?v=7f3e9c21","design.js?v=7f3e9c21","core.js?v=7f3e9c21","data.js?v=7f3e9c21","pro.js?v=7f3e9c21","lab.js?v=7f3e9c21","anatomy.js?v=7f3e9c21","health.js?v=7f3e9c21","posing.js?v=7f3e9c21","minerals.js?v=7f3e9c21","icons.js?v=7f3e9c21","supps.js?v=7f3e9c21","views.js?v=7f3e9c21","coach.js?v=7f3e9c21","signup.js?v=7f3e9c21","chat.js?v=7f3e9c21","inbox.js?v=7f3e9c21","screens.js?v=7f3e9c21","prices.js?v=7f3e9c21","training.js?v=7f3e9c21","sharecard.js?v=7f3e9c21","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -12,6 +12,7 @@ self.addEventListener("fetch",e=>{
     e.respondWith(caches.match(e.request).then(hit=>{ const net=fetch(e.request).then(r=>{ if(r.ok||r.type==="opaque"){ const cp=r.clone(); caches.open(C).then(c=>c.put(e.request,cp)); } return r; }).catch(()=>hit); return hit||net; }));
   }
 });
+
 
 
 

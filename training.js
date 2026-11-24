@@ -183,6 +183,8 @@ async function streakCardHTML(p){
     <div class="streak-row"><div class="sring"><svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="${R}" fill="none" stroke="#EEF0F4" stroke-width="8"/><circle class="sring-v" cx="40" cy="40" r="${R}" fill="none" stroke="url(#sg)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" style="--c:${C.toFixed(1)};--o:${off.toFixed(1)}" transform="rotate(-90 40 40)"/><defs><linearGradient id="sg" x1="0" x2="1"><stop offset="0" stop-color="#FF6B1A"/><stop offset="1" stop-color="#FFB347"/></linearGradient></defs></svg><b class="num">${done}/${goal}</b></div>
       <div class="streak-info"><div class="flame ${streak?"on":""}">🔥<span class="num">${streak}</span></div><small>${done>=goal?"✅ هدف الأسبوع اتحقق!":`فاضل ${goal-done} ${goal-done>2?"تمارين":"تمرين"} الأسبوع ده`}</small></div></div>
     <div class="badges">${BADGES.map(b=>`<div class="badge ${total>=b[0]?"got":""}" title="${b[2]}"><i>${b[1]}</i><small>${b[2]}</small></div>`).join("")}</div>
-    ${next?`<p class="hint" style="margin:8px 0 0">${next[0]-total} تمرين وتاخد شارة ${next[1]} ${next[2]}</p>`:""}</div>`;
+    ${next?`<p class="hint" style="margin:8px 0 0">${next[0]-total} تمرين وتاخد شارة ${next[1]} ${next[2]}</p>`:""}
+    <button class="btn sm ghost block" style="margin-top:10px" onclick="shareStreakCard(this)" data-streak="${streak}" data-total="${total}" data-done="${done}" data-goal="${goal}" data-badge="${earned.length?earned[earned.length-1][1]:""}" data-badgename="${earned.length?earned[earned.length-1][2]:""}">📤 شارك تقدمك</button></div>`;
 }
 function streakAfter(p){ if(window._streakNew){ try{ localStorage.setItem(window._streakKey,window._streakCount); }catch(e){} setTimeout(()=>{ if(typeof burst==="function") burst(); toast("🎖 شارة جديدة اتفتحت!"); },700); } }
+
