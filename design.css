@@ -30,9 +30,9 @@
 .anat .an-body{transform-box:fill-box;transform-origin:50% 100%;animation:anBreath 5s ease-in-out infinite}
 @keyframes anBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.012,1.008)}}
 .anat .an-scan{animation:anScan 3.4s cubic-bezier(.45,0,.35,1) infinite}
-@keyframes anScan{0%{transform:translateY(0)}70%,100%{transform:translateY(340px)}}
+@keyframes anScan{0%{transform:translateY(0)}70%,100%{transform:translateY(270px)}}
 .anat .an-line{animation:anLine 3.4s cubic-bezier(.45,0,.35,1) infinite}
-@keyframes anLine{0%{transform:translateY(0);opacity:0}8%{opacity:.9}62%{opacity:.9}70%,100%{transform:translateY(268px);opacity:0}}
+@keyframes anLine{0%{transform:translateY(0);opacity:0}8%{opacity:.9}62%{opacity:.9}70%,100%{transform:translateY(202px);opacity:0}}
 .anat .an-hud{transform-box:fill-box;transform-origin:center;animation:anSpin 40s linear infinite}
 @keyframes anSpin{to{transform:rotate(360deg)}}
 .anat .an-halo{transform-box:fill-box;transform-origin:center;animation:anHalo 4s ease-in-out infinite}
