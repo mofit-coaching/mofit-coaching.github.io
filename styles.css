@@ -919,3 +919,80 @@ main>*{animation:rise2 .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(v
 /* v5.7: empty-state icon sits on its own line above the text (was inline, text overlapped the halo) */
 .empty .big{display:grid!important;margin:8px auto 30px!important}
 .empty{line-height:1.7}
+
+/* ===== v6.0: designer motion pass ===== */
+@property --ang{syntax:"<angle>";inherits:false;initial-value:0deg}
+/* -- pricing cards -- */
+.plans{perspective:900px}
+.plan{overflow:visible;border:1.5px solid rgba(11,18,32,.07);background:linear-gradient(160deg,#fff,#FBF7F3);box-shadow:0 14px 30px -20px rgba(11,18,32,.35);animation:plin .8s cubic-bezier(.2,.9,.25,1) both;transition:transform .35s cubic-bezier(.2,1.4,.4,1),box-shadow .35s}
+.plan:nth-child(1){animation-delay:.05s}.plan:nth-child(2){animation-delay:.18s}.plan:nth-child(3){animation-delay:.31s}.plan:nth-child(4){animation-delay:.44s}.plan:nth-child(n+5){animation-delay:.55s}
+@keyframes plin{from{opacity:0;transform:translateY(46px) rotateX(18deg) scale(.92)}to{opacity:1;transform:none}}
+.plan:active{transform:scale(.97) translateY(2px)}
+.plan::before{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.75) 50%,transparent 65%);transform:translateX(-120%);animation:plsheen 5s ease-in-out 1.4s infinite;pointer-events:none;mix-blend-mode:overlay}
+@keyframes plsheen{0%,55%{transform:translateX(-120%)}85%,100%{transform:translateX(120%)}}
+.plan.hot{color:#fff;border:2px solid transparent;background:linear-gradient(160deg,#101a33,#0B1220 60%,#2a1408) padding-box,conic-gradient(from var(--ang),#FF6B1A,#FFC46B,#5B6CFF,#FF6B1A) border-box;animation:plin .8s cubic-bezier(.2,.9,.25,1) both,plspin 6s linear infinite,plfloat 4.2s ease-in-out 1s infinite;box-shadow:0 26px 50px -22px rgba(255,107,26,.75),0 0 0 1px rgba(255,107,26,.15)}
+@keyframes plspin{to{--ang:360deg}}
+@keyframes plfloat{50%{transform:translateY(-5px)}}
+.plan.hot .plan-total,.plan.hot .plan-price small,.plan.hot .plan-price s,.plan.hot .plan-note{color:#B6C0D4}
+.plan.hot .plan-free{color:#FFC46B}
+.plan.hot .plan-pm{color:#7EE0A4}.plan.hot .plan-pm b{color:#FFC46B}
+.plan.hot::after{content:"";position:absolute;inset:-28px;z-index:-1;background:radial-gradient(closest-side,rgba(255,107,26,.35),transparent);filter:blur(10px);animation:plglow 3s ease-in-out infinite;pointer-events:none}
+@keyframes plglow{50%{opacity:.45;transform:scale(1.06)}}
+.plan-badge{background:linear-gradient(90deg,#FF6B1A,#FFB347,#FF6B1A);background-size:200% 100%;animation:badgeslide 2.8s linear infinite,badgepop .6s cubic-bezier(.2,1.8,.4,1) .7s both;box-shadow:0 6px 14px -4px rgba(255,107,26,.7);letter-spacing:.2px;padding:3px 12px}
+@keyframes badgeslide{to{background-position:-200% 0}}
+@keyframes badgepop{from{opacity:0;transform:scale(.4) translateY(8px)}to{opacity:1;transform:none}}
+.plan-save{animation:badgepop .6s cubic-bezier(.2,1.8,.4,1) .95s both;box-shadow:0 6px 14px -4px rgba(22,163,74,.6)}
+.plan-free{display:inline-block;animation:giftw 3s ease-in-out 1.5s infinite}
+@keyframes giftw{0%,70%,100%{transform:none}76%{transform:rotate(-6deg) scale(1.06)}82%{transform:rotate(6deg) scale(1.06)}88%{transform:rotate(-3deg)}}
+.plan-price b{font-size:2rem;background:linear-gradient(90deg,var(--navy),#FF6B1A,var(--navy));background-size:220% 100%;-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;animation:pricesw 5s ease-in-out infinite}
+.plan.hot .plan-price b{background-image:linear-gradient(90deg,#fff,#FFC46B,#fff)}
+@keyframes pricesw{50%{background-position:100% 0}}
+.plan-cta{background:linear-gradient(135deg,#25D366,#1AAE54);position:relative;overflow:hidden;box-shadow:0 10px 20px -10px rgba(37,211,102,.8);animation:ctap 2.6s ease-in-out 1.6s infinite}
+.plan-cta::after{content:"";position:absolute;top:0;bottom:0;width:40%;left:-50%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:ctash 3s ease-in-out 1.8s infinite}
+@keyframes ctap{50%{transform:scale(1.025)}}
+@keyframes ctash{0%,60%{left:-50%}100%{left:130%}}
+/* -- animated logo -- */
+.logo,.logo-big{background:linear-gradient(100deg,currentColor 40%,#FFC46B 50%,currentColor 60%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;animation:logosw 4.5s ease-in-out 1s infinite}
+.logo{color:#fff;-webkit-text-fill-color:transparent}.logo b{-webkit-text-fill-color:#FF6B1A;filter:drop-shadow(0 0 8px rgba(255,107,26,.55));animation:logofit 2.4s ease-in-out infinite}
+.logo-big{-webkit-text-fill-color:transparent}.logo-big b{-webkit-text-fill-color:#FF6B1A}
+@keyframes logosw{0%,30%{background-position:120% 0}70%,100%{background-position:-120% 0}}
+@keyframes logofit{0%,100%{filter:drop-shadow(0 0 5px rgba(255,107,26,.4));transform:scale(1)}14%{filter:drop-shadow(0 0 14px rgba(255,107,26,.95));transform:scale(1.12)}28%{transform:scale(1)}42%{filter:drop-shadow(0 0 12px rgba(255,107,26,.8));transform:scale(1.07)}}
+.logo b{display:inline-block}
+.top-row .logo{animation:logoin .8s cubic-bezier(.2,1.2,.4,1) both,logosw 4.5s ease-in-out 1.2s infinite}
+@keyframes logoin{from{opacity:0;letter-spacing:12px;filter:blur(6px)}to{opacity:1;letter-spacing:.5px;filter:none}}
+/* -- welcome header -- */
+.hello .av{animation:avin .9s cubic-bezier(.2,1.5,.4,1) .15s both;box-shadow:0 0 0 0 rgba(255,107,26,.6);}
+.hello .av::after{content:"";position:absolute;inset:-6px;border-radius:inherit;border:2px solid rgba(255,107,26,.7);animation:avring 2.6s ease-out 1s infinite}
+.hello .av{position:relative}
+@keyframes avin{from{opacity:0;transform:scale(.2) rotate(-140deg)}to{opacity:1;transform:none}}
+@keyframes avring{0%{opacity:.9;transform:scale(.9)}100%{opacity:0;transform:scale(1.5)}}
+.hello h1{animation:wipe .9s cubic-bezier(.2,.8,.2,1) .35s both}
+.hello p{animation:wipe .9s cubic-bezier(.2,.8,.2,1) .6s both}
+@keyframes wipe{from{clip-path:inset(0 0 0 100%);opacity:0;transform:translateX(18px)}to{clip-path:inset(0 0 0 0);opacity:1;transform:none}}
+.hello .ringwrap{animation:avin 1s cubic-bezier(.2,1.5,.4,1) .5s both}
+/* -- tour sheet -- */
+.onb{overflow:hidden}
+.onb-ic{position:relative;animation:avin .8s cubic-bezier(.2,1.5,.4,1) both,float 4s ease-in-out .9s infinite}
+.onb-ic::before,.onb-ic::after{content:"";position:absolute;inset:-12px;border-radius:38px;border:1.5px dashed rgba(255,107,26,.45);animation:spin 14s linear infinite}
+.onb-ic::after{inset:-22px;border-style:dotted;opacity:.5;animation-direction:reverse;animation-duration:20s}
+.onb h3{animation:rise2 .6s cubic-bezier(.2,.9,.25,1) .2s both}
+.onb p{animation:rise2 .6s cubic-bezier(.2,.9,.25,1) .32s both}
+.onb .dots i{transition:width .4s cubic-bezier(.2,1.4,.4,1),background .3s}
+.onb .dots i.on{animation:dotp2 1.6s ease-in-out infinite}
+@keyframes dotp2{50%{box-shadow:0 0 0 5px rgba(255,107,26,.2)}}
+.onb #onbN{position:relative;overflow:hidden;animation:rise2 .6s cubic-bezier(.2,.9,.25,1) .44s both,ctap 2.4s ease-in-out 1.2s infinite}
+.onb #onbN::after{content:"";position:absolute;top:0;bottom:0;width:35%;left:-50%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.5),transparent);transform:skewX(-20deg);animation:ctash 2.8s ease-in-out 1.4s infinite}
+/* -- every screen: icons, headers, rows, pills -- */
+.card-h .ic{animation:icin .7s cubic-bezier(.2,1.6,.4,1) .25s both}
+@keyframes icin{from{opacity:0;transform:scale(.3) rotate(-30deg)}to{opacity:1;transform:none}}
+.card-h h2{animation:wipe .7s cubic-bezier(.2,.8,.2,1) .3s both}
+.alert-row,.daycard{animation:itemin .55s cubic-bezier(.2,.9,.25,1) both}
+.daycard:nth-child(2){animation-delay:.07s}.daycard:nth-child(3){animation-delay:.14s}.daycard:nth-child(4){animation-delay:.21s}.daycard:nth-child(5){animation-delay:.28s}.daycard:nth-child(n+6){animation-delay:.34s}
+@keyframes itemin{from{opacity:0;transform:translateX(-28px)}to{opacity:1;transform:none}}
+.pill{animation:badgepop .5s cubic-bezier(.2,1.8,.4,1) .4s both}
+.card.dark{position:relative;overflow:hidden}
+.card.dark::after{content:"";position:absolute;top:-30%;bottom:-30%;width:30%;left:-40%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.14),transparent);transform:skewX(-20deg);animation:ctash 6s ease-in-out 1.5s infinite;pointer-events:none}
+.nav button.on{position:relative}
+.nav button.on::before{content:"";position:absolute;inset:-2px;border-radius:inherit;background:radial-gradient(closest-side,rgba(255,107,26,.5),transparent);filter:blur(8px);z-index:-1;animation:plglow 2.6s ease-in-out infinite}
+.btn.primary{position:relative;overflow:hidden}
+@media(prefers-reduced-motion:reduce){.plan,.plan.hot,.plan::before,.plan::after,.plan-badge,.plan-save,.plan-free,.plan-price b,.plan-cta,.plan-cta::after,.logo,.logo b,.hello .av,.hello .av::after,.hello h1,.hello p,.hello .ringwrap,.onb-ic,.onb-ic::before,.onb-ic::after,.onb h3,.onb p,.onb #onbN,.onb #onbN::after,.card-h .ic,.card-h h2,.alert-row,.daycard,.pill,.card.dark::after,.nav button.on::before{animation:none!important}.plan-price b{-webkit-text-fill-color:currentColor;background:none}.logo,.logo-big{-webkit-text-fill-color:currentColor;background:none}}

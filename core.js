@@ -203,3 +203,11 @@ try{ const _s=new URLSearchParams(location.search).get("src"); if(_s) localStora
       (function f(n){ const k=Math.max(0,Math.min(1,(n-t0)/800)), e=1-Math.pow(1-k,3); el.textContent=(end*e).toFixed(dec); if(k<1) requestAnimationFrame(f); })(performance.now()); });
   }).observe(m,{childList:true,subtree:true});
 })();
+
+/* v6.0: price count-up when the plan cards appear, confetti when the tour ends */
+(function(){ const rm=()=>window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+  const run=el=>{ if(el.dataset.pc||rm()) return; el.dataset.pc=1; const raw=el.textContent.replace(/[^\d.]/g,""), end=parseFloat(raw); if(!end) return; const txt=el.textContent, t0=performance.now()+350;
+    el.textContent="0"; (function f(n){ const k=Math.max(0,Math.min(1,(n-t0)/1100)), e=1-Math.pow(1-k,4); el.textContent=k>=1?txt:Math.round(end*e).toLocaleString("en-US"); if(k<1) requestAnimationFrame(f); })(performance.now()); };
+  new MutationObserver(()=>{ document.querySelectorAll(".plan-price b.num").forEach(run); }).observe(document.body,{childList:true,subtree:true});
+  document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("#onbN"); if(b&&/يلا/.test(b.innerText)&&typeof burst==="function") burst(); },true);
+})();
