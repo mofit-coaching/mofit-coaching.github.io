@@ -62,7 +62,8 @@ async function _scRecord(d,ms){
   const s=_scSetup(d);
   await document.fonts.ready;
   const stream=s.cv.captureStream(30);
-  const mime=MediaRecorder.isTypeSupported("video/webm;codecs=vp9")?"video/webm;codecs=vp9":(MediaRecorder.isTypeSupported("video/webm")?"video/webm":"");
+  const cands=["video/mp4;codecs=avc1.640028,mp4a.40.2","video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9","video/webm"];
+  const mime=cands.find(m=>MediaRecorder.isTypeSupported(m))||"";
   const rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:4000000}:{videoBitsPerSecond:4000000});
   const chunks=[];rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data);};
   const done=new Promise(r=>rec.onstop=r);
@@ -72,10 +73,11 @@ async function _scRecord(d,ms){
   await done;
   return new Blob(chunks,{type:rec.mimeType||"video/webm"});
 }
+function _scExt(type){return type&&type.indexOf("mp4")>=0?"mp4":"webm";}
 async function shareProgressCard(d){
   let blob=null,file=null;
   if(window.MediaRecorder&&document.createElement("canvas").captureStream){
-    try{blob=await _scRecord(d,3000);file=new File([blob],"mofit-progress.webm",{type:blob.type||"video/webm"});}catch(e){blob=null;}
+    try{blob=await _scRecord(d,3000);file=new File([blob],"mofit-progress."+_scExt(blob.type),{type:blob.type||"video/webm"});}catch(e){blob=null;}
   }
   if(!blob){
     const cv=await drawShareCard(d);
