@@ -899,3 +899,20 @@ main>*:nth-child(2){animation-delay:.05s}main>*:nth-child(3){animation-delay:.1s
 .badge.got{filter:none;opacity:1;background:linear-gradient(160deg,#FFF3EA,#FFE2CC);box-shadow:0 8px 16px -10px rgba(255,107,26,.7);animation:pop .5s cubic-bezier(.2,1.6,.4,1) both}
 .badge.got:nth-child(2){animation-delay:.08s}.badge.got:nth-child(3){animation-delay:.16s}.badge.got:nth-child(4){animation-delay:.24s}.badge.got:nth-child(5){animation-delay:.32s}.badge.got:nth-child(6){animation-delay:.4s}
 @media(prefers-reduced-motion:reduce){.sring-v{animation:none;stroke-dashoffset:var(--o)}.flame.on{animation:none}}
+
+/* v5.6: bolder per-screen motion (stagger, grow, count-up, stronger ripple) */
+main>*{animation:rise2 .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(var(--i,0)*80ms)}
+@keyframes rise2{from{opacity:0;transform:translateY(38px) scale(.94)}60%{opacity:1}to{opacity:1;transform:none}}
+.bar>i{transform-origin:right center;animation:growx 1s cubic-bezier(.2,.9,.25,1) .35s both}
+@keyframes growx{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.stat{animation:statin .55s cubic-bezier(.2,1.4,.4,1) both;animation-delay:.3s}
+.stat:nth-child(2){animation-delay:.38s}.stat:nth-child(3){animation-delay:.46s}.stat:nth-child(4){animation-delay:.54s}
+@keyframes statin{from{opacity:0;transform:translateY(14px) scale(.85)}to{opacity:1;transform:none}}
+.loadbars>div i{transform-origin:bottom;animation:growy .8s cubic-bezier(.2,.9,.25,1) .3s both}
+@keyframes growy{from{transform:scaleY(0)}to{transform:scaleY(1)}}
+.chip .rip,.daycard .rip,.client .rip,.nav .rip{background:rgba(255,107,26,.28)}
+.card:active,.client:active,.daycard:active{transform:scale(.975)}
+.nav button.on svg,.nav button.on .ico{animation:navb2 .6s cubic-bezier(.2,1.7,.4,1)}
+@keyframes navb2{0%{transform:translateY(12px) scale(.55) rotate(-14deg)}100%{transform:none}}
+.card.hero{animation:rise2 .7s cubic-bezier(.2,.9,.25,1) both,glowp 3.2s ease-in-out 1s infinite}
+@media(prefers-reduced-motion:reduce){main>*,.bar>i,.stat,.loadbars>div i,.card.hero{animation:none!important}}
