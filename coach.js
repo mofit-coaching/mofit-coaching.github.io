@@ -375,6 +375,7 @@ async function viewFoods(el){
      <div class="grid3"><label class="f">الوحدة<select id="fu">${["جم","مل","حبة","شريحة","قطعة","كوب","ملعقة كبيرة","سكوب","رغيف"].map(u=>`<option>${u}</option>`).join("")}</select></label>
      <label class="f">سعرات<input id="fk" inputmode="decimal"></label><label class="f">بروتين<input id="fp" inputmode="decimal"></label>
      <label class="f">كارب<input id="fcb" inputmode="decimal"></label><label class="f">دهون<input id="ff" inputmode="decimal"></label></div>
+     <div class="grid3">${[["sodium_mg","صوديوم (مجم)"],["potassium_mg","بوتاسيوم (مجم)"],["magnesium_mg","ماغنيسيوم (مجم)"],["iron_mg","حديد (مجم)"],["calcium_mg","كالسيوم (مجم)"],["zinc_mg","زنك (مجم)"],["fiber_g","ألياف (جم)"]].map(([k,l])=>`<label class="f">${l}<input data-fm="${k}" inputmode="decimal" placeholder="اختياري"></label>`).join("")}</div>
      <p class="hint" id="fuHint"></p><button class="btn primary block" id="fAdd">إضافة</button></div>`;
   const { count } = await sb.from("foods").select("id",{count:"exact",head:true}); $("#fc").textContent=fmt(count)+" صنف · خاصة – العملاء بيبحثوا فيها بس";
   const hint=()=>{ const u=$("#fu").value; $("#fuHint").innerHTML=COUNT_UNITS(u)?`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fone" checked style="width:auto;min-height:0"> القيم اللي كتبتها لـ ${u} واحدة</label>`:`القيم لكل 100 ${u}.`; };
@@ -382,11 +383,12 @@ async function viewFoods(el){
   let timer; $("#fq").oninput=()=>{ clearTimeout(timer); timer=setTimeout(async()=>{
     const q=$("#fq").value.trim(); if(q.length<2){ $("#fl").innerHTML=""; return; }
     const { data } = await sb.from("foods").select("*").ilike("name",`%${q.replace(/[%_,()]/g," ")}%`).limit(40);
-    $("#fl").innerHTML=(data||[]).map(f=>{ const u=unitInfo(f); return `<div class="food-r"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(f.name)}<small>${esc(f.category||"")} · ${u.base}: ${fmt(u.per.kcal)} kcal · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}</small></div></div>`; }).join("")||emptyBox("🔎","مفيش نتائج");
+    $("#fl").innerHTML=(data||[]).map(f=>{ const u=unitInfo(f); return `<div class="food-r"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(f.name)}<small>${esc(f.category||"")} · ${u.base}: ${fmt(u.per.kcal)} kcal · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}${hasMinCols(f)&&hasMinData(f)?`<br>${MIN_KEYS.filter(([kk])=>f[kk]!=null).map(([kk,l,un,d])=>l.replace(/^\S+\s/,"")+" "+fmt(u.cnt?f[kk]/100:f[kk],d+(u.cnt?1:0))).join(" · ")}${f.mineral_source&&/تقدير/.test(f.mineral_source)?" (تقدير)":""}`:""}</small></div></div>`; }).join("")||emptyBox("🔎","مفيش نتائج");
   },250); };
   $("#fAdd").onclick=async()=>{
     const k=$("#fone")?.checked?100:1;
     const rec={name:$("#fn").value.trim(),unit:$("#fu").value,kcal:(num($("#fk").value)||0)*k,protein:(num($("#fp").value)||0)*k,carbs:(num($("#fcb").value)||0)*k,fat:(num($("#ff").value)||0)*k,source:"الكوتش"};
+    let anyMin=false; document.querySelectorAll("[data-fm]").forEach(i=>{ const x=num(i.value); if(x!=null){ rec[i.dataset.fm]=x*k; anyMin=true; } }); if(anyMin) rec.mineral_source="أدخله الكوتش";
     if(!rec.name) return toast("اكتب اسم الصنف");
     const { error } = await sb.from("foods").insert(rec); if(error) return toast(error.message); toast("✓ اتضاف"); viewFoods(el);
   };
