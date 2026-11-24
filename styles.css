@@ -818,3 +818,62 @@ main>*:nth-child(2){animation-delay:.05s}main>*:nth-child(3){animation-delay:.1s
 .empty .big{filter:drop-shadow(0 8px 14px rgba(255,107,26,.3));animation:float 5s ease-in-out infinite}
 
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* delete client */
+.client-del{border:0;background:#FEE2E2;color:#B91C1C;width:36px;height:36px;border-radius:12px;font-size:1rem;cursor:pointer;flex:none;transition:transform .12s,background .15s}
+.client-del:hover{background:#FECACA}.client-del:active{transform:scale(.9)}
+.del-warn{margin-top:12px;padding:14px;border-radius:16px;background:linear-gradient(180deg,#FFF1F1,#FEE2E2);border:1px solid #FCA5A5;color:#7F1D1D}
+.del-warn p{margin:4px 0}.del-ic{font-size:1.8rem}
+
+
+/* ---------- v5.3: motion layer ---------- */
+.hero-svg{display:block;width:min(320px,80%);height:auto;margin:0 auto 6px;overflow:visible}
+.hs-o{transform-origin:160px 65px;transform-box:view-box}
+.hs-o1{animation:spin 24s linear infinite}.hs-o2{animation:spin 38s linear infinite reverse}
+@keyframes spin{to{transform:rotate(360deg)}}
+.hs-pulse{stroke-dasharray:420;stroke-dashoffset:420;animation:draw 2.8s ease-in-out .3s infinite;filter:drop-shadow(0 0 6px rgba(255,107,26,.8))}
+@keyframes draw{0%{stroke-dashoffset:420}55%,80%{stroke-dashoffset:0}100%{stroke-dashoffset:-420}}
+.hs-dot{animation:dotp 1.4s ease-in-out infinite;transform-origin:160px 65px;transform-box:view-box}
+@keyframes dotp{50%{transform:scale(2.2);opacity:.4}}
+.login-art:before{display:none}
+.top:after{animation:drift 14s ease-in-out infinite alternate}
+@keyframes drift{to{transform:translateX(24px)}}
+
+/* ripple + confetti */
+.rip{position:absolute;border-radius:50%;background:rgba(255,255,255,.35);transform:scale(0);animation:ripple .6s ease-out forwards;pointer-events:none}
+.btn:not(.primary):not(.navy) .rip,.chip:not(.on) .rip,.client .rip,.tick .rip{background:rgba(255,107,26,.22)}
+@keyframes ripple{to{transform:scale(1);opacity:0}}
+.burst{position:fixed;left:50%;top:44%;z-index:200;pointer-events:none}
+.burst i{position:absolute;width:9px;height:14px;opacity:0;animation:conf 1.5s cubic-bezier(.15,.7,.3,1) forwards}
+@keyframes conf{0%{opacity:1;transform:translate(0,0) rotate(0)}70%{opacity:1}100%{opacity:0;transform:translate(var(--x),calc(var(--y) + 220px)) rotate(var(--r))}}
+
+/* toggles + state changes */
+.tick.on{animation:pop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{0%{transform:scale(.6)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.nav button.on svg,.nav button.on .ico{animation:navb .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes navb{0%{transform:translateY(6px) scale(.8)}100%{transform:none}}
+.sheet-card{animation:sheetup .38s cubic-bezier(.2,.9,.2,1) both}
+@keyframes sheetup{from{transform:translateY(40px);opacity:0}}
+.sheet-bg{animation:fadein .3s both}@keyframes fadein{from{opacity:0}}
+.toast{animation:toastin .4s cubic-bezier(.2,1.4,.4,1) both}
+@keyframes toastin{from{opacity:0;transform:translate(-50%,-14px) scale(.9)}}
+.pr-pop{animation:prin .5s cubic-bezier(.2,1.5,.4,1) both}
+@keyframes prin{from{opacity:0;transform:translate(-50%,-50%) scale(.6)}}
+.pr-pop>div:first-child{animation:float 2s ease-in-out infinite}
+
+/* delight on cards */
+.stat .v,.ringwrap b{font-variant-numeric:tabular-nums}
+.stat{transition:transform .2s,box-shadow .2s}.stat:active{transform:scale(.97)}
+.card{transition:transform .2s,box-shadow .25s}
+.client,.alert-row,.food-r{transition:background .15s,transform .15s}
+.client:active,.alert-row:active{transform:scale(.985)}
+.ex-h:active{background:rgba(255,107,26,.05)}
+.set.done{animation:setdone .5s ease}
+@keyframes setdone{0%{background:rgba(18,161,80,.35)}100%{background:linear-gradient(90deg,rgba(18,161,80,.07),transparent)}}
+.empty{position:relative}
+.empty .big{position:relative;display:inline-grid;place-items:center;width:84px;height:84px;border-radius:50%;background:radial-gradient(circle at 30% 25%,#fff,#FFE9D9);box-shadow:0 14px 30px -12px rgba(255,107,26,.5),0 0 0 8px rgba(255,107,26,.07),0 0 0 18px rgba(255,107,26,.04)}
+.empty .big:after{content:"";position:absolute;inset:-8px;border-radius:50%;border:2px dashed rgba(255,107,26,.35);animation:spin 18s linear infinite}
+.skel{border-radius:12px;background:linear-gradient(90deg,#EEF0F4 25%,#F8F9FB 45%,#EEF0F4 65%);background-size:300% 100%;animation:skel 1.2s linear infinite}
+@keyframes skel{to{background-position:-100% 0}}
+@supports(-webkit-touch-callout:none){body{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}input,textarea,select,[contenteditable]{-webkit-user-select:text;user-select:text}html{overscroll-behavior-y:none}}
+@media(prefers-reduced-motion:reduce){.burst{display:none}}
