@@ -129,8 +129,10 @@ function lineChart(pts, unit, color="#0F172A"){
 function emptyBox(icon, text){ return `<div class="empty"><div class="big">${icon}</div>${text}</div>`; }
 
 /* ---------- bottom sheet ---------- */
-function openSheet(html){ $("#sheetBody").innerHTML=html; $("#sheet").classList.remove("hidden"); document.body.style.overflow="hidden"; return $("#sheetBody"); }
-function closeSheet(){ $("#sheet").classList.add("hidden"); $("#sheetBody").innerHTML=""; document.body.style.overflow=""; }
+let _sheetOpener=null;
+function openSheet(html){ _sheetOpener=document.activeElement; $("#sheetBody").innerHTML=html; $("#sheet").classList.remove("hidden"); document.body.style.overflow="hidden"; const f=$("#sheetBody").querySelector("input,select,textarea,button"); if(f) try{ f.focus({preventScroll:true}); }catch(e){} return $("#sheetBody"); }
+function closeSheet(){ $("#sheet").classList.add("hidden"); $("#sheetBody").innerHTML=""; document.body.style.overflow=""; try{ _sheetOpener?.focus?.({preventScroll:true}); }catch(e){} _sheetOpener=null; }
+document.addEventListener("keydown",e=>{ if(e.key==="Escape" && !$("#sheet").classList.contains("hidden") && !$("#sheet").dataset.lock) closeSheet(); });
 document.addEventListener("click",e=>{ if(e.target.classList?.contains("sheet-bg") && !$("#sheet").dataset.lock) closeSheet(); });
 
 /* ---------- exercise videos ---------- */
@@ -168,3 +170,4 @@ function tempoBlocks(t){
   const L=["نزول","توقف تحت","طلوع","توقف فوق"];
   return `<div class="tempo">${p.map((v,i)=>`<div><b class="num">${esc(v)}</b>${L[i]}</div>`).join("")}</div>`;
 }
+
