@@ -148,15 +148,15 @@ function customCardHTML(r){
 
 /* ---------- client view ---------- */
 async function viewSupps(el){
-  const p=S.client; el.innerHTML=`<div class="card">${emptyBox("⏳","بيتحمل…")}</div>`;
+  const p=S.client; el.innerHTML=`<div class="card">${emptyBox("⏳","بيتحمل…","","","es-load es-sm")}</div>`;
   const [rows, W, H] = await Promise.all([loadSupps(p), suppWeight(p),
     S.health?.[p.id] ? null : sb.from("health_screens").select("client_id,flagged").eq("client_id",p.id).maybeSingle()]);
   if(H?.data){ S.health = S.health||{}; S.health[p.id] = H.data; }
   el.innerHTML = suppsClientHTML(p, rows, W);
 }
 function suppsClientHTML(p, rows, W){
-  if(!rows.length) return `<div class="card">${emptyBox("💊","الكوتش لسه ما حددلكش مكملات.")}</div>`;
-  if(p.age && +p.age<18) return `<div class="card">${emptyBox("🔒","المكملات دي للبالغين فقط – كلم الكوتش.")}</div>`;
+  if(!rows.length) return `<div class="card">${emptyBox("💊","لسه مفيش مكملات","الكوتش لسه ما حددلكش مكملات – لو محتاج حاجة اسأله في الشات.")}</div>`;
+  if(p.age && +p.age<18) return `<div class="card">${emptyBox("🔒","للبالغين فقط","المكملات دي مخصصة للبالغين – عندك سؤال؟ كلم الكوتش.")}</div>`;
   const flagged = S.health?.[p.id]?.flagged;
   const cards = rows.map(r=>{ if(isCustom(r)) return customCardHTML(r); const s=SUPP[r.supp_key], d=suppDose(s, W.w, p.sex, r.dose), ev=EV[s.ev];
     const how=(s.how||"").replace("{load}", W.w&&s.load? fmt(roundTo(s.load*W.w,1)) : "20");
@@ -177,7 +177,7 @@ function suppsClientHTML(p, rows, W){
 
 /* ---------- coach editor (⚙️ التحكم → 💊 المكملات) ---------- */
 async function setupSupps(el){
-  const p=S.client; el.innerHTML=`<div class="card">${emptyBox("⏳","بيتحمل…")}</div>`;
+  const p=S.client; el.innerHTML=`<div class="card">${emptyBox("⏳","بيتحمل…","","","es-load es-sm")}</div>`;
   const [rows, W] = await Promise.all([loadSupps(p), suppWeight(p)]);
   const cur = Object.fromEntries(rows.map(r=>[r.supp_key,r]));
   el.innerHTML = `<div class="card"><div class="card-h"><div class="ic">💊</div><h2>مكملات ${esc(p.full_name||"العميل")}<small>${W.w?`الوزن المستخدم: ${fmt(W.w,1)} كجم (${esc(W.src)})`:"⚠ مفيش وزن مسجّل – الجرعات بالكيلو مش هتتحسب"}</small></h2></div>

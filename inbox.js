@@ -82,7 +82,7 @@ async function viewHub(el){
   const goal=Math.max(1,new Set((S.program||[]).map(e=>e.day_no)).size||3), done=cnt[wk]||0; let st=0, w=done>=goal?wk:wk-1; while(w>=1&&(cnt[w]||0)>=goal){ st++; w--; }
   $("#hbStreak").innerHTML=`<div class="card-h"><div class="ic acc">🔥</div><h2>الالتزام<small>${W.length} تمرين متسجّل · ${st?st+" أسبوع متتالي":"لسه مفيش سلسلة"}</small></h2></div>
     <div class="bar"><i style="width:${Math.min(100,done/goal*100)}%"></i></div><p class="hint" style="margin:6px 0 0">الأسبوع ده: ${done} من ${goal} تمارين</p>`;
-  const M=(ms.data||[]).reverse(); $("#hbMsgs").innerHTML=`<div class="card-h"><div class="ic acc">💬</div><h2>آخر الرسايل</h2></div>`+(M.length?M.map(m=>`<div class="hbm ${m.sender_role==="coach"?"me":""}">${esc(m.body)}</div>`).join(""):`<p class="muted">مفيش رسايل</p>`);
+  const M=(ms.data||[]).reverse(); $("#hbMsgs").innerHTML=`<div class="card-h"><div class="ic acc">💬</div><h2>آخر الرسايل</h2></div>`+(M.length?M.map(m=>`<div class="hbm ${m.sender_role==="coach"?"me":""}">${esc(m.body)}</div>`).join(""):emptyBox("💬","مفيش رسايل لسه","أول رسالة بينك وبين الكوتش هتظهر هنا.","","es-sm"));
 }
 (function(){ const s=document.createElement("style"); s.textContent=`
 .inbst{display:grid!important;grid-template-columns:repeat(3,minmax(0,1fr))!important;gap:8px}.inbst .stat{padding:12px 10px}.inb-a a.btn{text-decoration:none;color:inherit;display:inline-flex;align-items:center;justify-content:center;gap:6px}

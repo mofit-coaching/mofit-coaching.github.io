@@ -1,0 +1,43 @@
+/* Mofit identity layer (loads after styles.css). Display font: Alexandria. Keeps all existing motion. */
+:root{--disp:"Alexandria","Cairo",system-ui,sans-serif}
+.hello h1,.card.dark .card-h h2,.wu-title,.onb h3,.ex-n,.stat .v,.lift .num,.mlg-r b,.wu-n{font-family:var(--disp);font-weight:800;letter-spacing:0}
+.hello h1{font-size:1.5rem;line-height:1.35}
+.stat .v,.lift .num{font-weight:800}
+/* signature wordmark */
+.logo,.logo-big{display:inline-flex;align-items:center;line-height:1;letter-spacing:0!important;padding-inline-end:0!important;-webkit-text-fill-color:currentColor!important}
+.logo{color:#fff}
+.wm{display:block;height:1.55em;width:auto;overflow:visible}
+.wm-big{height:1.35em}
+.logo-big{font-size:3.6rem;color:#fff}
+.logo b,.logo-big b{all:unset}
+.wm-fit{transform-box:fill-box;transform-origin:center;animation:wmfit 2.4s ease-in-out infinite}
+@keyframes wmfit{0%,100%{filter:drop-shadow(0 0 4px rgba(255,107,26,.4))}14%{filter:drop-shadow(0 0 12px rgba(255,107,26,.95))}28%{filter:drop-shadow(0 0 4px rgba(255,107,26,.4))}42%{filter:drop-shadow(0 0 10px rgba(255,107,26,.8))}}
+.wm-hub{transform-box:fill-box;transform-origin:center;animation:wmhub 2.4s ease-in-out infinite}
+@keyframes wmhub{14%{transform:scale(1.5)}28%{transform:scale(1)}42%{transform:scale(1.3)}}
+.wm-pl{transform-box:fill-box;transform-origin:center;animation:wmpl 4.5s ease-in-out infinite}
+@keyframes wmpl{0%,55%,100%{transform:scaleX(1)}70%{transform:scaleX(1.25)}}
+.wm-sig{stroke-dasharray:1;stroke-dashoffset:1;animation:wmsig 1.1s .5s cubic-bezier(.3,.7,.2,1) forwards}
+@keyframes wmsig{to{stroke-dashoffset:0}}
+.wm-big{filter:drop-shadow(0 10px 30px rgba(255,107,26,.35))}
+.wm-big .wm-mo{animation:wmin .9s cubic-bezier(.2,1.2,.4,1) both}
+@keyframes wmin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.logo-big{animation:none}
+@media(prefers-reduced-motion:reduce){.wm *,.wm{animation:none!important}.wm-sig{stroke-dashoffset:0}}
+/* anatomy figure v2 animation */
+.anat .mm-on{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--mc,#FF6B1A) 55%,transparent))}
+.anat .mm-top{animation:mmIn .7s cubic-bezier(.2,.8,.2,1) both,mmPulse 2.8s ease-in-out 1s infinite}
+@keyframes mmPulse{0%,100%{filter:drop-shadow(0 0 2px color-mix(in srgb,var(--mc) 40%,transparent))}50%{filter:drop-shadow(0 0 10px var(--mc))}}
+.anat .an-body{transform-box:fill-box;transform-origin:50% 100%;animation:anBreath 5s ease-in-out infinite}
+@keyframes anBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.012,1.008)}}
+.anat .an-scan{animation:anScan 3.4s cubic-bezier(.45,0,.35,1) infinite}
+@keyframes anScan{0%{transform:translateY(0)}70%,100%{transform:translateY(270px)}}
+.anat .an-line{animation:anLine 3.4s cubic-bezier(.45,0,.35,1) infinite}
+@keyframes anLine{0%{transform:translateY(0);opacity:0}8%{opacity:.9}62%{opacity:.9}70%,100%{transform:translateY(202px);opacity:0}}
+.anat .an-hud{transform-box:fill-box;transform-origin:center;animation:anSpin 40s linear infinite}
+@keyframes anSpin{to{transform:rotate(360deg)}}
+.anat .an-halo{transform-box:fill-box;transform-origin:center;animation:anHalo 4s ease-in-out infinite}
+@keyframes anHalo{0%,100%{opacity:.7;transform:scale(.96)}50%{opacity:1;transform:scale(1.05)}}
+.anat .an-px circle{fill:#FFB347;opacity:0;animation:anPx 4.5s ease-in infinite}
+.anat .an-px circle:nth-child(2){animation-delay:.9s}.anat .an-px circle:nth-child(3){animation-delay:1.8s}.anat .an-px circle:nth-child(4){animation-delay:2.7s}.anat .an-px circle:nth-child(5){animation-delay:3.4s}
+@keyframes anPx{0%{opacity:0;transform:translateY(0)}15%{opacity:.9}100%{opacity:0;transform:translateY(-70px)}}
+@media(prefers-reduced-motion:reduce){.anat .mm-top,.anat .an-body,.anat .an-scan,.anat .an-line,.anat .an-hud,.anat .an-halo,.anat .an-px circle{animation:none!important}.anat .an-scan,.anat .an-line{display:none}}

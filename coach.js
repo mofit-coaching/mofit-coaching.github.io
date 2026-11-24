@@ -98,7 +98,7 @@ async function viewClients(el){
   const draw=q=>{ const list=C.filter(c=>!q||(c.full_name||"").includes(q)||(c.email||"").includes(q));
     $("#cl").innerHTML=list.length?list.map(c=>{ const wk=currentWeek(c); return `<div class="client" data-id="${c.id}"><div class="av">${initials(c)}</div>
       <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${(s=>s?s.icon+" "+esc(s.text)+" · ":"")(subStatus(c))}${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
-      <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","ضيف أول عميل من الزرار اللي فوق");
+      <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","لسه مفيش عملاء","ضيف أول عميل وابدأ ابنِ برنامجه: تمرين وأكل ومتابعة من مكان واحد.",{label:"+ إضافة عميل جديد",click:"#addBtn"});
     $("#cl").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); deleteClientFlow(C.find(c=>c.id===b.dataset.del),async()=>{ await loadClients(); viewClients(el); }); });
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
   weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C);
@@ -223,7 +223,7 @@ function setupProgram(el){
   el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{S.day=+b.dataset.d; setupProgram(el);});
   $("#dLblSave").onclick=async()=>{ const v=$("#dLbl").value.trim()||null; const { error } = await sb.from("program_exercises").update({day_label:v}).eq("client_id",p.id).eq("day_no",S.day); if(error) return toast(error.message); S.program.filter(e=>e.day_no===S.day).forEach(e=>e.day_label=v); toast("✓ اتحفظ"); };
   const exs=S.program.filter(e=>e.day_no===S.day), list=$("#pList");
-  list.innerHTML=exs.length?"":`<p class="hint">يوم راحة – مفيش تمارين.</p>`;
+  list.innerHTML=exs.length?"":emptyBox("😴","يوم راحة","مفيش تمارين في اليوم ده.","","es-sm");
   exs.forEach((ex,idx)=>{
     const d=document.createElement("div"); d.className="edit-ex"; const lib=S.videos[(ex.name||"").toUpperCase()];
     d.innerHTML=`<div class="between" style="margin-bottom:8px"><b>${idx+1}. ${esc(ex.name)}</b><div class="row"><button class="btn sm" data-up>▲</button><button class="btn sm" data-dn>▼</button></div></div>
@@ -301,7 +301,7 @@ async function setupDiet(el){
   $("#mCount").onchange=async()=>{ await sb.from("profiles").update({meals_per_day:+$("#mCount").value}).eq("id",p.id); await refreshClient(); setupDiet(el); };
   const tk=targets(p).kcal;
   $("#dtList").innerHTML=(S.dietTpl||[]).length?S.dietTpl.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>${esc(t.name)}</b><small>${fmt(t.kcal)} kcal · ${t.items.length} صنف · ${t.meals_per_day||"—"} وجبات</small></div>
-      <button class="btn sm primary" data-dta="${t.id}">تطبيق</button><button class="x" data-dtd="${t.id}">✕</button></div>`).join(""):`<p class="hint">مفيش قوالب لسه.</p>`;
+      <button class="btn sm primary" data-dta="${t.id}">تطبيق</button><button class="x" data-dtd="${t.id}">✕</button></div>`).join(""):emptyBox("📋","مفيش قوالب لسه","احفظ أي خطة كقالب وهتلاقيها هنا جاهزة تطبقها لأي عميل.","","es-sm");
   el.querySelectorAll("[data-dta]").forEach(b=>b.onclick=async()=>{ const t=S.dietTpl.find(x=>x.id===b.dataset.dta);
     const scale=tk&&t.kcal&&Math.abs(tk-t.kcal)/t.kcal>0.03 ? confirm(`القالب ${fmt(t.kcal)} kcal وهدف العميل ${fmt(tk)} kcal.\nأضبط الكميات تلقائياً على ${fmt(tk)}؟ (إلغاء = زي ما هو)`) : false;
     if(!confirm("استبدال خطة الدايت الحالية بالقالب؟")) return;
@@ -353,7 +353,7 @@ async function viewVideos(el){
     const list=all.filter(n=>(!q||n.includes(q))&&ok(n)).slice(0,80);
     $("#vl").innerHTML=list.map(n=>`<div class="edit-ex" data-n="${esc(n)}"><div class="between"><b>${map[n]?"🎬":"⚪"} ${esc(n)}${usedBy[n]?` <span class="pill acc-soft">👥 ${usedBy[n].size}</span>`:""}</b><span class="row" style="gap:6px"><a class="btn sm" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${encodeURIComponent(n.toLowerCase()+" exercise proper form")}" title="بحث يوتيوب">🔎</a>${map[n]?`<button class="btn sm" data-play>▶</button>`:""}</span></div>
       <div class="row" style="margin-top:6px"><input class="grow" data-url placeholder="🎬 https://youtu.be/…" value="${esc(map[n]||"")}"></div>
-      <div class="row" style="margin-top:6px"><input class="grow" data-alts placeholder="⇄ البدائل (افصل بفاصلة) – الافتراضي: ${esc((DEFAULT_ALTS[n]||[]).join("، ")||"لا يوجد")}" value="${esc((altMap[n]||[]).join(", "))}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox(f==="usedno"&&!q?"👌":"🔎",f==="usedno"&&!q?"كل تمارين عملائك ليها فيديو":"مفيش نتائج");
+      <div class="row" style="margin-top:6px"><input class="grow" data-alts placeholder="⇄ البدائل (افصل بفاصلة) – الافتراضي: ${esc((DEFAULT_ALTS[n]||[]).join("، ")||"لا يوجد")}" value="${esc((altMap[n]||[]).join(", "))}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox(f==="usedno"&&!q?"👌":"🔎",f==="usedno"&&!q?"كل تمارين عملائك ليها فيديو":"مفيش نتائج",f==="usedno"&&!q?"":"جرّب اسم تمرين تاني أو غيّر الفلتر.","","es-sm");
     $("#vl").querySelectorAll("[data-n]").forEach(r=>{ const n=r.dataset.n;
       r.querySelector("[data-save]").onclick=async()=>{ const url=r.querySelector("[data-url]").value.trim(), alts=r.querySelector("[data-alts]").value.split(/[,،]/).map(x=>x.trim().toUpperCase()).filter(Boolean);
         const { error } = (url||alts.length)? await sb.from("exercise_videos").upsert({name:n,video_url:url||null,alternatives:alts.length?alts:null,updated_at:new Date().toISOString()}) : await sb.from("exercise_videos").delete().eq("name",n);
@@ -383,7 +383,7 @@ async function viewFoods(el){
   let timer; $("#fq").oninput=()=>{ clearTimeout(timer); timer=setTimeout(async()=>{
     const q=$("#fq").value.trim(); if(q.length<2){ $("#fl").innerHTML=""; return; }
     const { data } = await sb.from("foods").select("*").ilike("name",`%${q.replace(/[%_,()]/g," ")}%`).limit(40);
-    $("#fl").innerHTML=(data||[]).map(f=>{ const u=unitInfo(f); return `<div class="food-r"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(f.name)}<small>${esc(f.category||"")} · ${u.base}: ${fmt(u.per.kcal)} kcal · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}${hasMinCols(f)&&hasMinData(f)?`<br>${MIN_KEYS.filter(([kk])=>f[kk]!=null).map(([kk,l,un,d])=>l.replace(/^\S+\s/,"")+" "+fmt(u.cnt?f[kk]/100:f[kk],d+(u.cnt?1:0))).join(" · ")}${f.mineral_source&&/تقدير/.test(f.mineral_source)?" (تقدير)":""}`:""}</small></div></div>`; }).join("")||emptyBox("🔎","مفيش نتائج");
+    $("#fl").innerHTML=(data||[]).map(f=>{ const u=unitInfo(f); return `<div class="food-r"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(f.name)}<small>${esc(f.category||"")} · ${u.base}: ${fmt(u.per.kcal)} kcal · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}${hasMinCols(f)&&hasMinData(f)?`<br>${MIN_KEYS.filter(([kk])=>f[kk]!=null).map(([kk,l,un,d])=>l.replace(/^\S+\s/,"")+" "+fmt(u.cnt?f[kk]/100:f[kk],d+(u.cnt?1:0))).join(" · ")}${f.mineral_source&&/تقدير/.test(f.mineral_source)?" (تقدير)":""}`:""}</small></div></div>`; }).join("")||emptyBox("🔎","مفيش نتايج","جرّب كلمة تانية، أو ضيف الصنف من زرار «صنف جديد».","","es-sm");
   },250); };
   $("#fAdd").onclick=async()=>{
     const k=$("#fone")?.checked?100:1;
