@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-997656cc";
-const SHELL=["./","index.html","styles.css?v=997656cc","design.css?v=997656cc","design.js?v=997656cc","core.js?v=997656cc","data.js?v=997656cc","pro.js?v=997656cc","lab.js?v=997656cc","anatomy.js?v=997656cc","health.js?v=997656cc","posing.js?v=997656cc","minerals.js?v=997656cc","icons.js?v=997656cc","supps.js?v=997656cc","views.js?v=997656cc","coach.js?v=997656cc","signup.js?v=997656cc","chat.js?v=997656cc","inbox.js?v=997656cc","screens.js?v=997656cc","prices.js?v=997656cc","training.js?v=997656cc","sharecard.js?v=997656cc","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-ec256d9f";
+const SHELL=["./","index.html","styles.css?v=ec256d9f","design.css?v=ec256d9f","design.js?v=ec256d9f","core.js?v=ec256d9f","data.js?v=ec256d9f","pro.js?v=ec256d9f","lab.js?v=ec256d9f","anatomy.js?v=ec256d9f","health.js?v=ec256d9f","posing.js?v=ec256d9f","minerals.js?v=ec256d9f","icons.js?v=ec256d9f","supps.js?v=ec256d9f","views.js?v=ec256d9f","coach.js?v=ec256d9f","signup.js?v=ec256d9f","chat.js?v=ec256d9f","inbox.js?v=ec256d9f","screens.js?v=ec256d9f","prices.js?v=ec256d9f","training.js?v=ec256d9f","sharecard.js?v=ec256d9f","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -12,6 +12,7 @@ self.addEventListener("fetch",e=>{
     e.respondWith(caches.match(e.request).then(hit=>{ const net=fetch(e.request).then(r=>{ if(r.ok||r.type==="opaque"){ const cp=r.clone(); caches.open(C).then(c=>c.put(e.request,cp)); } return r; }).catch(()=>hit); return hit||net; }));
   }
 });
+
 
 
 
