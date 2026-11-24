@@ -4,6 +4,12 @@
    ====================================================================== */
 const _A='class="a"'; // accent (ember) fill layer
 const ICO={
+  pill:`<rect x="3.5" y="8" width="17" height="8" rx="4" transform="rotate(-35 12 12)"/><path d="M9.2 8.9l5.6 6.2" /><path ${_A} d="M12.2 5.6l3.3-2.1a3.8 3.8 0 015.2 5.2l-2.1 3.3z" opacity=".0"/><circle ${_A} cx="8.2" cy="14.6" r="1.6"/>`,
+  phone:`<rect x="6.5" y="2.5" width="11" height="19" rx="3"/><path d="M10.5 18.5h3"/><path ${_A} d="M10 6h4v1.5h-4z"/>`,
+  flag:`<path d="M5 21V4"/><path d="M5 5c4-2 6 2 10 0 1.4-.7 2.9-.8 4-.3v8.6c-1.1-.5-2.6-.4-4 .3-4 2-6-2-10 0"/><path ${_A} d="M5 5c4-2 6 2 10 0v8c-4 2-6-2-10 0z" opacity=".35"/>`,
+  gift:`<rect x="3.5" y="9" width="17" height="11.5" rx="2.5"/><path d="M12 9v11.5M3.5 13h17M12 9c-1.5-4-6-4.5-5.5-1.6.3 1.5 3 1.6 5.5 1.6zM12 9c1.5-4 6-4.5 5.5-1.6-.3 1.5-3 1.6-5.5 1.6z"/><path ${_A} d="M3.5 12h17v1H3.5z"/>`,
+  home:`<path d="M3.5 11.5L12 4l8.5 7.5"/><path d="M6 10v9.5h12V10"/><path ${_A} d="M10 19.5v-5a2 2 0 014 0v5z"/>`,
+  eye:`<path d="M2.5 12S6 5.5 12 5.5 21.5 12 21.5 12 18 18.5 12 18.5 2.5 12 2.5 12z"/><circle ${_A} cx="12" cy="12" r="3.2"/>`,
   flame:`<path d="M12 21c-3.9 0-6.5-2.6-6.5-6.2 0-3.3 2.3-5 3.4-7.8.4 1.9 1.4 3 2.6 3.6C11.3 7.4 12.6 4.6 15.2 3c-.4 2.6.6 4.4 1.9 6.2 1 1.4 1.4 2.8 1.4 4.6C18.5 18.4 15.9 21 12 21z"/><path ${_A} d="M12 21c-1.8 0-3-1.2-3-2.9 0-1.7 1.3-2.5 2-4 .9 1.3 2.9 2.1 3.6 3.6.6 1.6-.6 3.3-2.6 3.3z"/>`,
   scale:`<path d="M12 4v16M5 20h14M7 7h10"/><path d="M7 7l-3 6a3 3 0 006 0L7 7zM17 7l-3 6a3 3 0 006 0l-3-6z"/><circle ${_A} cx="12" cy="4" r="1.6"/>`,
   plate:`<circle cx="13" cy="12" r="7"/><circle ${_A} cx="13" cy="12" r="3.2"/><path d="M3 4v5a1.5 1.5 0 003 0V4M4.5 9v11"/>`,
@@ -94,6 +100,7 @@ const ICO={
   ext:`<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/><circle ${_A} cx="20" cy="4" r="1.5"/>`,
 };
 const EMOJI_ICO={
+  "💊":"pill","📱":"phone","🏁":"flag","🎁":"gift","🏠":"home","👁":"eye","🌙":"moon","🔒":"lock","✨":"sparkle","🌿":"sprout","🍑":"apple","🍊":"apple","🪨":"layers","🤸":"person","🙏":"heart","👇":"down","🥇":"star","🏅":"star",
   "🔥":"flame","⚖":"scale","🍽":"plate","⏱":"watch","⏰":"watch","⏳":"hourglass","😴":"moon","💤":"moon","⚠":"warn","💪":"dumbbell","⇄":"swap",
   "🎯":"target","📸":"camera","📷":"camera","🩺":"medical","⚕":"medical","🤕":"bandage","📋":"clipboard","🥗":"bowl","🍎":"apple","🍌":"apple",
   "🍳":"pan","🍗":"drumstick","🥤":"cup","🥛":"cup","🍞":"bread","📝":"pencil","✍":"pencil","✏":"pencil","✎":"pencil","📴":"offline","💬":"chat",
@@ -122,3 +129,4 @@ function iconize(root){
   if(document.body){ obs.observe(document.body,{childList:true,subtree:true,characterData:true}); requestAnimationFrame(run); }
   else document.addEventListener("DOMContentLoaded",()=>{ obs.observe(document.body,{childList:true,subtree:true,characterData:true}); run(); });
 })();
+

@@ -384,7 +384,7 @@ function openPain(ex, onAlt){
 function celebratePR(name, now, before){
   const d=document.createElement("div"); d.className="pr-pop";
   d.innerHTML=`<div>🏆</div><b>رقم قياسي جديد!</b><small>${esc(name)}<br>1RM ≈ ${fmt(now,1)} كجم (+${fmt((now/before-1)*100,1)}%)</small>`;
-  document.body.appendChild(d); setTimeout(()=>d.classList.add("out"),2200); setTimeout(()=>d.remove(),2700);
+  document.body.appendChild(d); burst(); setTimeout(()=>d.classList.add("out"),2200); setTimeout(()=>d.remove(),2700);
   if(navigator.vibrate) navigator.vibrate([60,40,60]);
 }
 /* missed yesterday's workout */
@@ -416,3 +416,4 @@ function painCard(p){
       ${e.resolved_at?`<span class="pill good">تمت المتابعة</span>`:`<button class="btn sm" data-pres="${e.id}">تمت المتابعة ✓</button>`}</div>`).join("")}
     <p class="hint">لو الألم في مفصل: بدّل التمرين من تبويب البرنامج، أو قلل المدى/الوزن، أو حوّله لنظام "ضهر آمن".</p></div>`;
 }
+

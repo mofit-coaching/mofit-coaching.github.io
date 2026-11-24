@@ -172,3 +172,20 @@ function tempoBlocks(t){
 }
 
 
+
+
+
+/* ---- motion helpers (v4): confetti burst + tap ripple; both skip under reduced-motion ---- */
+const _rm=()=>window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
+function burst(){
+  if(_rm()) return; const w=document.createElement("div"); w.className="burst"; const cols=["#FF6B1A","#FFB347","#5B6CFF","#14B8A6","#F43F8E","#fff"];
+  for(let i=0;i<34;i++){ const p=document.createElement("i"), a=Math.random()*Math.PI*2, d=90+Math.random()*170;
+    p.style.cssText=`--x:${Math.cos(a)*d}px;--y:${Math.sin(a)*d-80}px;--r:${Math.random()*720-360}deg;background:${cols[i%cols.length]};animation-delay:${Math.random()*.12}s;border-radius:${i%3?"2px":"50%"}`; w.appendChild(p); }
+  document.body.appendChild(w); setTimeout(()=>w.remove(),1800); if(navigator.vibrate) navigator.vibrate(30);
+}
+document.addEventListener("pointerdown",e=>{
+  if(_rm()) return; const t=e.target.closest&&e.target.closest(".btn,.chip,.nav button,.client,.daycard,.tick"); if(!t) return;
+  const r=t.getBoundingClientRect(), s=document.createElement("span"), d=Math.max(r.width,r.height)*1.6; s.className="rip";
+  s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
+  if(getComputedStyle(t).position==="static") t.style.position="relative"; t.style.overflow=t.style.overflow||"hidden"; t.appendChild(s); setTimeout(()=>s.remove(),600);
+},{passive:true});

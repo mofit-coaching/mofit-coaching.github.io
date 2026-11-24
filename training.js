@@ -111,7 +111,7 @@ function openFinish(p, day, week, exs, logs, onDone){
     if(error) return toast(error.message);
     const { data:prev } = await sb.from("workout_sessions").select("volume,log_date").eq("client_id",p.id).eq("day_no",day).lt("log_date",today()).order("log_date",{ascending:false}).limit(1);
     const pv=+prev?.[0]?.volume||0, dv=pv&&vol?(vol-pv)/pv:null;
-    closeSheet(); toast(queued?"📴 اتحفظ على الموبايل":dv!==null?`✓ برافو! الحجم ${dv>=0?"زاد":"قل"} ${Math.abs(dv*100).toFixed(0)}% عن آخر مرة`:"✓ برافو! اتسجل التمرين 💪");
+    closeSheet(); burst(); toast(queued?"📴 اتحفظ على الموبايل":dv!==null?`✓ برافو! الحجم ${dv>=0?"زاد":"قل"} ${Math.abs(dv*100).toFixed(0)}% عن آخر مرة`:"✓ برافو! اتسجل التمرين 💪");
     try{ localStorage.removeItem(wStartKey(p.id,day)); }catch(e){}
     onDone&&onDone();
   };
@@ -163,3 +163,4 @@ function wireBlockReview(p, el){
   const b=$("#brDone"); if(!b) return;
   b.onclick=async()=>{ const { error } = await sb.from("profiles").update({reviewed_block:blockOf(currentWeek(p))}).eq("id",p.id); if(error) return toast(error.message); await refreshClient(); toast("✓ تمام"); setupProgram(el); };
 }
+
