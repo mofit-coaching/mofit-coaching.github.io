@@ -1193,3 +1193,5 @@ body.scrolling *,body.scrolling *::before,body.scrolling *::after{animation-play
 .ltabs{gap:3px}.ltab{white-space:nowrap;padding:9px 2px;font-size:.8rem;letter-spacing:0}
 
 .nudge-mini{flex:none;align-self:center;width:38px;height:38px;border-radius:12px;border:0;background:var(--navy,#0B1220);color:#fff;font-size:1.05rem;cursor:pointer;margin-inline-start:6px;transition:transform .15s}.nudge-mini:active{transform:scale(.9)}.nudge-mini.sent{background:#1FA971}
+
+.wtrend .wt-row{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;margin:6px 0}.wtrend .wt-row .num{font-size:2rem}.wtrend .wt-v{margin:4px 0 0;font-weight:700}.wtrend.warn{border:1.5px solid var(--acc-line,#FDBA74)}.wtrend .wt-row .num{animation:itemin .6s cubic-bezier(.2,.9,.25,1) both}
