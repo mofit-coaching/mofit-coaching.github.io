@@ -161,8 +161,12 @@ async function viewTrain(el){
       <div class="muted" style="margin:8px 0 6px;font-weight:700">الأسبوع</div>
       ${blockNavHTML(S.week,p)}<div class="scroller" id="wkChips">${blockWeeks(S.week).map(w=>`<button class="chip ${S.week===w?"on":""} ${wkNow===w?"cur":""}" data-w="${w}">${w}${isDeload(p,w)?" 🔄":""}</button>`).join("")}</div></div>
     <div class="card tools hidden" id="tTools"></div><div id="tPrep"></div><div id="exList"></div><div class="card" id="failCard"></div>`;
-  el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{S.day=+b.dataset.d; viewTrain(el);});
-  el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{S.week=+b.dataset.w; viewTrain(el);});
+  { const dc=$("#dayCards"), wc=$("#wkChips"), sel=dc&&dc.querySelector(".daycard.on");
+    if(dc){ if(window._dcX!=null){ dc.style.scrollSnapType="none"; dc.scrollLeft=window._dcX; requestAnimationFrame(()=>{ if(sel) sel.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); setTimeout(()=>{dc.style.scrollSnapType="";},500); }); } else if(sel) sel.scrollIntoView({inline:"center",block:"nearest"}); }
+    if(wc){ if(window._wcX!=null) wc.scrollLeft=window._wcX; const w=wc.querySelector(".chip.on"); if(w) requestAnimationFrame(()=>w.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"})); }
+    window._dcX=null; window._wcX=null; }
+  el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{ window._dcX=$("#dayCards")?.scrollLeft; S.day=+b.dataset.d; viewTrain(el);});
+  el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ window._wcX=$("#wkChips")?.scrollLeft; S.week=+b.dataset.w; viewTrain(el);});
   const allEx=S.program.filter(e=>e.day_no===S.day), exs=trainMode()==="quick"?allEx.slice(0,4):allEx, list=$("#exList");
   const tt=$("#tTools"); if(allEx.length&&S.me.role!=="coach"&&S.week===wkNow){ tt.classList.remove("hidden"); tt.innerHTML=trainToolsHTML();
     tt.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ setTrainMode(trainMode()===b.dataset.mode?"":b.dataset.mode); viewTrain(el); });

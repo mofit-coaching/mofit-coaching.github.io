@@ -1088,3 +1088,9 @@ main>*{animation:rise2 .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(v
 .wu-prog i{background-size:200% 100%;background-image:linear-gradient(90deg,#FDBA74,var(--acc),#FFE2B8,var(--acc));animation:shim 2.4s linear infinite}
 @keyframes shim{to{background-position:200% 0}}
 @media(prefers-reduced-motion:reduce){#exList .ex,.ex-h,.ex-h::after,.ex-n::after,.ex-tags .pill,.tempo div,.wu-hero,.wu-prog i{animation:none!important}}
+
+/* v7.1 smooth touch scrolling for day cards and week chips */
+.scroller{scroll-snap-type:x proximity;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;touch-action:pan-x pan-y;scroll-padding-inline:12px;scroll-behavior:smooth}
+.scroller .daycard,.scroller .chip{scroll-snap-align:center;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
+#dayCards{padding-block:6px 10px;margin-inline:-4px;padding-inline:4px}
+@media(hover:none){#wkChips .chip:active,#dayCards .daycard:active{transform:none}}
