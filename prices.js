@@ -38,13 +38,14 @@ async function loadPlans(all=false){
 function plansHTML(plans, who){
   if(!plans.length) return `<p class="hint">العروض هتنزل قريب – كلم الكوتش على واتساب.</p>`;
   const perMonth=p=> planPrice(p) ? (+p.price)/((+p.months)+(+p.free_months||0)) : null;
-  return `<div class="plans">${plans.map(p=>{ const total=(+p.months)+(+p.free_months||0), pm=perMonth(p);
-    return `<a class="plan ${p.badge?"hot":""}" href="${esc(waLink(planMsg(p,who)))}" target="_blank" rel="noopener">
-      ${p.badge?`<span class="plan-badge">${esc(p.badge)}</span>`:""}
+  const priced=plans.filter(planPrice), best=priced.length>1&&!plans.some(p=>p.badge)? priced.reduce((a,b)=>perMonth(b)<perMonth(a)?b:a) : null;
+  return `<div class="plans">${plans.map(p=>{ const total=(+p.months)+(+p.free_months||0), pm=perMonth(p), pd=pm?pm/30:null, save=p.old_price&&planPrice(p)&&+p.old_price>+p.price?Math.round((1-(+p.price)/(+p.old_price))*100):0;
+    return `<a class="plan ${p.badge||p===best?"hot":""}" href="${esc(waLink(planMsg(p,who)))}" target="_blank" rel="noopener">
+      ${p.badge?`<span class="plan-badge">${esc(p.badge)}</span>`:p===best?`<span class="plan-badge">⭐ الأفضل قيمة</span>`:""}${save>0?`<span class="plan-save">وفّر ${save}%</span>`:""}
       <div class="plan-top"><b>${esc(monthsAr(p.months))}</b>${p.free_months?`<span class="plan-free">+ ${esc(monthsAr(p.free_months))} هدية 🎁</span>`:""}</div>
       <div class="plan-total">إجمالي ${esc(monthsAr(total))} متابعة</div>
       <div class="plan-price">${planPrice(p)?`${p.old_price?`<s class="num">${fmt(p.old_price)}</s> `:""}<b class="num">${fmt(p.price)}</b> <small>${esc(p.currency||"ج.م")}</small>`:`<small>تواصل لمعرفة السعر</small>`}</div>
-      ${pm?`<div class="plan-pm">يعني <span class="num">${fmt(pm)}</span> ${esc(p.currency||"ج.م")} في الشهر</div>`:""}
+      ${pm?`<div class="plan-pm">يعني <span class="num">${fmt(pm)}</span> ${esc(p.currency||"ج.م")} في الشهر · <b class="num">${fmt(pd,1)}</b> في اليوم</div>`:""}
       ${p.note?`<div class="plan-note">${esc(p.note)}</div>`:""}
       <span class="plan-cta">اشترك عن طريق واتساب ›</span></a>`; }).join("")}</div>`;
 }
@@ -123,4 +124,5 @@ function remindLink(c,a){
     : `عايز أطمن عليك بخصوص آخر حاجة سجلتها في التطبيق – كلمني لما تفضى 🙏`;
   return `https://wa.me/${normPhone(c.phone)}?text=${encodeURIComponent(`أهلاً ${first} 👋\n${body}`)}`;
 }
+
 
