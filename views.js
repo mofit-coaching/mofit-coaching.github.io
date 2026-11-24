@@ -14,7 +14,7 @@ async function boot(){
   if(!session){ $("#loginView").classList.remove("hidden"); $("#appView").classList.add("hidden"); return; }
   let { data:me } = await sb.from("profiles").select("*").eq("id",session.user.id).single();
   if(me) cacheSet("me",me); else { me=cacheGet("me"); if(!me||me.id!==session.user.id){ toast("تعذر تحميل الحساب"); return; } }
-  if(!me.active){ await sb.auth.signOut(); $("#loginView").classList.remove("hidden"); $("#loginErr").textContent="الحساب غير مفعّل – تواصل مع الكوتش"; return; }
+  if(!me.active){ await sb.auth.signOut(); $("#loginView").classList.remove("hidden"); $("#loginErr").textContent=me.signup_days?"طلبك قيد المراجعة – الكوتش هيفعّل حسابك بعد تأكيد الاشتراك":"الحساب غير مفعّل – تواصل مع الكوتش"; return; }
   S.me=me; $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
   await loadVideos(); flushQueue();
   if(me.role==="coach"){ S.tab="clients"; await Promise.all([loadClients(),loadCoachTemplates(),loadDietTemplates()]); }
@@ -431,3 +431,4 @@ async function homeCheckinCard(p,wk){
      ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
   $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
 }
+
