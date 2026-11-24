@@ -77,7 +77,9 @@ function chatAppend(m){
   const L=document.getElementById("chatL"); if(!L || L.querySelector(`[data-id="${m.id}"]`)) return;
   L.querySelector(".chat-empty")?.remove();
   const day=chatDay(m.created_at); if(L.dataset.day!==day){ const h=document.createElement("div"); h.className="chat-day"; h.textContent=day; L.append(h); L.dataset.day=day; }
-  L.append(chatBubble(m)); L.scrollTop=L.scrollHeight;
+  const el=chatBubble(m), prev=L.lastElementChild;
+  if(prev&&prev.classList.contains("msg")&&prev.classList.contains("me")===el.classList.contains("me")&&(new Date(m.created_at)-new Date(prev.dataset.t||0))<120000){ prev.classList.add("gnext"); el.classList.add("cont"); }
+  el.dataset.t=m.created_at; L.append(el); L.scrollTop=L.scrollHeight;
 }
 async function chatMarkRead(cid){
   const { error } = await sb.from("messages").update({read_at:new Date().toISOString()}).eq("client_id",cid).neq("sender_role",chatMine()).is("read_at",null);
@@ -101,11 +103,11 @@ function chatFabUpdate(){
 async function openChat(clientId, title){
   chatStart(); CHAT.open=clientId;
   const wa = S.me.role!=="coach" && typeof waLink==="function" ? `<a class="btn" target="_blank" rel="noopener" href="${esc(waLink("السلام عليكم كوتش 👋"))}">واتساب</a>` : "";
-  openSheet(`<div class="chat"><div class="chat-h"><b>💬 ${esc(title)}</b><div class="row">${wa}<button class="btn" type="button" id="chatX">إغلاق</button></div></div>
+  openSheet(`<div class="chat"><div class="chat-h"><button class="mback" type="button" id="chatX" aria-label="رجوع"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button><div class="av mav">${esc(String(title).trim().charAt(0)||"👤")}</div><div class="mt"><b>${esc(title)}</b><small>${S.me.role==="coach"?"عميل":"الكوتش"}</small></div>${wa}</div>
     <div class="chat-l" id="chatL" aria-live="polite"><div class="chat-empty">⏳ بيتحمل…</div></div>
     <div class="chat-q" id="chatQ"></div><div class="chat-rec hidden" id="chatRec"><span class="recdot"></span><b id="recT">0:00</b><span class="recs">بيسجّل… دوس ■ للإرسال</span><button class="btn" type="button" id="recX">إلغاء</button></div>
     <form class="chat-f" id="chatF" autocomplete="off"><button class="cb" type="button" id="chatCam" aria-label="صورة">📷</button><input type="file" id="chatFile" accept="image/*" hidden><input id="chatI" maxlength="2000" placeholder="اكتب رسالتك…" aria-label="رسالة"><button class="cb" type="button" id="chatMic" aria-label="تسجيل صوتي"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#F97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button class="btn primary" type="submit" id="chatSend">إرسال</button></form></div>`);
-  $("#chatX").onclick=closeSheet;
+  $("#sheet").classList.add("msgr");   $("#chatX").onclick=closeSheet;
   const { data, error } = await sb.from("messages").select("*").eq("client_id",clientId).order("created_at",{ascending:false}).limit(100);
   const L=$("#chatL"); if(!L || CHAT.open!==clientId) return;
   L.innerHTML="";
@@ -178,3 +180,65 @@ viewClients = async function(el){
   const anchor=el.querySelector("#addBtn"); anchor?anchor.after(host):el.prepend(host);
 };
 
+
+
+/* ===== v8 Messenger look: full-screen thread + coach conversation list ===== */
+(function(){ const st=document.createElement("style"); st.textContent=`
+#sheet.msgr .sheet-bg{background:#fff;backdrop-filter:none}
+#sheet.msgr .sheet-card{inset:0;top:0;bottom:0;max-height:none;height:100%;max-width:none;width:100%;border-radius:0;padding:0;overflow:hidden;display:flex;flex-direction:column;animation:msgrin .28s cubic-bezier(.2,.9,.2,1) both;background:#fff}
+@keyframes msgrin{from{transform:translateX(-30px);opacity:0}}
+#sheet.msgr .sheet-grab{display:none}
+#sheet.msgr #sheetBody{flex:1;min-height:0;display:flex;flex-direction:column}
+#sheet.msgr .chat{flex:1;height:auto;min-height:0;max-width:760px;width:100%;margin:0 auto}
+#sheet.msgr .chat-h{justify-content:flex-start;gap:10px;padding:calc(10px + env(safe-area-inset-top)) 12px 10px;border-bottom:1px solid rgba(11,18,32,.08);background:#fff}
+.mback{width:38px;height:38px;border-radius:50%;border:0;background:transparent;color:#F97316;display:grid;place-items:center;cursor:pointer;flex:none}.mback:active{background:rgba(249,115,22,.12)}
+.mav{width:42px;height:42px;border-radius:50%!important;font-size:1.05rem;flex:none}
+.chat-h .mt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.25}.chat-h .mt b{font-size:16px}.chat-h .mt small{font-size:12px;opacity:.6}
+#sheet.msgr .chat-l{padding:12px 12px 6px;gap:8px;background:#fff}
+#sheet.msgr .msg{border-radius:20px;padding:9px 14px;max-width:78%}
+#sheet.msgr .msg.me{background:linear-gradient(135deg,#FF8A3D,#F97316 60%,#EA580C);color:#fff;border-bottom-right-radius:20px}
+#sheet.msgr .msg.them{background:#F0F2F5;color:#0B1220;border-bottom-left-radius:20px}
+#sheet.msgr .msg.cont{margin-top:-6px}
+#sheet.msgr .msg.me.cont{border-top-right-radius:6px}#sheet.msgr .msg.me.gnext{border-bottom-right-radius:6px}
+#sheet.msgr .msg.them.cont{border-top-left-radius:6px}#sheet.msgr .msg.them.gnext{border-bottom-left-radius:6px}
+#sheet.msgr .msg small{font-size:10.5px;opacity:.6}
+#sheet.msgr .chat-q{padding:8px 12px 0}
+#sheet.msgr .chat-f{padding:8px 10px calc(10px + env(safe-area-inset-bottom));align-items:center;gap:6px;border-top:1px solid rgba(11,18,32,.06);background:#fff}
+#sheet.msgr .chat-f input#chatI{background:#F0F2F5;border:0;border-radius:99px;padding:11px 16px;font-size:15px;min-width:0;outline:none}
+#sheet.msgr .cb{border:0;background:transparent;border-radius:50%;width:40px;height:40px;color:#F97316}.cb:active{background:rgba(249,115,22,.12)}
+#sheet.msgr #chatSend{width:42px;height:42px;padding:0;border-radius:50%;font-size:0;display:grid;place-items:center;flex:none;background:linear-gradient(135deg,#FF8A3D,#F97316);border:0;box-shadow:0 4px 12px -3px rgba(249,115,22,.6)}
+#sheet.msgr #chatSend::before{content:"";width:18px;height:18px;background:#fff;-webkit-mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 11.5L21 3l-6.5 18-3-7.5z'/></svg>") center/contain no-repeat;mask:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><path d='M3 11.5L21 3l-6.5 18-3-7.5z'/></svg>") center/contain no-repeat;transform:scaleX(-1)}
+.mlist{max-width:760px;margin:0 auto}
+.msearch{position:sticky;top:0;z-index:2;padding:4px 0 10px;background:var(--bg,#F4F2EC)}
+.msearch input{width:100%;background:#fff;border:0;border-radius:99px;padding:12px 18px;font-size:15px;box-shadow:0 1px 4px rgba(11,18,32,.08)}
+.mrow{display:flex;align-items:center;gap:12px;width:100%;text-align:start;background:#fff;border:0;border-radius:18px;padding:11px 12px;margin-bottom:6px;cursor:pointer;font:inherit;color:inherit;-webkit-tap-highlight-color:transparent}
+.mrow:active{background:#F0F2F5}
+.mrow .mb{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}.mrow .mb b{font-size:15.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow .mb small{font-size:13.5px;opacity:.6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mrow.unread .mb b{font-weight:800}.mrow.unread .mb small{opacity:1;font-weight:700;color:#0B1220}
+.mrow .mm{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:none;font-size:11.5px}.mrow .mm em{font-style:normal;opacity:.55}
+.mdot{min-width:22px;height:22px;padding:0 6px;border-radius:11px;background:#F97316;color:#fff;font-style:normal;font-weight:800;font-size:12px;display:grid;place-items:center}
+.mrow.none .mb small{opacity:.4}
+.nbdg{display:inline-block;min-width:16px;height:16px;padding:0 4px;margin-inline-start:4px;border-radius:8px;background:#F97316;color:#fff;font-size:10px;line-height:16px;font-style:normal}
+@media(prefers-reduced-motion:reduce){#sheet.msgr .sheet-card{animation:none}}
+`; document.head.appendChild(st); })();
+ICON.chats='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1-4.6A8 8 0 1 1 21 12z"/></svg>';
+(function(){
+  const _t=tabs; tabs=function(){ const t=_t(); if(S.me&&S.me.role==="coach"&&!S.client){ const n=Object.values(CHAT.unread).reduce((a,b)=>a+b,0); t.splice(0,0,["chats","الرسايل"+(n?`<i class="nbdg">${n>9?"9+":n}</i>`:"")]); } return t; };
+  const _h=viewHome; viewHome=async function(el){ if(S.me.role==="coach"&&!S.client&&S.tab==="chats") return viewChats(el); return _h.apply(this,arguments); };
+})();
+function chatWhen(t){ const d=new Date(t), n=new Date(); try{ if(d.toDateString()===n.toDateString()) return d.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}); if(n-d<6*864e5) return d.toLocaleDateString("ar-EG",{weekday:"short"}); return d.toLocaleDateString("ar-EG",{day:"numeric",month:"short"}); }catch(_){ return ""; } }
+async function viewChats(el){
+  el.innerHTML=`<div class="mlist"><div class="msearch"><input id="mq" type="search" placeholder="ابحث في المحادثات" aria-label="بحث"></div><div id="mrows"><div class="chat-empty">⏳ بيتحمل…</div></div></div>`;
+  const { data } = await sb.from("messages").select("client_id,sender_role,body,kind,created_at").order("created_at",{ascending:false}).limit(600);
+  if(!$("#mrows")) return;
+  const last={}; (data||[]).forEach(m=>{ if(!last[m.client_id]) last[m.client_id]=m; });
+  const C=(S.coachClients||[]).slice().sort((a,b)=>{ const x=last[a.id],y=last[b.id]; if(x&&y) return new Date(y.created_at)-new Date(x.created_at); if(x) return -1; if(y) return 1; return String(a.full_name||"").localeCompare(String(b.full_name||""),"ar"); });
+  const draw=()=>{ const q=($("#mq").value||"").trim().toLowerCase(); const R=C.filter(c=>!q||String(c.full_name||c.email||"").toLowerCase().includes(q));
+    $("#mrows").innerHTML=R.length?R.map(c=>{ const m=last[c.id], un=CHAT.unread[c.id]||0; const pv=!m?"ابدأ محادثة":(m.sender_role==="coach"?"أنت: ":"")+(m.kind==="image"?"📷 صورة":m.kind==="voice"?"🎤 رسالة صوتية":m.body);
+      return `<button type="button" class="mrow ${un?"unread":""} ${m?"":"none"}" data-id="${esc(c.id)}"><span class="av mav">${initials(c)}</span><span class="mb"><b>${esc(c.full_name||c.email||"عميل")}</b><small>${esc(pv)}</small></span><span class="mm">${m?`<em>${chatWhen(m.created_at)}</em>`:""}${un?`<i class="mdot">${un>9?"9+":un}</i>`:""}</span></button>`; }).join(""):`<div class="chat-empty">مفيش نتايج</div>`; };
+  draw(); $("#mq").oninput=draw;
+  $("#mrows").onclick=e=>{ const b=e.target.closest("[data-id]"); if(!b) return; const c=C.find(x=>x.id===b.dataset.id); openChat(b.dataset.id,c?.full_name||c?.email||"العميل"); };
+}
+(function(){ const _c=closeSheet; closeSheet=function(){ $("#sheet").classList.remove("msgr"); _c.apply(this,arguments); if(S.me?.role==="coach"&&!S.client&&S.tab==="chats"){ try{ render(); }catch(e){} } };
+  const _i=chatIncoming; chatIncoming=function(m){ _i.apply(this,arguments); if(S.me?.role==="coach"&&!S.client&&S.tab==="chats"&&$("#sheet").classList.contains("hidden")){ try{ render(); }catch(e){} } }; })();
