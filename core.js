@@ -211,3 +211,7 @@ try{ const _s=new URLSearchParams(location.search).get("src"); if(_s) localStora
   new MutationObserver(()=>{ document.querySelectorAll(".plan-price b.num").forEach(run); }).observe(document.body,{childList:true,subtree:true});
   document.addEventListener("click",e=>{ const b=e.target.closest&&e.target.closest("#onbN"); if(b&&/يلا/.test(b.innerText)&&typeof burst==="function") burst(); },true);
 })();
+
+/* v7.5: pause decorative animations while scrolling so touch scrolling stays smooth */
+(function(){var t,on=false;function s(){if(!on){document.body.classList.add("scrolling");on=true}clearTimeout(t);t=setTimeout(function(){document.body.classList.remove("scrolling");on=false},160)}
+document.addEventListener("scroll",s,{passive:true,capture:true});document.addEventListener("touchmove",s,{passive:true,capture:true})})();

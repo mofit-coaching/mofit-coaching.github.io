@@ -1137,3 +1137,16 @@ main>*{animation:rise2 .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(v
 #dayCards .daycard,#wkChips .chip,#wkChips .chip.on,#wkChips .chip.cur:not(.on){animation:none!important}
 #wkChips .chip.on{box-shadow:0 8px 18px -6px rgba(11,18,32,.6),0 0 0 2px rgba(255,107,26,.55)}
 #dayCards .daycard .dot{animation:none!important}
+
+/* v7.5 smooth scrolling everywhere: fewer repaints while a finger is moving */
+.scroller,.seg,.chat-q,.scrollx{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:none;scroll-behavior:auto;touch-action:pan-x pan-y}
+.scroller>*,.seg>*,.chat-q>*{backface-visibility:hidden;-webkit-backface-visibility:hidden}
+body.scrolling *,body.scrolling *::before,body.scrolling *::after{animation-play-state:paused!important}
+@media(hover:none){
+  .nav,.timer,.toast,.ibtn,.pill.glass{backdrop-filter:none!important;-webkit-backdrop-filter:none!important}
+  .nav{background:rgba(11,18,32,.97)}
+  .sheet-bg{backdrop-filter:none!important}
+  .heat i.l3,.heat i.l4{animation:cellin .6s cubic-bezier(.2,1.5,.4,1) both!important}
+  .heat::after{animation-duration:9s}
+  .wu-prog i,.btn.primary.block::after{animation:none!important}
+}
