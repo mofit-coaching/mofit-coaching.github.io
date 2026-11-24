@@ -406,6 +406,25 @@ async function viewBody(el){
   el.querySelectorAll("[data-bs]").forEach(b=>b.onclick=()=>{ S.bodySeg=b.dataset.bs; viewBody(el); });
   return S.bodySeg==="c" ? viewCheckin($("#bodyHost")) : viewMeasures($("#bodyHost"));
 }
+function weightTrend(B,p){
+  const W=B.filter(b=>b.weight&&b.week>=0).map(b=>({x:b.week,y:+b.weight})).sort((a,b)=>a.x-b.x);
+  if(W.length<3) return null;
+  const MA=W.map((pt,i)=>{ const w=W.slice(Math.max(0,i-2),i+1); return {x:pt.x,y:w.reduce((a,q)=>a+q.y,0)/w.length}; });
+  const R=W.slice(-4), n=R.length, mx=R.reduce((a,q)=>a+q.x,0)/n, my=R.reduce((a,q)=>a+q.y,0)/n;
+  const den=R.reduce((a,q)=>a+(q.x-mx)**2,0), rate=den?R.reduce((a,q)=>a+(q.x-mx)*(q.y-my),0)/den:0;
+  const last=MA[MA.length-1].y, pctWk=rate/last*100, g=p.goal||"";
+  let kind="ok", text="الاتجاه ماشي كويس";
+  if(/تنشيف|خسارة|تخسيس/.test(g)){ if(rate>-0.1){ kind="warn"; text="الوزن واقف – وقت تعدّل السعرات أو الكارديو"; } else if(pctWk<-1){ kind="warn"; text="النزول سريع – خلي بالك على العضلات"; } else text="نزول مضبوط 👌"; }
+  else if(/زيادة|تضخيم|بناء/.test(g)){ if(rate<0.05){ kind="warn"; text="الوزن مش بيزيد – وقت تزوّد السعرات"; } else if(pctWk>0.5){ kind="warn"; text="الزيادة سريعة – ممكن تبقى دهون زيادة"; } else text="زيادة مضبوطة 👌"; }
+  else text=Math.abs(rate)<0.15?"الوزن ثابت":"الوزن بيتغير";
+  return {MA,rate,kind,text,last};
+}
+function weightTrendCard(B,p){
+  const t=weightTrend(B,p); if(!t) return `<div class="card"><div class="card-h"><div class="ic acc">📉</div><h2>اتجاه الوزن<small>بيظهر بعد 3 قياسات</small></h2></div></div>`;
+  return `<div class="card wtrend ${t.kind}"><div class="card-h"><div class="ic acc">📉</div><h2>اتجاه الوزن<small>متوسط متحرك – مش وزن يوم واحد</small></h2></div>
+    <div class="wt-row"><b class="num">${fmt(t.last,1)}</b><span>كجم (متوسط)</span><span class="pill ${t.kind==="warn"?"acc":"acc-soft"}">${t.rate>0?"▲":"▼"} ${fmt(Math.abs(t.rate),2)} كجم/أسبوع</span></div>
+    <p class="wt-v">${t.kind==="warn"?"⚠ ":"✅ "}${t.text}</p>${lineChart(t.MA,"كجم","#F97316")}</div>`;
+}
 async function viewMeasures(el){
   const p=S.client, { data } = await sb.from("body_logs").select("*").eq("client_id",p.id).order("week");
   const B=data||[], wk=currentWeek(p), sel=S.bodyWeek ?? (B.find(b=>b.week===0)?wk:0);
@@ -417,6 +436,7 @@ async function viewMeasures(el){
       ${F.map(([k,l,u])=>{ const d=sel&&start[k]&&cur[k]?cur[k]-start[k]:null; return `<label class="f">${l} (${u})<input inputmode="decimal" data-k="${k}" value="${esc(cur[k]??"")}">${d!==null?`<span class="pill ${d<0?"acc-soft":""}" style="margin-top:4px">${d>0?"▲":"▼"} ${fmt(Math.abs(d),1)} منذ البداية</span>`:""}</label>`; }).join("")}</div>
       <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
       <button class="btn primary block" id="bSave">حفظ ${sel?"الأسبوع "+sel:"قياسات البداية"}</button></div>
+    ${weightTrendCard(B,p)}
     <div class="card"><div class="card-h"><div class="ic acc">⚖</div><h2>منحنى الوزن</h2></div>${lineChart(B.filter(b=>b.weight).map(b=>({x:b.week,y:+b.weight})),"كجم")}</div>
     <div class="card"><div class="card-h"><div class="ic">📐</div><h2>منحنى الوسط</h2></div>${lineChart(B.filter(b=>b.waist).map(b=>({x:b.week,y:+b.waist})),"سم")}</div>`;
   el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{S.bodyWeek=+b.dataset.w; viewMeasures(el);});
