@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-433edca5";
-const SHELL=["./","index.html","styles.css?v=433edca5","core.js?v=433edca5","data.js?v=433edca5","pro.js?v=433edca5","lab.js?v=433edca5","icons.js?v=433edca5","supps.js?v=433edca5","views.js?v=433edca5","coach.js?v=433edca5","prices.js?v=433edca5","training.js?v=433edca5","manifest.json","icon.svg","icon-192.png"];
+const C="mofit-9b1c2d3e";
+const SHELL=["./","index.html","styles.css?v=9b1c2d3e","core.js?v=9b1c2d3e","data.js?v=9b1c2d3e","pro.js?v=9b1c2d3e","lab.js?v=9b1c2d3e","icons.js?v=9b1c2d3e","supps.js?v=9b1c2d3e","views.js?v=9b1c2d3e","coach.js?v=9b1c2d3e","prices.js?v=9b1c2d3e","training.js?v=9b1c2d3e","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -12,3 +12,4 @@ self.addEventListener("fetch",e=>{
     e.respondWith(caches.match(e.request).then(hit=>{ const net=fetch(e.request).then(r=>{ if(r.ok||r.type==="opaque"){ const cp=r.clone(); caches.open(C).then(c=>c.put(e.request,cp)); } return r; }).catch(()=>hit); return hit||net; }));
   }
 });
+

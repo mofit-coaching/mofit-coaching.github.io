@@ -13,13 +13,25 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-title" content="Mofit">
 <meta name="description" content="Mofit – تمرينك وأكلك ومتابعتك مع الكوتش في مكان واحد">
+<link rel="canonical" href="https://mofit-coaching.github.io/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Mofit">
+<meta property="og:title" content="Mofit – تمرينك وأكلك ومتابعتك مع الكوتش">
+<meta property="og:description" content="برنامج تمرين مخصص، نظام غذائي محسوب، ومتابعة أسبوعية مع الكوتش في تطبيق واحد.">
+<meta property="og:url" content="https://mofit-coaching.github.io/">
+<meta property="og:image" content="https://mofit-coaching.github.io/icon-512.png">
+<meta property="og:locale" content="ar_EG">
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Mofit – تمرينك وأكلك ومتابعتك مع الكوتش">
+<meta name="twitter:image" content="https://mofit-coaching.github.io/icon-512.png">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Lalezar&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js"></script>
-<link rel="stylesheet" href="styles.css?v=433edca5">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js" integrity="sha384-HZZ/fukV+9G8gwTNjN7zQDG0Sp7MsZy5DDN6VfY3Be7V9dvQpEpR2jF2HlyFUUjU" crossorigin="anonymous"></script>
+<link rel="stylesheet" href="styles.css?v=9b1c2d3e">
 </head>
 <body>
+<noscript><p style="padding:24px;text-align:center;font-family:sans-serif">Mofit محتاج JavaScript عشان يشتغل.</p></noscript>
 <section id="loginView" class="login hidden">
   <div class="login-art"><div class="logo-big">MO<b>FIT</b></div><p>برنامجك · تغذيتك · تطورك — في مكان واحد</p></div>
   <div class="login-card">
@@ -44,17 +56,18 @@
   <main id="main"></main>
   <nav class="nav" id="nav"></nav>
 </section>
-<div id="timer" class="timer hidden"></div>
-<div id="sheet" class="sheet hidden"><div class="sheet-bg"></div><div class="sheet-card"><div class="sheet-grab"></div><div id="sheetBody"></div></div></div>
-<script src="core.js?v=433edca5"></script>
-<script src="icons.js?v=433edca5"></script>
-<script src="data.js?v=433edca5"></script>
-<script src="pro.js?v=433edca5"></script>
-<script src="lab.js?v=433edca5"></script>
-<script src="supps.js?v=433edca5"></script>
-<script src="training.js?v=433edca5"></script>
-<script src="prices.js?v=433edca5"></script>
-<script src="views.js?v=433edca5"></script>
-<script src="coach.js?v=433edca5"></script>
+<div id="timer" class="timer hidden" role="status" aria-live="polite"></div>
+<div id="sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="نافذة"><div class="sheet-bg"></div><div class="sheet-card"><div class="sheet-grab"></div><div id="sheetBody"></div></div></div>
+<script src="core.js?v=9b1c2d3e"></script>
+<script src="icons.js?v=9b1c2d3e"></script>
+<script src="data.js?v=9b1c2d3e"></script>
+<script src="pro.js?v=9b1c2d3e"></script>
+<script src="lab.js?v=9b1c2d3e"></script>
+<script src="supps.js?v=9b1c2d3e"></script>
+<script src="training.js?v=9b1c2d3e"></script>
+<script src="prices.js?v=9b1c2d3e"></script>
+<script src="views.js?v=9b1c2d3e"></script>
+<script src="coach.js?v=9b1c2d3e"></script>
 </body>
 </html>
+
