@@ -44,7 +44,7 @@ async function submitSignup(e){
   const btn=$("#suBtn"); btn.disabled=true; btn.textContent="⏳ بيتم الإرسال…";
   const { data, error } = await sb.auth.signUp({ email, password:pass, options:{
     emailRedirectTo: location.origin+location.pathname,
-    data:{ signup:true, full_name:name, phone, signup_days:days.join("،"), training_days:days.length, signup_steps:steps, signup_plan:plan?planTitle(plan):null } } });
+    data:{ signup:true, signup_src:(localStorage.getItem("mofit_src")||null), full_name:name, phone, signup_days:days.join("،"), training_days:days.length, signup_steps:steps, signup_plan:plan?planTitle(plan):null } } });
   btn.disabled=false; btn.textContent="إرسال الطلب";
   if(error){ err(/registered|exists/i.test(error.message)?"الإيميل ده مسجل قبل كده – جرّب تسجيل الدخول":"حصلت مشكلة، جرّب تاني بعد شوية"); return; }
   // Supabase hides duplicate emails when confirmation is on: identities comes back empty
@@ -87,3 +87,4 @@ function renderPending(el){
     }
   };
 }
+
