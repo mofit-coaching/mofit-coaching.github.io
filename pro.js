@@ -165,7 +165,7 @@ async function viewCheckin(el){
     ${coach?`<div class="card"><div class="card-h"><div class="ic acc">💬</div><h2>ردك على المتابعة</h2></div>
       <textarea rows="4" id="ciReply" placeholder="ملاحظاتك وتعديلات الأسبوع الجاي…">${esc(cur.coach_reply??"")}</textarea>
       <button class="btn navy block" id="ciReplySave" style="margin-top:8px" ${cur.id?"":"disabled"}>حفظ الرد ✓✓</button></div>`:""}
-    ${first&&cur.id&&first.week!==cur.week?`<div class="card"><div class="card-h"><div class="ic">🔁</div><h2>قبل وبعد<small>أسبوع ${first.week} ← أسبوع ${cur.week}</small></h2></div><div id="cmp" class="grid2"></div></div>`:""}`;
+    ${first&&cur.id&&first.week!==cur.week?`<div class="card"><div class="card-h"><div class="ic">🔁</div><h2>قبل وبعد<small>أسبوع ${first.week} ← أسبوع ${cur.week}</small></h2></div><div id="cmp" class="ba-grid"></div></div>`:""}`;
   el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ S.ciWeek=+b.dataset.w; viewCheckin(el); });
   el.querySelectorAll("[data-rate]").forEach(g=>g.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{ g.querySelectorAll("[data-v]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); rec[g.dataset.rate]=+b.dataset.v; }));
   const files={};
@@ -190,7 +190,7 @@ async function viewCheckin(el){
   };
   $("#ciReplySave")&&($("#ciReplySave").onclick=async()=>{ const { error } = await sb.from("checkins").update({coach_reply:$("#ciReply").value.trim()||null, reviewed_at:new Date().toISOString()}).eq("id",cur.id); if(error) return toast(error.message); toast("✓ اتحفظ الرد"); viewCheckin(el); });
   if($("#cmp")){ const box=$("#cmp"); for(const [k,l] of POSES){ const a=first["photo_"+k], b=cur["photo_"+k]; if(!a||!b) continue;
-      const [ua,ub]=await Promise.all([photoUrl(a),photoUrl(b)]); box.insertAdjacentHTML("beforeend",`<div class="cmp"><img src="${ua}"><small>${l} · أ${first.week}</small></div><div class="cmp"><img src="${ub}"><small>${l} · أ${cur.week}</small></div>`); }
+      const [ua,ub]=await Promise.all([photoUrl(a),photoUrl(b)]); box.insertAdjacentHTML("beforeend", baPair(ua,ub,l,first.week,cur.week)); }
     if(!box.innerHTML) box.outerHTML=`<p class="hint">الصور بتظهر جنب بعض لما تتسجل نفس الزاوية في الأسبوعين.</p>`; }
 }
 
@@ -251,10 +251,10 @@ async function viewReport(el){
       <div class="grid2"><div class="stat"><div class="l">متوسط السعرات</div><div class="v num">${fmt(kcalAvg)}</div><div class="s">الهدف ${fmt(t.kcal)}</div></div><div class="stat"><div class="l">متوسط البروتين</div><div class="v num">${fmt(pAvg)}</div><div class="s">الهدف ${fmt(t.P)} جم</div></div></div></div>
     ${lifts.length?`<div class="card"><div class="card-h"><div class="ic dark">🏋️</div><h2>تطور القوة<small>أفضل 1RM تقديري – أول أسبوع مقابل آخر أسبوع</small></h2></div><table><tr><th style="text-align:start">التمرين</th><th>قبل</th><th>بعد</th><th>التغيّر</th></tr>${lifts.map(l=>`<tr><td style="text-align:start;font-size:.75rem">${esc(l.name)}</td><td class="num">${fmt(l.a,1)}</td><td class="num">${fmt(l.b,1)}</td><td><span class="pill ${l.d>=0?"good":"navy"}">${l.d>=0?"▲":"▼"} ${Math.abs(l.d*100).toFixed(1)}%</span></td></tr>`).join("")}</table></div>`:""}
     <div class="card"><div class="card-h"><div class="ic">🗓</div><h2>خريطة الالتزام</h2></div>${heatmap(p,H)}</div>
-    ${R.photos!==false&&firstPh&&lastPh&&firstPh.week!==lastPh.week?`<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>قبل وبعد<small>أسبوع ${firstPh.week} ← أسبوع ${lastPh.week}</small></h2></div><div class="grid2" id="repPhotos"></div></div>`:""}
+    ${R.photos!==false&&firstPh&&lastPh&&firstPh.week!==lastPh.week?`<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>قبل وبعد<small>أسبوع ${firstPh.week} ← أسبوع ${lastPh.week}</small></h2></div><div class="ba-grid" id="repPhotos"></div></div>`:""}
     <div class="card dark"><div class="card-h"><div class="ic">💬</div><h2>ملخص الكوتش</h2></div><p id="repSumOut" style="margin:0;white-space:pre-wrap">${esc(R.summary||"—")}</p></div>`;
-  if($("#repPhotos")) for(const pose of ["front","side","back"]){ const a=firstPh["photo_"+pose], b=lastPh["photo_"+pose]; if(!a||!b) continue;
-    const [ua,ub]=await Promise.all([photoUrl(a),photoUrl(b)]); $("#repPhotos").insertAdjacentHTML("beforeend",`<div class="cmp"><img src="${ua}"><small>قبل</small></div><div class="cmp"><img src="${ub}"><small>بعد</small></div>`); }
+  if($("#repPhotos")) for(const [pose,l] of POSES){ const a=firstPh["photo_"+pose], b=lastPh["photo_"+pose]; if(!a||!b) continue;
+    const [ua,ub]=await Promise.all([photoUrl(a),photoUrl(b)]); $("#repPhotos").insertAdjacentHTML("beforeend", baPair(ua,ub,l,firstPh.week,lastPh.week)); }
 }
 
 /* ---------- 10) health screening (PAR-Q) + consent ---------- */
