@@ -101,7 +101,7 @@ function openAlts(ex, onChange){
   const body=openSheet(`<div class="between"><b>⇄ بدائل ${esc(ex.name)}</b><button class="btn sm ghost" data-close>✕</button></div>
     <p class="hint">لو الجهاز مشغول اختار بديل – هيتسجل في ملاحظات المجموعات، ونفس العدات والراحة.</p>
     ${cur?`<div class="item" style="background:var(--acc-soft);border-radius:12px"><div class="nm"><b>بتلعب دلوقتي: ${esc(cur)}</b></div><button class="btn sm" data-reset>رجوع للأساسي</button></div>`:""}
-    ${list.length?list.map(a=>`<div class="item"><div class="nm"><b>${esc(a)}</b></div>${videoFor({name:a})?`<button class="btn sm" data-play="${esc(a)}">▶</button>`:""}<button class="btn sm primary" data-pick="${esc(a)}">اختار</button></div>`).join(""):emptyBox("🤷","مفيش بدائل للتمرين ده – الكوتش يقدر يضيفها")}`);
+    ${list.length?list.map(a=>`<div class="item"><div class="nm"><b>${esc(a)}</b></div>${videoFor({name:a})?`<button class="btn sm" data-play="${esc(a)}">▶</button>`:""}<button class="btn sm primary" data-pick="${esc(a)}">اختار</button></div>`).join(""):emptyBox("🤷","مفيش بدائل للتمرين ده","الكوتش يقدر يضيف بدائل من لوحة التحكم.","","es-sm")}`);
   body.querySelector("[data-close]").onclick=closeSheet;
   body.querySelector("[data-reset]")&&(body.querySelector("[data-reset]").onclick=()=>{ setAltChoice(ex.id,null); closeSheet(); onChange(); });
   body.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{ setAltChoice(ex.id,b.dataset.pick); closeSheet(); toast("⇄ "+b.dataset.pick); onChange(); });
@@ -419,4 +419,3 @@ function painCard(p){
       ${e.resolved_at?`<span class="pill good">تمت المتابعة</span>`:`<button class="btn sm" data-pres="${e.id}">تمت المتابعة ✓</button>`}</div>`).join("")}
     <p class="hint">لو الألم في مفصل: بدّل التمرين من تبويب البرنامج، أو قلل المدى/الوزن، أو حوّله لنظام "ضهر آمن".</p></div>`;
 }
-
