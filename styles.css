@@ -1040,3 +1040,7 @@ main>*{animation:rise2 .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(v
 .nav button[data-tab=habits].on svg{color:#5EEAD4}.nav button[data-tab=body].on svg{color:#B4A8FF}.nav button[data-tab=setup].on svg{color:#FFC46B}.nav button[data-tab=inbox].on svg,.nav button[data-tab=clients].on svg{color:#7DD3FC}
 .nav button.on svg{filter:drop-shadow(0 0 6px currentColor)}
 @media(prefers-reduced-motion:reduce){.ic .ico svg,.onb-ic .ico svg{animation:none!important}}
+
+/* v6.2 logo always reads MOFIT in RTL */
+.logo,.logo-big{direction:ltr;unicode-bidi:isolate}
+.logo{display:inline-block}
