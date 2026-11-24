@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-b96558fe";
-const SHELL=["./","index.html","styles.css?v=b96558fe","design.css?v=b96558fe","design.js?v=b96558fe","core.js?v=b96558fe","data.js?v=b96558fe","pro.js?v=b96558fe","lab.js?v=b96558fe","health.js?v=b96558fe","posing.js?v=b96558fe","minerals.js?v=b96558fe","icons.js?v=b96558fe","supps.js?v=b96558fe","views.js?v=b96558fe","coach.js?v=b96558fe","signup.js?v=b96558fe","chat.js?v=b96558fe","inbox.js?v=b96558fe","screens.js?v=b96558fe","prices.js?v=b96558fe","training.js?v=b96558fe","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-6cc5557d";
+const SHELL=["./","index.html","styles.css?v=6cc5557d","design.css?v=6cc5557d","design.js?v=6cc5557d","core.js?v=6cc5557d","data.js?v=6cc5557d","pro.js?v=6cc5557d","lab.js?v=6cc5557d","anatomy.js?v=6cc5557d","health.js?v=6cc5557d","posing.js?v=6cc5557d","minerals.js?v=6cc5557d","icons.js?v=6cc5557d","supps.js?v=6cc5557d","views.js?v=6cc5557d","coach.js?v=6cc5557d","signup.js?v=6cc5557d","chat.js?v=6cc5557d","inbox.js?v=6cc5557d","screens.js?v=6cc5557d","prices.js?v=6cc5557d","training.js?v=6cc5557d","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
