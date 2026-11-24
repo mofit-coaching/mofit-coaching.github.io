@@ -50,6 +50,29 @@ async function weeklyReportCard(host,C){
     const { error } = await sb.from("messages").insert({client_id:cl.id, sender_role:chatMine(), body}); b.disabled=false;
     if(error) return toast("تعذر الإرسال، جرّب تاني"); b.classList.add("sent"); toast("✓ التقرير اتبعت في الشات"); });
 }
+/* ---------- progress analysis: plateau (lift flat 3+ logged weeks) + deload suggestion. Suggestions only, nothing edits a program. ---------- */
+function progressAnalysis(c,exs,sets){
+  const wk=currentWeek(c), out={plateaus:[],deload:null}; if(isDeload(c,wk)) return out;
+  const byEx={}; sets.forEach(s=>{ if(logged(s)&&s.week<=wk){ ((byEx[s.exercise_id]=byEx[s.exercise_id]||{})[s.week]=(byEx[s.exercise_id][s.week]||[])).push(s); } });
+  const best=ws=>Math.max(0,...ws.map(s=>e1rm(s)||0)); let dropped=0, tracked=0;
+  exs.forEach(ex=>{ const W=byEx[ex.id]; if(!W) return; const wks=Object.keys(W).map(Number).filter(w=>!isDeload(c,w)).sort((a,b)=>a-b); if(wks.length<3) return;
+    const B=wks.map(w=>best(W[w])), n=B.length, last3=B.slice(-3), prior=Math.max(0,...B.slice(0,-3)), top=Math.max(...last3);
+    if(B[n-1]<B[n-2]) dropped++; tracked++;
+    const base=B[n-3]; if(base>0 && Math.max(B[n-2],B[n-1])<=base*1.01 && wks[n-1]>=wk-1) out.plateaus.push({name:ex.name,weeks:3,top:Math.round(top)}); });
+  const lastW=sets.filter(s=>s.week===wk-1&&logged(s)); const fail=lastW.filter(isFailure).length;
+  if(lastW.length>=10 && fail/lastW.length>=0.5) out.deload={why:`${Math.round(fail/lastW.length*100)}% من مجموعات الأسبوع اللي فات وصلت للفشل`};
+  else if(tracked>=3 && dropped/tracked>=0.5) out.deload={why:`الأوزان نزلت في ${dropped} من ${tracked} تمارين`};
+  return out;
+}
+async function progressCard(host,C){
+  if(!host) return; const act=C.filter(c=>c.active); if(!act.length){ host.innerHTML=""; return; }
+  host.innerHTML=`<div class="card-h"><div class="ic acc">📈</div><h2>تحليل التقدم<small>ثبات الأوزان واقتراحات الديلود</small></h2></div><p class="hint">بيحلّل…</p>`;
+  const minW=Math.max(1,Math.min(...act.map(c=>currentWeek(c)))-6);
+  const [{ data:sets }, { data:exs }] = await Promise.all([ sb.from("set_logs").select("client_id,exercise_id,week,set_no,reps,weight,rir,failure").gte("week",minW).range(0,9999), sb.from("program_exercises").select("id,client_id,name").in("client_id",act.map(c=>c.id)).range(0,4999) ]);
+  const rows=act.map(c=>({c,a:progressAnalysis(c,(exs||[]).filter(e=>e.client_id===c.id),(sets||[]).filter(s=>s.client_id===c.id))})).filter(r=>r.a.plateaus.length||r.a.deload);
+  host.innerHTML=`<div class="card-h"><div class="ic acc">📈</div><h2>تحليل التقدم<small>${rows.length?rows.length+" عميل فيهم ملاحظات":"مفيش ثبات ولا إجهاد ملحوظ 👌"}</small></h2></div>`+rows.map(({c,a})=>`<div class="alert-row" data-pg="${c.id}"><div class="av">${initials(c)}</div><div class="nm"><b>${esc(c.full_name||c.email)}</b>${a.deload?`<span class="pill acc">🔄 اقتراح ديلود: ${esc(a.deload.why)}</span>`:""}${a.plateaus.slice(0,4).map(p=>{ const alts=(typeof altsFor==="function"?altsFor(p.name):[]).slice(0,2); return `<span class="pill acc-soft">➖ ${esc(p.name)} ثابت 3 أسابيع${alts.length?" · بدائل: "+alts.map(esc).join("، "):""}</span>`; }).join("")}</div></div>`).join("")+(rows.length?`<p class="hint">دي اقتراحات بس – مفيش برنامج بيتغيّر لوحده. اضغط على العميل لتعديل البرنامج.</p>`:"");
+  host.querySelectorAll("[data-pg]").forEach(r=>r.onclick=async()=>{ await openClient(C.find(x=>x.id===r.dataset.pg)); S.tab="setup"; S.setupTab="program"; render(); window.scrollTo(0,0); });
+}
 async function viewClients(el){
   const C=S.coachClients;
   el.innerHTML=`<div class="grid3" style="margin-bottom:14px"><div class="stat dark"><div class="l">العملاء</div><div class="v">${C.length}</div></div>
@@ -58,6 +81,7 @@ async function viewClients(el){
     <button class="btn primary block" id="addBtn" style="margin-bottom:14px">+ إضافة عميل جديد</button>
     <div class="card" id="alerts"></div>
     <div class="card" id="wrep"></div>
+    <div class="card" id="pgan"></div>
     <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
       ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
     <div class="card" id="bk"></div>
@@ -77,7 +101,7 @@ async function viewClients(el){
       <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","ضيف أول عميل من الزرار اللي فوق");
     $("#cl").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); deleteClientFlow(C.find(c=>c.id===b.dataset.del),async()=>{ await loadClients(); viewClients(el); }); });
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
-  weeklyReportCard($("#wrep"),C);
+  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C);
   draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
   $("#tplList").querySelectorAll("[data-tdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف البرنامج المحفوظ؟ (برامج العملاء الحالية مش هتتأثر)")) return; await sb.from("program_templates").delete().eq("id",b.dataset.tdel); await loadCoachTemplates(); viewClients(el); });
