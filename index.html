@@ -28,14 +28,14 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Lalezar&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js" integrity="sha384-HZZ/fukV+9G8gwTNjN7zQDG0Sp7MsZy5DDN6VfY3Be7V9dvQpEpR2jF2HlyFUUjU" crossorigin="anonymous"></script>
-<link rel="stylesheet" href="styles.css?v=9b1c2d3e">
+<link rel="stylesheet" href="styles.css?v=5e7a41c0">
 </head>
 <body>
 <noscript><p style="padding:24px;text-align:center;font-family:sans-serif">Mofit محتاج JavaScript عشان يشتغل.</p></noscript>
 <section id="loginView" class="login hidden">
   <div class="login-art"><div class="logo-big">MO<b>FIT</b></div><p>برنامجك · تغذيتك · تطورك — في مكان واحد</p></div>
   <div class="login-card">
-  <div class="ltabs" role="tablist"><button type="button" class="ltab on" data-lt="login" role="tab">🔐 تسجيل الدخول</button><button type="button" class="ltab" data-lt="plans" role="tab">💰 الأسعار والعروض</button></div>
+  <div class="ltabs" role="tablist"><button type="button" class="ltab on" data-lt="login" role="tab">🔐 تسجيل الدخول</button><button type="button" class="ltab" data-lt="plans" role="tab">💰 الأسعار والعروض</button><button type="button" class="ltab" data-lt="signup" role="tab">✨ حساب جديد</button></div>
   <form id="loginForm">
     <label class="f">الإيميل<input id="loginEmail" type="email" autocomplete="username" required></label>
     <label class="f">كلمة السر<input id="loginPass" type="password" autocomplete="current-password" required></label>
@@ -43,6 +43,7 @@
     <button class="btn primary block" type="submit">دخول</button>
     <p class="login-links"><a id="forgotLink" target="_blank" rel="noopener">نسيت كلمة السر؟</a> · <a href="#prices" onclick="loginTab('plans');return false">لسه مش مشترك؟ شوف العروض</a></p>
   </form>
+  <div id="signupPane" class="hidden"></div>
   <div id="plansPane" class="hidden">
     <p class="hint" style="margin-top:0">اختار العرض المناسب ليك – هيفتحلك واتساب برسالة جاهزة للكوتش.</p>
     <div id="plansBox"></div>
@@ -58,16 +59,17 @@
 </section>
 <div id="timer" class="timer hidden" role="status" aria-live="polite"></div>
 <div id="sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="نافذة"><div class="sheet-bg"></div><div class="sheet-card"><div class="sheet-grab"></div><div id="sheetBody"></div></div></div>
-<script src="core.js?v=9b1c2d3e"></script>
-<script src="icons.js?v=9b1c2d3e"></script>
-<script src="data.js?v=9b1c2d3e"></script>
-<script src="pro.js?v=9b1c2d3e"></script>
-<script src="lab.js?v=9b1c2d3e"></script>
-<script src="supps.js?v=9b1c2d3e"></script>
-<script src="training.js?v=9b1c2d3e"></script>
-<script src="prices.js?v=9b1c2d3e"></script>
-<script src="views.js?v=9b1c2d3e"></script>
-<script src="coach.js?v=9b1c2d3e"></script>
+<script src="core.js?v=5e7a41c0"></script>
+<script src="icons.js?v=5e7a41c0"></script>
+<script src="data.js?v=5e7a41c0"></script>
+<script src="pro.js?v=5e7a41c0"></script>
+<script src="lab.js?v=5e7a41c0"></script>
+<script src="supps.js?v=5e7a41c0"></script>
+<script src="training.js?v=5e7a41c0"></script>
+<script src="prices.js?v=5e7a41c0"></script>
+<script src="views.js?v=5e7a41c0"></script>
+<script src="coach.js?v=5e7a41c0"></script>
+<script src="signup.js?v=5e7a41c0"></script>
 </body>
 </html>
 
