@@ -1156,3 +1156,13 @@ body.scrolling *,body.scrolling *::before,body.scrolling *::after{animation-play
   #main *,#main *::before,#main *::after{animation-iteration-count:1!important}
   .scroller,.seg,.chat-q{contain:layout paint;will-change:scroll-position;transform:translateZ(0)}
 }
+
+/* v7.7 logo: keep wide letter spacing after the intro animation (it used to end at .5px, so letters collided) */
+@keyframes logoin{from{opacity:0;letter-spacing:.5em;filter:blur(6px)}to{opacity:1;letter-spacing:.14em;filter:none}}
+.logo{letter-spacing:.14em;padding-inline-end:.14em}
+.logo b{margin-inline-start:.06em;transform-origin:center}
+@keyframes logofit{0%,100%{filter:drop-shadow(0 0 5px rgba(255,107,26,.4));transform:scale(1)}14%{filter:drop-shadow(0 0 14px rgba(255,107,26,.95));transform:scale(1.06)}28%{transform:scale(1)}42%{filter:drop-shadow(0 0 12px rgba(255,107,26,.8));transform:scale(1.04)}}
+.logo{background:none!important;-webkit-background-clip:border-box!important;background-clip:border-box!important;color:#fff;-webkit-text-fill-color:#fff;animation:logoin .8s cubic-bezier(.2,1.2,.4,1) both!important;text-shadow:0 2px 14px rgba(255,255,255,.12)}
+.logo b{background:none!important;-webkit-text-fill-color:#FF6B1A;color:#FF6B1A;display:inline-block;filter:none;animation:logofit 2.4s ease-in-out infinite;margin-inline-start:0}
+@keyframes logofit{0%,100%{transform:scale(1);text-shadow:0 0 6px rgba(255,107,26,.35)}20%{transform:scale(1.05);text-shadow:0 0 16px rgba(255,107,26,.9)}40%{transform:scale(1)}}
+@keyframes logoin{from{opacity:0;letter-spacing:.5em}to{opacity:1;letter-spacing:.14em}}
