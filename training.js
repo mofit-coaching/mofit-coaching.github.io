@@ -164,3 +164,25 @@ function wireBlockReview(p, el){
   b.onclick=async()=>{ const { error } = await sb.from("profiles").update({reviewed_block:blockOf(currentWeek(p))}).eq("id",p.id); if(error) return toast(error.message); await refreshClient(); toast("✓ تمام"); setupProgram(el); };
 }
 
+
+
+/* ---------- streaks, weekly goal ring, milestone badges (client home) ---------- */
+const BADGES=[[1,"🌱","أول تمرين"],[5,"💪","٥ تمارين"],[10,"🔥","١٠ تمارين"],[25,"⚡","٢٥ تمرين"],[50,"🏆","٥٠ تمرين"],[100,"🌟","١٠٠ تمرين"]];
+async function streakCardHTML(p){
+  const { data } = await sb.from("workout_sessions").select("log_date,week").eq("client_id",p.id);
+  const W=data||[]; if(!W.length) return "";
+  const goal=Math.max(1,new Set(S.program.map(e=>e.day_no)).size||3), wkNow=currentWeek(p), cnt={};
+  W.forEach(s=>{ cnt[s.week]=(cnt[s.week]||0)+1; });
+  const done=cnt[wkNow]||0; let streak=0, w=done>=goal?wkNow:wkNow-1;
+  while(w>=1 && (cnt[w]||0)>=goal){ streak++; w--; }
+  const total=W.length, earned=BADGES.filter(b=>total>=b[0]), next=BADGES.find(b=>total<b[0]);
+  const R=34, C=2*Math.PI*R, off=C*(1-Math.min(1,done/goal));
+  const key="mofit_badges_"+p.id; let seen=0; try{ seen=+localStorage.getItem(key)||0; }catch(e){}
+  window._streakNew = earned.length>seen; window._streakKey=key; window._streakCount=earned.length;
+  return `<div class="card streak"><div class="card-h"><div class="ic acc">🔥</div><h2>التزامك<small>${streak?`${streak} ${streak>2?"أسابيع":"أسبوع"} متتالي بتحقق هدفك`:"ابدأ سلسلتك – حقق هدف الأسبوع"}</small></h2></div>
+    <div class="streak-row"><div class="sring"><svg viewBox="0 0 80 80" aria-hidden="true"><circle cx="40" cy="40" r="${R}" fill="none" stroke="#EEF0F4" stroke-width="8"/><circle class="sring-v" cx="40" cy="40" r="${R}" fill="none" stroke="url(#sg)" stroke-width="8" stroke-linecap="round" stroke-dasharray="${C.toFixed(1)}" style="--c:${C.toFixed(1)};--o:${off.toFixed(1)}" transform="rotate(-90 40 40)"/><defs><linearGradient id="sg" x1="0" x2="1"><stop offset="0" stop-color="#FF6B1A"/><stop offset="1" stop-color="#FFB347"/></linearGradient></defs></svg><b class="num">${done}/${goal}</b></div>
+      <div class="streak-info"><div class="flame ${streak?"on":""}">🔥<span class="num">${streak}</span></div><small>${done>=goal?"✅ هدف الأسبوع اتحقق!":`فاضل ${goal-done} ${goal-done>2?"تمارين":"تمرين"} الأسبوع ده`}</small></div></div>
+    <div class="badges">${BADGES.map(b=>`<div class="badge ${total>=b[0]?"got":""}" title="${b[2]}"><i>${b[1]}</i><small>${b[2]}</small></div>`).join("")}</div>
+    ${next?`<p class="hint" style="margin:8px 0 0">${next[0]-total} تمرين وتاخد شارة ${next[1]} ${next[2]}</p>`:""}</div>`;
+}
+function streakAfter(p){ if(window._streakNew){ try{ localStorage.setItem(window._streakKey,window._streakCount); }catch(e){} setTimeout(()=>{ if(typeof burst==="function") burst(); toast("🎖 شارة جديدة اتفتحت!"); },700); } }
