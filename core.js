@@ -189,3 +189,6 @@ document.addEventListener("pointerdown",e=>{
   s.style.cssText=`width:${d}px;height:${d}px;left:${e.clientX-r.left-d/2}px;top:${e.clientY-r.top-d/2}px`;
   if(getComputedStyle(t).position==="static") t.style.position="relative"; t.style.overflow=t.style.overflow||"hidden"; t.appendChild(s); setTimeout(()=>s.remove(),600);
 },{passive:true});
+
+/* campaign tracking: ?src=instagram is remembered and sent with the signup */
+try{ const _s=new URLSearchParams(location.search).get("src"); if(_s) localStorage.setItem("mofit_src",_s.slice(0,40)); }catch(e){}
