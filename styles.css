@@ -1125,3 +1125,8 @@ main>*{animation:rise2 .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(v
 .supp-top input:checked{animation:jig .5s cubic-bezier(.2,1.6,.4,1)}
 @keyframes jig{0%{transform:scale(.5) rotate(-40deg)}100%{transform:scale(1) rotate(0)}}
 @media(prefers-reduced-motion:reduce){.heat i,.heat::after,.seg button.on,.btn.primary.block::after,.supp .card-h .ic,.supp-row,.supp-dose,.supp-top input:checked{animation:none!important}}
+
+/* v7.3 narrower day cards so more show at once */
+#dayCards .daycard{width:98px;padding:9px 10px;border-radius:16px}
+#dayCards .daycard b{font-size:.92rem}
+#dayCards .daycard small{font-size:.68rem}
