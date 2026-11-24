@@ -476,3 +476,8 @@ details.card.wu>summary::after{color:#94A3B8;top:14px}
 .loadbars i{display:block;width:100%;background:var(--navy3);border-radius:6px 6px 2px 2px;min-height:3px}
 .loadbars .cur i{background:var(--acc)}
 .loadbars span{font-size:.66rem;color:var(--slate);margin-top:3px}
+
+
+/* a11y: visible keyboard focus + reduced motion */
+:focus-visible{outline:2px solid #F97316;outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;transition-duration:.01ms!important}}
