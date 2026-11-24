@@ -1094,3 +1094,34 @@ main>*{animation:rise2 .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(v
 .scroller .daycard,.scroller .chip{scroll-snap-align:center;-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 #dayCards{padding-block:6px 10px;margin-inline:-4px;padding-inline:4px}
 @media(hover:none){#wkChips .chip:active,#dayCards .daycard:active{transform:none}}
+
+/* v7.2 habits: adherence map "ember wave" + check-in pills; supplements playful motion */
+.heat{position:relative;padding:6px 4px;border-radius:18px;background:radial-gradient(120% 90% at 50% 0,rgba(255,107,26,.08),transparent 70%)}
+.heat i{transform-origin:center;animation:cellin .6s cubic-bezier(.2,1.5,.4,1) both;animation-delay:calc(var(--k,0)*55ms + .15s);transition:transform .2s}
+.heat i:active{transform:scale(1.25)}
+@keyframes cellin{from{opacity:0;transform:scale(.2) rotate(-25deg)}}
+.heat i.l1{box-shadow:inset 0 0 0 1px rgba(251,146,60,.25)}
+.heat i.l2,.heat i.l3{background-image:linear-gradient(145deg,rgba(255,255,255,.35),transparent 60%)}
+.heat i.l3{box-shadow:0 0 8px rgba(251,146,60,.5);animation:cellin .6s cubic-bezier(.2,1.5,.4,1) both,ember 3s ease-in-out infinite;animation-delay:calc(var(--k,0)*55ms + .15s),calc(var(--k,0)*55ms + 1s)}
+.heat i.l4{background:linear-gradient(145deg,#FFB347,#FF6B1A 55%,#E8430A);animation:cellin .6s cubic-bezier(.2,1.5,.4,1) both,ember 2.2s ease-in-out infinite;animation-delay:calc(var(--k,0)*55ms + .15s),calc(var(--k,0)*55ms + 1s)}
+@keyframes ember{50%{filter:brightness(1.18) saturate(1.2);box-shadow:0 0 16px rgba(255,107,26,.75)}}
+.heat i.today{position:relative;animation:cellin .6s cubic-bezier(.2,1.5,.4,1) both,todayp 1.8s ease-out 1.4s infinite;animation-delay:calc(var(--k,0)*55ms + .15s),1.4s}
+@keyframes todayp{0%{box-shadow:0 0 0 0 rgba(11,18,32,.45)}80%,100%{box-shadow:0 0 0 10px rgba(11,18,32,0)}}
+.heat::after{content:"";position:absolute;inset:0;pointer-events:none;border-radius:18px;background:linear-gradient(115deg,transparent 42%,rgba(255,196,107,.35) 50%,transparent 58%);transform:translateX(120%);animation:wave 5s ease-in-out 1.6s infinite}
+@keyframes wave{to{transform:translateX(-120%)}}
+.seg button{transition:transform .25s cubic-bezier(.2,1.5,.4,1),box-shadow .25s,background .25s}
+.seg button:active{transform:scale(.9)}
+.seg button.on{animation:segpop .45s cubic-bezier(.2,1.6,.4,1)}
+@keyframes segpop{0%{transform:scale(.8)}60%{transform:scale(1.12)}100%{transform:scale(1)}}
+.btn.primary.block{position:relative;overflow:hidden}
+.btn.primary.block::after{content:"";position:absolute;inset:0;background:linear-gradient(105deg,transparent 40%,rgba(255,255,255,.35) 50%,transparent 60%);transform:translateX(-120%);animation:rdyswp 3.6s ease-in-out infinite}
+.supp .card-h .ic,.card.dark .card-h .ic .ico[data-n=pill]{animation:wob 2.6s ease-in-out infinite}
+@keyframes wob{0%,100%{transform:rotate(0)}15%{transform:rotate(-14deg) scale(1.08)}30%{transform:rotate(12deg)}45%{transform:rotate(-6deg)}60%{transform:rotate(0)}}
+.supp-row{animation:suppin .6s cubic-bezier(.2,1.4,.4,1) both}
+.supp-row:nth-child(2){animation-delay:.07s}.supp-row:nth-child(3){animation-delay:.14s}.supp-row:nth-child(4){animation-delay:.21s}.supp-row:nth-child(5){animation-delay:.28s}.supp-row:nth-child(n+6){animation-delay:.35s}
+@keyframes suppin{from{opacity:0;transform:translateY(24px) scale(.94) rotate(-2deg)}}
+.supp-dose{animation:dosepop 2.8s ease-in-out infinite;transform-origin:center}
+@keyframes dosepop{0%,86%,100%{transform:scale(1)}92%{transform:scale(1.18) rotate(-4deg)}96%{transform:scale(.96) rotate(3deg)}}
+.supp-top input:checked{animation:jig .5s cubic-bezier(.2,1.6,.4,1)}
+@keyframes jig{0%{transform:scale(.5) rotate(-40deg)}100%{transform:scale(1) rotate(0)}}
+@media(prefers-reduced-motion:reduce){.heat i,.heat::after,.seg button.on,.btn.primary.block::after,.supp .card-h .ic,.supp-row,.supp-dose,.supp-top input:checked{animation:none!important}}
