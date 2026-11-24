@@ -996,3 +996,47 @@ main>*{animation:rise2 .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(v
 .nav button.on::before{content:"";position:absolute;inset:-2px;border-radius:inherit;background:radial-gradient(closest-side,rgba(255,107,26,.5),transparent);filter:blur(8px);z-index:-1;animation:plglow 2.6s ease-in-out infinite}
 .btn.primary{position:relative;overflow:hidden}
 @media(prefers-reduced-motion:reduce){.plan,.plan.hot,.plan::before,.plan::after,.plan-badge,.plan-save,.plan-free,.plan-price b,.plan-cta,.plan-cta::after,.logo,.logo b,.hello .av,.hello .av::after,.hello h1,.hello p,.hello .ringwrap,.onb-ic,.onb-ic::before,.onb-ic::after,.onb h3,.onb p,.onb #onbN,.onb #onbN::after,.card-h .ic,.card-h h2,.alert-row,.daycard,.pill,.card.dark::after,.nav button.on::before{animation:none!important}.plan-price b{-webkit-text-fill-color:currentColor;background:none}.logo,.logo-big{-webkit-text-fill-color:currentColor;background:none}}
+
+/* ===== v6.1: colorful animated icon set (groups tint the stroke, accent and tile) ===== */
+:root{--g-train:#F0560B;--g-train2:#FFB347;--g-food:#16A34A;--g-food2:#F59E0B;--g-habit:#0D9488;--g-habit2:#5EEAD4;--g-prog:#6D5BFF;--g-prog2:#FF6B1A;--g-fire:#E8421C;--g-fire2:#FFC46B;--g-chat:#0284C7;--g-chat2:#38BDF8}
+.ic .ico,.onb-ic .ico,.empty .big .ico,.seg .ico{--s:var(--acc);--s2:var(--acc)}
+.ico[data-g=train],.ic .ico[data-g=train]{--s:var(--g-train);--s2:var(--g-train2)}.ico[data-g=food],.ic .ico[data-g=food]{--s:var(--g-food);--s2:var(--g-food2)}.ico[data-g=habit],.ic .ico[data-g=habit]{--s:var(--g-habit);--s2:var(--g-habit2)}
+.ico[data-g=prog],.ic .ico[data-g=prog]{--s:var(--g-prog);--s2:var(--g-prog2)}.ico[data-g=fire],.ic .ico[data-g=fire]{--s:var(--g-fire);--s2:var(--g-fire2)}.ico[data-g=chat],.ic .ico[data-g=chat]{--s:var(--g-chat);--s2:var(--g-chat2)}
+.ic .ico[data-g]:not([data-g=""]) svg,.onb-ic .ico[data-g]:not([data-g=""]) svg,.empty .big .ico[data-g]:not([data-g=""]) svg{stroke:var(--s);stroke-width:1.9;filter:drop-shadow(0 3px 5px color-mix(in srgb,var(--s) 35%,transparent))}
+.ic .ico[data-g]:not([data-g=""]) svg .a,.onb-ic .ico[data-g]:not([data-g=""]) svg .a,.empty .big .ico[data-g]:not([data-g=""]) svg .a{fill:var(--s2)}
+.card.dark .ic .ico svg,.card.dark .ic .ico[data-g] svg{stroke:currentColor;filter:none}
+.card-h .ic:has(.ico[data-g=train]){background:linear-gradient(145deg,#FFF1E6,#FFD7BA)!important;box-shadow:inset 0 0 0 1px rgba(11,18,32,.06),0 8px 16px -8px var(--g-train)!important}
+.card-h .ic:has(.ico[data-g=food]){background:linear-gradient(145deg,#EAFBF0,#C9F0D6)!important;box-shadow:inset 0 0 0 1px rgba(11,18,32,.06),0 8px 16px -8px var(--g-food)!important}
+.card-h .ic:has(.ico[data-g=habit]){background:linear-gradient(145deg,#E6FAF7,#BFEFE8)!important;box-shadow:inset 0 0 0 1px rgba(11,18,32,.06),0 8px 16px -8px var(--g-habit)!important}
+.card-h .ic:has(.ico[data-g=prog]){background:linear-gradient(145deg,#EFEDFF,#D9D4FF)!important;box-shadow:inset 0 0 0 1px rgba(11,18,32,.06),0 8px 16px -8px var(--g-prog)!important}
+.card-h .ic:has(.ico[data-g=fire]){background:linear-gradient(145deg,#FFF0E8,#FFD2BF)!important;box-shadow:inset 0 0 0 1px rgba(11,18,32,.06),0 8px 16px -8px var(--g-fire)!important}
+.card-h .ic:has(.ico[data-g=chat]){background:linear-gradient(145deg,#E8F6FF,#C5E8FB)!important;box-shadow:inset 0 0 0 1px rgba(11,18,32,.06),0 8px 16px -8px var(--g-chat)!important}
+.onb-ic:has(.ico[data-g=train]){background:radial-gradient(circle at 30% 25%,#fff,#FFD7BA)}.onb-ic:has(.ico[data-g=habit]){background:radial-gradient(circle at 30% 25%,#fff,#BFEFE8)}.onb-ic:has(.ico[data-g=prog]){background:radial-gradient(circle at 30% 25%,#fff,#D9D4FF)}
+/* idle motion */
+.ic .ico[data-n=dumbbell] svg,.onb-ic .ico[data-n=dumbbell] svg{animation:ilift 2.6s ease-in-out infinite;transform-origin:50% 50%}
+@keyframes ilift{0%,100%{transform:translateY(0) rotate(0)}30%{transform:translateY(-3px) rotate(-8deg)}60%{transform:translateY(1px) rotate(4deg)}}
+.ic .ico[data-n=flame] svg,.onb-ic .ico[data-n=flame] svg{animation:flick 1.6s ease-in-out infinite;transform-origin:50% 90%}
+.ic .ico[data-n=bolt] svg,.onb-ic .ico[data-n=bolt] svg{animation:ibolt 2.2s ease-in-out infinite}
+@keyframes ibolt{0%,80%,100%{transform:scale(1)}86%{transform:scale(1.25) rotate(-6deg)}92%{transform:scale(.95)}}
+.ic .ico[data-n=heart] svg{animation:ibeat 1.3s ease-in-out infinite;transform-origin:50% 55%}
+@keyframes ibeat{0%,100%{transform:scale(1)}15%{transform:scale(1.2)}30%{transform:scale(1)}45%{transform:scale(1.12)}}
+.ic .ico[data-n=apple] svg,.ic .ico[data-n=bowl] svg{animation:ibob 3s ease-in-out infinite}
+@keyframes ibob{50%{transform:translateY(-3px) rotate(5deg)}}
+.ic .ico[data-n=bell] svg{animation:iring 3.4s ease-in-out infinite;transform-origin:50% 12%}
+@keyframes iring{0%,70%,100%{transform:none}74%{transform:rotate(16deg)}80%{transform:rotate(-14deg)}86%{transform:rotate(9deg)}92%{transform:rotate(-4deg)}}
+.ic .ico[data-n=check] svg{stroke-dasharray:40;animation:idraw 3.2s ease-in-out infinite}
+@keyframes idraw{0%{stroke-dashoffset:40}35%,85%{stroke-dashoffset:0}100%{stroke-dashoffset:40}}
+.ic .ico[data-n=camera] svg{animation:iflash 4s ease-in-out infinite}
+@keyframes iflash{0%,88%,100%{filter:drop-shadow(0 3px 5px rgba(109,91,255,.3))}92%{filter:drop-shadow(0 0 10px #fff) brightness(1.3)}}
+.ic .ico[data-n=bars] svg,.ic .ico[data-n=up] svg{animation:igrow 3s ease-in-out infinite;transform-origin:50% 100%}
+@keyframes igrow{0%,100%{transform:scaleY(1)}50%{transform:scaleY(.82)}}
+.ic .ico[data-n=chat] svg{animation:ibob 2.6s ease-in-out infinite}
+.ic .ico[data-n=moon] svg{animation:ibob 4s ease-in-out infinite}
+.ic .ico[data-n=trophy] svg,.ic .ico[data-n=star] svg,.ic .ico[data-n=sparkle] svg{animation:iflash2 2.8s ease-in-out infinite}
+@keyframes iflash2{50%{transform:scale(1.15) rotate(8deg)}}
+/* nav: each tab has its own color */
+.nav button svg{transition:color .3s,filter .3s}
+.nav button[data-tab=home].on svg,.nav button[data-tab=hub].on svg{color:#FFC46B}.nav button[data-tab=train].on svg{color:#FF8A3D}.nav button[data-tab=food].on svg{color:#6EE7A0}
+.nav button[data-tab=habits].on svg{color:#5EEAD4}.nav button[data-tab=body].on svg{color:#B4A8FF}.nav button[data-tab=setup].on svg{color:#FFC46B}.nav button[data-tab=inbox].on svg,.nav button[data-tab=clients].on svg{color:#7DD3FC}
+.nav button.on svg{filter:drop-shadow(0 0 6px currentColor)}
+@media(prefers-reduced-motion:reduce){.ic .ico svg,.onb-ic .ico svg{animation:none!important}}
