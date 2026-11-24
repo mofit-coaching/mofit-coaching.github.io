@@ -163,8 +163,8 @@ async function viewTrain(el){
     <div class="card tools hidden" id="tTools"></div><div id="tPrep"></div><div id="exList"></div><div class="card" id="failCard"></div>`;
   { const dc=$("#dayCards"), wc=$("#wkChips"), sel=dc&&dc.querySelector(".daycard.on");
     [dc,wc].forEach(r=>{ if(!r) return; let x0=0; r.addEventListener("pointerdown",e=>{x0=e.clientX;r._drag=false;},{passive:true}); r.addEventListener("pointermove",e=>{ if(Math.abs(e.clientX-x0)>8) r._drag=true; },{passive:true}); const end=()=>setTimeout(()=>{r._drag=false;},140); r.addEventListener("pointerup",end,{passive:true}); r.addEventListener("pointercancel",()=>{r._drag=true;end();},{passive:true}); r.addEventListener("click",e=>{ if(r._drag){ e.stopPropagation(); e.preventDefault(); } },true); });
-    if(dc){ if(window._dcX!=null){ dc.style.scrollSnapType="none"; dc.scrollLeft=window._dcX; requestAnimationFrame(()=>{ if(sel) sel.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"}); setTimeout(()=>{dc.style.scrollSnapType="";},500); }); } else if(sel) sel.scrollIntoView({inline:"center",block:"nearest"}); }
-    if(wc){ if(window._wcX!=null) wc.scrollLeft=window._wcX; const w=wc.querySelector(".chip.on"); if(w) requestAnimationFrame(()=>w.scrollIntoView({behavior:"smooth",inline:"center",block:"nearest"})); }
+    if(dc){ if(window._dcX!=null) dc.scrollLeft=window._dcX; else if(sel){ const dr=dc.getBoundingClientRect(), sr=sel.getBoundingClientRect(), t=dc.scrollLeft+(sr.left-dr.left)-(dc.clientWidth-sr.width)/2; if(sr.left<dr.left||sr.right>dr.right) dc.scrollLeft=t; } }
+    if(wc){ if(window._wcX!=null) wc.scrollLeft=window._wcX; }
     window._dcX=null; window._wcX=null; }
   el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{ window._dcX=$("#dayCards")?.scrollLeft; S.day=+b.dataset.d; viewTrain(el);});
   el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ window._wcX=$("#wkChips")?.scrollLeft; S.week=+b.dataset.w; viewTrain(el);});
