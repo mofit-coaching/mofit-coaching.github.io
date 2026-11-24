@@ -23,8 +23,21 @@
 @keyframes wmin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .logo-big{animation:none}
 @media(prefers-reduced-motion:reduce){.wm *,.wm{animation:none!important}.wm-sig{stroke-dashoffset:0}}
-/* anatomy figure polish */
+/* anatomy figure v2 animation */
 .anat .mm-on{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--mc,#FF6B1A) 55%,transparent))}
-.anat .mm-top{animation:mmIn .7s cubic-bezier(.2,.8,.2,1) both,mmPulse 2.8s ease-in-out 1s infinite;animation-delay:var(--d,0s),1s}
-@keyframes mmPulse{0%,100%{filter:drop-shadow(0 0 2px color-mix(in srgb,var(--mc) 40%,transparent))}50%{filter:drop-shadow(0 0 9px var(--mc))}}
-@media(prefers-reduced-motion:reduce){.anat .mm-top{animation:none}}
+.anat .mm-top{animation:mmIn .7s cubic-bezier(.2,.8,.2,1) both,mmPulse 2.8s ease-in-out 1s infinite}
+@keyframes mmPulse{0%,100%{filter:drop-shadow(0 0 2px color-mix(in srgb,var(--mc) 40%,transparent))}50%{filter:drop-shadow(0 0 10px var(--mc))}}
+.anat .an-body{transform-box:fill-box;transform-origin:50% 100%;animation:anBreath 5s ease-in-out infinite}
+@keyframes anBreath{0%,100%{transform:scale(1)}50%{transform:scale(1.012,1.008)}}
+.anat .an-scan{animation:anScan 3.4s cubic-bezier(.45,0,.35,1) infinite}
+@keyframes anScan{0%{transform:translateY(0)}70%,100%{transform:translateY(270px)}}
+.anat .an-line{animation:anLine 3.4s cubic-bezier(.45,0,.35,1) infinite}
+@keyframes anLine{0%{transform:translateY(0);opacity:0}8%{opacity:.9}62%{opacity:.9}70%,100%{transform:translateY(202px);opacity:0}}
+.anat .an-hud{transform-box:fill-box;transform-origin:center;animation:anSpin 40s linear infinite}
+@keyframes anSpin{to{transform:rotate(360deg)}}
+.anat .an-halo{transform-box:fill-box;transform-origin:center;animation:anHalo 4s ease-in-out infinite}
+@keyframes anHalo{0%,100%{opacity:.7;transform:scale(.96)}50%{opacity:1;transform:scale(1.05)}}
+.anat .an-px circle{fill:#FFB347;opacity:0;animation:anPx 4.5s ease-in infinite}
+.anat .an-px circle:nth-child(2){animation-delay:.9s}.anat .an-px circle:nth-child(3){animation-delay:1.8s}.anat .an-px circle:nth-child(4){animation-delay:2.7s}.anat .an-px circle:nth-child(5){animation-delay:3.4s}
+@keyframes anPx{0%{opacity:0;transform:translateY(0)}15%{opacity:.9}100%{opacity:0;transform:translateY(-70px)}}
+@media(prefers-reduced-motion:reduce){.anat .mm-top,.anat .an-body,.anat .an-scan,.anat .an-line,.anat .an-hud,.anat .an-halo,.anat .an-px circle{animation:none!important}.anat .an-scan,.anat .an-line{display:none}}
