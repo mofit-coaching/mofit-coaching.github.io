@@ -14,7 +14,7 @@
 <meta name="apple-mobile-web-app-title" content="Mofit">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no">
-<style>html{background:#0A1020}#boot{position:fixed;inset:0;z-index:999;display:grid;place-items:center;background:radial-gradient(500px 360px at 80% 10%,rgba(255,107,26,.45),transparent 62%),radial-gradient(420px 320px at 0% 90%,rgba(91,108,255,.3),transparent 62%),#0A1020;animation:bootout .5s ease 1.1s forwards}#boot b{display:block;font:800 2.6rem/1 Outfit,system-ui,sans-serif;letter-spacing:.18em;color:#fff;text-align:center;animation:bootpop .7s cubic-bezier(.2,.9,.2,1) both}#boot b i{font-style:normal;color:#FF6B1A}#boot .ring{width:74px;height:74px;margin:0 auto 22px;border-radius:50%;border:3px solid rgba(255,255,255,.12);border-top-color:#FF6B1A;animation:spin .9s linear infinite}@keyframes spin{to{transform:rotate(360deg)}}@keyframes bootpop{from{opacity:0;transform:scale(.8)}}@keyframes bootout{to{opacity:0;visibility:hidden}}@media(prefers-reduced-motion:reduce){#boot{animation-duration:.01s;animation-delay:.3s}#boot *{animation:none!important}}</style>
+<style>html{background:#0A1020}#boot{position:fixed;inset:0;z-index:999;display:grid;place-items:center;background:radial-gradient(500px 360px at 80% 10%,rgba(255,107,26,.45),transparent 62%),radial-gradient(420px 320px at 0% 90%,rgba(91,108,255,.3),transparent 62%),#0A1020;animation:bootout .5s ease 1.1s forwards}#boot b{display:block;font:800 2.6rem/1 Outfit,system-ui,sans-serif;letter-spacing:.18em;color:#fff;text-align:center;animation:bootpop .7s cubic-bezier(.2,.9,.2,1) both}#boot b i{font-style:normal;color:#FF6B1A}#boot .ring{width:74px;height:74px;margin:0 auto 22px;animation:spin .9s linear infinite}#boot .ring svg{display:block}@keyframes spin{to{transform:rotate(360deg)}}@keyframes bootpop{from{opacity:0;transform:scale(.8)}}@keyframes bootout{to{opacity:0;visibility:hidden}}@media(prefers-reduced-motion:reduce){#boot{animation-duration:.01s;animation-delay:.3s}#boot *{animation:none!important}}</style>
 <meta name="description" content="Mofit – تمرينك وأكلك ومتابعتك مع الكوتش في مكان واحد">
 <link rel="canonical" href="https://mofit-coaching.github.io/">
 <meta property="og:type" content="website">
@@ -33,11 +33,11 @@
 <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Lalezar&family=Outfit:wght@600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js" integrity="sha384-HZZ/fukV+9G8gwTNjN7zQDG0Sp7MsZy5DDN6VfY3Be7V9dvQpEpR2jF2HlyFUUjU" crossorigin="anonymous"></script>
-<link rel="stylesheet" href="styles.css?v=d6e7f8a9">
+<link rel="stylesheet" href="styles.css?v=a3c91f5e">
 </head>
 <body>
 <noscript><p style="padding:24px;text-align:center;font-family:sans-serif">Mofit محتاج JavaScript عشان يشتغل.</p></noscript>
-<div id="boot" aria-hidden="true"><div><div class="ring"></div><b>MO<i>FIT</i></b></div></div>
+<div id="boot" aria-hidden="true"><div><div class="ring"><svg viewBox="0 0 64 64" width="74" height="74" fill="none"><rect x="6" y="22" width="8" height="20" rx="2" fill="#FF6B1A"/><rect x="14" y="16" width="8" height="32" rx="2" fill="#FF6B1A"/><rect x="22" y="29" width="20" height="6" rx="2" fill="#fff"/><rect x="42" y="16" width="8" height="32" rx="2" fill="#FF6B1A"/><rect x="50" y="22" width="8" height="20" rx="2" fill="#FF6B1A"/></svg></div><b>MO<i>FIT</i></b></div></div>
 <section id="loginView" class="login hidden">
   <div class="login-art"><svg class="hero-svg" viewBox="0 0 320 130" aria-hidden="true"><defs><linearGradient id="hg" x1="0" x2="1"><stop offset="0" stop-color="#FF6B1A"/><stop offset="1" stop-color="#FFB347"/></linearGradient></defs><circle class="hs-o hs-o1" cx="160" cy="65" r="52" fill="none" stroke="rgba(255,255,255,.14)" stroke-dasharray="4 8"/><circle class="hs-o hs-o2" cx="160" cy="65" r="62" fill="none" stroke="rgba(255,107,26,.35)" stroke-dasharray="2 14"/><path class="hs-pulse" d="M10 65 H110 L124 30 L142 100 L158 48 L170 65 H310" fill="none" stroke="url(#hg)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><g class="hs-db"><rect x="136" y="55" width="48" height="10" rx="5" fill="#fff" opacity=".0"/></g><circle class="hs-dot" cx="160" cy="65" r="4" fill="#FFB347"/></svg><div class="logo-big">MO<b>FIT</b></div><p>برنامجك · تغذيتك · تطورك — في مكان واحد</p></div>
   <div class="login-card">
@@ -65,19 +65,19 @@
 </section>
 <div id="timer" class="timer hidden" role="status" aria-live="polite"></div>
 <div id="sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="نافذة"><div class="sheet-bg"></div><div class="sheet-card"><div class="sheet-grab"></div><div id="sheetBody"></div></div></div>
-<script src="core.js?v=d6e7f8a9"></script>
-<script src="icons.js?v=d6e7f8a9"></script>
-<script src="data.js?v=d6e7f8a9"></script>
-<script src="pro.js?v=d6e7f8a9"></script>
-<script src="lab.js?v=d6e7f8a9"></script>
-<script src="supps.js?v=d6e7f8a9"></script>
-<script src="training.js?v=d6e7f8a9"></script>
-<script src="prices.js?v=d6e7f8a9"></script>
-<script src="views.js?v=d6e7f8a9"></script>
-<script src="coach.js?v=d6e7f8a9"></script>
-<script src="signup.js?v=d6e7f8a9"></script>
-<script src="chat.js?v=d6e7f8a9"></script>
-<script src="inbox.js?v=d6e7f8a9"></script>
+<script src="core.js?v=a3c91f5e"></script>
+<script src="icons.js?v=a3c91f5e"></script>
+<script src="data.js?v=a3c91f5e"></script>
+<script src="pro.js?v=a3c91f5e"></script>
+<script src="lab.js?v=a3c91f5e"></script>
+<script src="supps.js?v=a3c91f5e"></script>
+<script src="training.js?v=a3c91f5e"></script>
+<script src="prices.js?v=a3c91f5e"></script>
+<script src="views.js?v=a3c91f5e"></script>
+<script src="coach.js?v=a3c91f5e"></script>
+<script src="signup.js?v=a3c91f5e"></script>
+<script src="chat.js?v=a3c91f5e"></script>
+<script src="inbox.js?v=a3c91f5e"></script>
 </body>
 </html>
 
