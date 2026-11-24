@@ -1,61 +1,75 @@
-/* Polished anatomy figure (replaces the flat-block version in lab.js; same API, same data logic and Arabic labels). */
+/* Anatomy figure v2: refined silhouette, per-muscle shading, animated scan + energy flow. Same API as lab.js anatomySVG. */
 (function(){
   let uid=0;
-  const SIL={
-    head:"M60 6C52 6 48.5 12.5 48.8 20C49 27 53 32 56 33.5L56 38H64L64 33.5C67 32 71 27 71.2 20C71.5 12.5 68 6 60 6Z",
-    torso:"M60 44Q47 44 34 51Q29 62 30 76Q31 94 36 110Q40 124 41 136L43 148Q50 153 60 153Z",
-    leg:"M43 148Q35 170 37 198Q38 209 42 217Q39 237 41 252L52 252Q54 236 52 217Q57 203 58 188Q60 172 61.5 152Z",
-    arm:"M31 52Q19 57 18 72Q17 90 19 105Q15 126 14 146Q13 154 16 160Q22 163 24 155Q29 134 32 108Q34 90 34 70Z"
-  };
+  const HEAD="M60 5.5C52.5 5.5 48.6 11.5 48.9 19C49.1 26 52.6 31 56 33L56 38.5L64 38.5L64 33C67.4 31 70.9 26 71.1 19C71.4 11.5 67.5 5.5 60 5.5Z";
+  const BODY="M60 42L56 42Q55.5 46 47 48Q37 50 31 54Q29 65 31 77Q33.5 93 37 107Q40.5 119 40.5 129Q38.5 138 37 150Q34 168 35 186Q36 201 38 212Q35.5 223 36 234Q37 245 40 252L53 252Q54.5 241 54 229Q53.5 219 56 211Q59.5 197 61 177L61.5 154L60 150Z";
+  const ARM="M30 55Q19 58 18 74Q17.5 90 20 106Q16 124 14.5 144Q13 153 15.5 160Q21 163 24 156Q28 136 31.5 110Q35 92 34 72Q33.5 62 30 55Z";
+  const DELT="M31 53Q20.5 56 18.5 71Q19 81 26 86Q33 79 35.5 64Q35 56 31 53Z";
   const FRONT=[
-    ["أكتاف","M32 51Q20 55 18.5 70Q19 81 27 85Q34 77 36 62Q35 55 32 51Z"],
-    ["صدر","M60 53Q47 50 35.5 58Q31.5 71 38 84Q49 91 60 86Z"],
-    ["باي","M27 87Q20.5 93 19.5 105Q26 109 31.5 105Q34 95 32 87Q30 86 27 87Z"],
-    ["بطن","M38.5 90Q42 113 44 140L51 141Q49.5 114 52 92Q45 94 38.5 90Z"],
-    ["بطن","M54 91.5h6v13h-6z",1],["بطن","M54 107h6v13h-6z",1],["بطن","M54 122.5h6v15h-6z",1],
-    ["أمامية","M44 152Q36.5 172 38 198Q40 209 46.5 211Q55 206 57.5 186Q59.5 168 60.5 154Q51 157 44 152Z"]
+    ["ضهر","M56 43Q50 47 45 48Q38 50 32 54L36 58Q46 54.5 56 50Z"],
+    ["أكتاف",DELT],
+    ["صدر","M60 54Q47 51 36 58Q32.5 70 37 82Q41 88 49 88Q56 88 60 85Z"],
+    ["باي","M27 88Q20.5 94 20 106Q26 110.5 31 106Q34 96 32.5 88Z"],
+    ["بطن","M37.5 87Q38 99 41 112Q43 124 43.5 137L48.5 137Q47.5 118 48 99Q42.5 98 37.5 87Z"],
+    ["بطن","M51.5 90.5h8.5v10h-8.5z",1],["بطن","M51.5 102.5h8.5v10h-8.5z",1],["بطن","M51.5 114.5h8.5v10h-8.5z",1],["بطن","M51.5 126.5h8.5v11h-8.5z",1],
+    ["أمامية","M40.5 154Q34.5 172 36 192Q37 203 40.5 211Q47 212.5 51.5 209Q57.5 198 59 178Q60.5 164 60.8 156Q52 158.5 44.5 153.5Z"]
   ];
   const BACK=[
-    ["ضهر","M60 43L52 47Q42 51 33 55Q47 61 60 82Z"],
-    ["أكتاف","M32 51Q20 55 18.5 70Q19 81 27 85Q34 77 36 62Q35 55 32 51Z"],
-    ["ضهر","M60 85Q47 71 34.5 65Q31 85 40 111Q50 119 60 121Z"],
-    ["ضهر","M60 123Q50 121 42 116Q43 129 45 142L60 142Z"],
-    ["تراي","M31.5 79Q21 85 19.5 105Q26 109 31.5 105Q35 92 33.5 81Z"],
-    ["خلفية/أرداف","M60 144L43 144Q34.5 153 37.5 169Q50 175 60 169Z"],
-    ["خلفية/أرداف","M38 172Q35 192 39.5 208Q47.5 212 55.5 206Q58.5 190 60 175Q48 177 38 172Z"],
-    ["سمانة","M39.5 217Q33 233 39.5 249L49 251Q55 235 52 217Z"]
+    ["ضهر","M60 41L55.5 43Q46 49 33 55Q45 62 60 84Z"],
+    ["أكتاف",DELT],
+    ["ضهر","M60 88Q47 74 34.5 66Q31.5 86 39 112Q49 121 60 122Z"],
+    ["ضهر","M60 124Q51 122 43 117Q43 130 45 142L60 144Z"],
+    ["تراي","M31.5 80Q21 86 19.5 106Q26 110.5 31.5 106Q35 94 33.5 82Z"],
+    ["خلفية/أرداف","M60 146L42.5 146Q34 155 37 170Q49 177 60 171Z"],
+    ["خلفية/أرداف","M37.5 174Q34.5 193 39.5 209Q48 214 56.5 207Q59.5 191 60.5 176Q48 178 37.5 174Z"],
+    ["سمانة","M40 217Q34.5 231 39 246L47 248Q50.5 232 47.5 217Z"],
+    ["سمانة","M48.5 218Q53.5 231 51 243L48 246Q50 232 48.5 218Z"]
   ];
   window.anatomySVG=function(vol,{dark=false}={}){
     const id="an"+(++uid), max=Math.max(1,...Object.values(vol));
-    const top=Object.entries(vol).sort((a,b)=>b[1]-a[1]);
-    const ord={}; top.forEach(([m],i)=>ord[m]=i);
-    const bodyA=dark?"#2B3A5C":"#F1F5F9", bodyB=dark?"#1B2744":"#CBD5E1", line=dark?"rgba(255,255,255,.14)":"rgba(15,23,42,.14)";
-    const off=dark?"rgba(255,255,255,.07)":"rgba(15,23,42,.07)", offLine=dark?"rgba(255,255,255,.12)":"rgba(15,23,42,.10)";
-    const cols=[...new Set(Object.keys(vol).filter(m=>vol[m]).map(m=>mColor(m)))];
+    const ord={}; Object.entries(vol).sort((a,b)=>b[1]-a[1]).forEach(([m],i)=>ord[m]=i);
+    const A=dark?"#3A4B73":"#F8FAFC", B=dark?"#16213B":"#CFD8E3", line=dark?"rgba(160,185,235,.28)":"rgba(15,23,42,.16)";
+    const off=dark?"rgba(255,255,255,.055)":"rgba(15,23,42,.06)", offLine=dark?"rgba(255,255,255,.10)":"rgba(15,23,42,.09)";
+    const cols=[...new Set(Object.keys(vol).filter(m=>vol[m]).map(mColor))];
+    const mir='transform="translate(120 0) scale(-1 1)"';
+    const both=(d,att)=>`<path d="${d}" ${att}/><path d="${d}" ${mir} ${att}/>`;
     const defs=`<defs>
-<linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${bodyA}"/><stop offset="1" stop-color="${bodyB}"/></linearGradient>
-<linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".55" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".22"/></linearGradient>
-<radialGradient id="${id}h" cx=".5" cy=".45" r=".6"><stop offset="0" stop-color="${dark?"#FF6B1A":"#FB923C"}" stop-opacity="${dark?".22":".16"}"/><stop offset="1" stop-color="#FF6B1A" stop-opacity="0"/></radialGradient>
-<radialGradient id="${id}f" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity="${dark?".5":".22"}"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
-${cols.map((c,i)=>`<linearGradient id="${id}m${i}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${c}" stop-opacity="1"/><stop offset="1" stop-color="${c}"/></linearGradient>`).join("")}
+<linearGradient id="${id}b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${A}"/><stop offset="1" stop-color="${B}"/></linearGradient>
+<linearGradient id="${id}s" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".6"/><stop offset=".45" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></linearGradient>
+<linearGradient id="${id}e" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
+<radialGradient id="${id}h" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#FF6B1A" stop-opacity="${dark?".26":".16"}"/><stop offset="1" stop-color="#FF6B1A" stop-opacity="0"/></radialGradient>
+<radialGradient id="${id}f" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#000" stop-opacity="${dark?".55":".25"}"/><stop offset="1" stop-color="#000" stop-opacity="0"/></radialGradient>
+<pattern id="${id}p" width="2.4" height="3" patternUnits="userSpaceOnUse" patternTransform="rotate(62)"><rect width="1" height="3" fill="#000" opacity=".07"/></pattern>
+${cols.map((c,i)=>`<linearGradient id="${id}m${i}" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${c}" stop-opacity=".8"/><stop offset=".5" stop-color="${c}"/><stop offset="1" stop-color="${c}" stop-opacity=".78"/></linearGradient>`).join("")}
+<clipPath id="${id}c"><path d="${HEAD}"/><path d="${BODY}"/><path d="${BODY}" ${mir}/><path d="${ARM}"/><path d="${ARM}" ${mir}/></clipPath>
 </defs>`;
-    const mirror=(d,att)=>`<path d="${d}" ${att}/><path d="${d}" transform="translate(120 0) scale(-1 1)" ${att}/>`;
-    const shape=d=>mirror(d,`fill="url(#${id}b)" stroke="${line}" stroke-width=".9" stroke-linejoin="round"`);
-    const muscle=([m,d,center])=>{
-      const v=vol[m]||0, ci=cols.indexOf(mColor(m));
-      if(!v){ return center?`<path d="${d}" fill="${off}" stroke="${offLine}" stroke-width=".6"/>`:mirror(d,`fill="${off}" stroke="${offLine}" stroke-width=".6" stroke-linejoin="round"`); }
-      const op=(0.62+0.38*v/max).toFixed(2), isTop=ord[m]===0;
-      const cls=`mm-on${isTop?" mm-top":""}`, st=`style="--d:${ord[m]*.12}s;--mc:${mColor(m)}"`;
-      const one=(tr)=>`<g class="${cls}" ${st} ${tr}><path d="${d}" fill="url(#${id}m${ci})" fill-opacity="${op}" stroke="${mColor(m)}" stroke-width=".8" stroke-linejoin="round"/><path d="${d}" fill="url(#${id}s)" stroke="rgba(255,255,255,.5)" stroke-width=".5" stroke-linejoin="round"/></g>`;
-      return center?one(""):one("")+one('transform="translate(120 0) scale(-1 1)"');
+    const fig=(muscles,x,label,k)=>{
+      const act=muscles.filter(([m])=>vol[m]);
+      const clipId=`${id}a${k}`;
+      const clip=`<clipPath id="${clipId}">${act.map(([,d,c])=>c?`<path d="${d}"/>`:`<path d="${d}"/><path d="${d}" ${mir}/>`).join("")}</clipPath>`;
+      const muscle=([m,d,center])=>{
+        const v=vol[m]||0; if(!v) return center?`<path d="${d}" fill="${off}" stroke="${offLine}" stroke-width=".5"/>`:both(d,`fill="${off}" stroke="${offLine}" stroke-width=".5" stroke-linejoin="round"`);
+        const ci=cols.indexOf(mColor(m)), op=(0.7+0.3*v/max).toFixed(2), top=ord[m]===0;
+        const one=tr=>`<g class="mm-on${top?" mm-top":""}" style="--d:${ord[m]*.12}s;--mc:${mColor(m)}" ${tr}><path d="${d}" fill="url(#${id}m${ci})" fill-opacity="${op}" stroke="${mColor(m)}" stroke-width=".7" stroke-linejoin="round"/><path d="${d}" fill="url(#${id}p)"/><path d="${d}" fill="url(#${id}s)" stroke="rgba(255,255,255,.45)" stroke-width=".4" stroke-linejoin="round"/></g>`;
+        return center?one(""):one("")+one(mir);
+      };
+      return `<g transform="translate(${x} 0)" class="an-fig">
+<defs>${clip}</defs>
+<ellipse cx="60" cy="256" rx="40" ry="5" fill="url(#${id}f)"/>
+<circle class="an-halo" cx="60" cy="138" r="56" fill="url(#${id}h)"/>
+<g class="an-hud"><circle cx="60" cy="138" r="62" fill="none" stroke="#FF6B1A" stroke-opacity=".35" stroke-width=".6" stroke-dasharray="2 7"/><circle cx="60" cy="138" r="52" fill="none" stroke="${dark?"#fff":"#0F172A"}" stroke-opacity=".12" stroke-width=".5" stroke-dasharray="18 10"/></g>
+<g class="an-body">
+<path d="${HEAD}" fill="url(#${id}b)" stroke="${line}" stroke-width=".8"/>
+${both(BODY,`fill="url(#${id}b)" stroke="${line}" stroke-width=".8" stroke-linejoin="round"`)}
+${both(ARM,`fill="url(#${id}b)" stroke="${line}" stroke-width=".8" stroke-linejoin="round"`)}
+${muscles.map(muscle).join("")}
+<g clip-path="url(#${clipId})"><rect class="an-scan" x="0" y="-60" width="120" height="62" fill="url(#${id}e)"/></g>
+<g clip-path="url(#${id}c)"><rect class="an-line" x="0" y="0" width="120" height="1.6" fill="${dark?"#7DD3FC":"#FB923C"}" opacity=".9"/></g>
+</g>
+<g class="an-px"><circle cx="30" cy="250" r="1.2"/><circle cx="92" cy="240" r="1"/><circle cx="60" cy="256" r="1.4"/><circle cx="18" cy="230" r=".9"/><circle cx="102" cy="248" r="1.1"/></g>
+</g>
+<text x="${x+60}" y="277" text-anchor="middle" font-size="11" font-weight="700" fill="${dark?"#CBD5E1":"#64748B"}">${label}</text>`;
     };
-    const fig=(muscles,x,label)=>`<g transform="translate(${x} 0)">
-<ellipse cx="60" cy="256" rx="38" ry="5" fill="url(#${id}f)"/>
-<circle cx="60" cy="140" r="54" fill="url(#${id}h)"/>
-<path d="${SIL.head}" fill="url(#${id}b)" stroke="${line}" stroke-width=".9"/>
-${shape(SIL.leg)}${shape(SIL.torso)}${shape(SIL.arm)}
-${muscles.map(muscle).join("")}</g>
-<text x="${x+60}" y="276" text-anchor="middle" font-size="11" font-weight="700" fill="${dark?"#CBD5E1":"#64748B"}">${label}</text>`;
-    return `<svg class="anat" viewBox="0 0 250 282" role="img" aria-label="خريطة العضلات المستهدفة">${defs}${fig(FRONT,0,"أمام")}${fig(BACK,130,"خلف")}</svg>`;
+    return `<svg class="anat" viewBox="0 0 250 282" role="img" aria-label="خريطة العضلات المستهدفة">${defs}${fig(FRONT,0,"أمام",0)}${fig(BACK,130,"خلف",1)}</svg>`;
   };
 })();
