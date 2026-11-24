@@ -112,7 +112,13 @@ const EMOJI_ICO={
   "📊":"bars","✅":"check","👌":"check","🔗":"link","🗑":"trash","🌱":"sprout","🎚":"sliders","👋":"_none","😍":"face5","🙂":"face4","😐":"face3",
   "😕":"face2","😞":"face1","🟢":"dotG","🟡":"dotY","🔴":"dotR","⚪":"dotW","↗":"ext","🧮":"bars","🗒":"doc",
 };
-const ico=(n,cls="")=>n==="_none"?"":`<i class="ico ${cls}" aria-hidden="true"><svg viewBox="0 0 24 24">${ICO[n]||""}</svg></i>`;
+const ICO_GRP={dumbbell:"train",bolt:"train",leg:"train",arm:"train",run:"train",steps:"train",hourglass:"train",slow:"train",
+  apple:"food",bowl:"food",plate:"food",pan:"food",cup:"food",drumstick:"food",bread:"food",drop:"food",pill:"food",
+  check:"habit",heart:"habit",battery:"habit",batteryLow:"habit",moon:"habit",sprout:"habit",watch:"habit",clock:"habit",target:"habit",
+  bars:"prog",up:"prog",down:"prog",scale:"prog",camera:"prog",ruler:"prog",calendar:"prog",doc:"prog",clipboard:"prog",book:"prog",video:"prog",
+  flame:"fire",bell:"fire",warn:"fire",trophy:"fire",star:"fire",sparkle:"fire",gift:"fire",
+  chat:"chat",mail:"chat",phone:"chat",users:"chat",user:"chat",person:"chat",link:"chat"};
+const ico=(n,cls="")=>n==="_none"?"":`<i class="ico ${cls}" data-n="${n}" data-g="${ICO_GRP[n]||""}" aria-hidden="true"><svg viewBox="0 0 24 24">${ICO[n]||""}</svg></i>`;
 const _EMO_RE=new RegExp("("+Object.keys(EMOJI_ICO).sort((a,b)=>b.length-a.length).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")\\uFE0F?","gu");
 const _SKIP={INPUT:1,TEXTAREA:1,SELECT:1,OPTION:1,SCRIPT:1,STYLE:1,svg:1,SVG:1};
 function iconize(root){
