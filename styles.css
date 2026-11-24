@@ -1166,3 +1166,7 @@ body.scrolling *,body.scrolling *::before,body.scrolling *::after{animation-play
 .logo b{background:none!important;-webkit-text-fill-color:#FF6B1A;color:#FF6B1A;display:inline-block;filter:none;animation:logofit 2.4s ease-in-out infinite;margin-inline-start:0}
 @keyframes logofit{0%,100%{transform:scale(1);text-shadow:0 0 6px rgba(255,107,26,.35)}20%{transform:scale(1.05);text-shadow:0 0 16px rgba(255,107,26,.9)}40%{transform:scale(1)}}
 @keyframes logoin{from{opacity:0;letter-spacing:.5em}to{opacity:1;letter-spacing:.14em}}
+
+/* v7.8 glide rows: JS drives horizontal drag + inertia, the browser keeps vertical scroll */
+.glide{overflow-x:hidden!important;touch-action:pan-y!important;overscroll-behavior-x:none;-webkit-user-select:none;user-select:none}
+.glide>*{-webkit-user-drag:none}

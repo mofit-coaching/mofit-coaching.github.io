@@ -215,3 +215,45 @@ try{ const _s=new URLSearchParams(location.search).get("src"); if(_s) localStora
 /* v7.5: pause decorative animations while scrolling so touch scrolling stays smooth */
 (function(){var t,on=false;function s(){if(!on){document.body.classList.add("scrolling");on=true}clearTimeout(t);t=setTimeout(function(){document.body.classList.remove("scrolling");on=false},160)}
 document.addEventListener("scroll",s,{passive:true,capture:true});document.addEventListener("touchmove",s,{passive:true,capture:true})})();
+
+/* v7.8 glide: custom drag + inertia for every horizontal row (day cards, week chips, tabs, quick replies) */
+(function(){
+  var SEL=".scroller,.seg,.chat-q,.scrollx";
+  function setup(el){
+    if(el._gl) return; el._gl=1; el.classList.add("glide");
+    var id=null,x0=0,last=0,lt=0,v=0,moved=false,raf=0;
+    function stop(){ cancelAnimationFrame(raf); }
+    el.addEventListener("pointerdown",function(e){
+      if(e.pointerType==="mouse"&&e.button!==0) return;
+      stop(); id=e.pointerId; x0=last=e.clientX; lt=e.timeStamp; v=0; moved=false;
+    },{passive:true});
+    el.addEventListener("pointermove",function(e){
+      if(e.pointerId!==id) return;
+      if(!moved){ if(Math.abs(e.clientX-x0)<6) return; moved=true; try{ el.setPointerCapture(id); }catch(_){} document.body.classList.add("scrolling"); last=e.clientX; lt=e.timeStamp; return; }
+      var d=e.clientX-last, dt=Math.max(1,e.timeStamp-lt);
+      el.scrollLeft-=d; v=0.6*(d/dt)+0.4*v; last=e.clientX; lt=e.timeStamp;
+    },{passive:true});
+    function end(e){
+      if(e.pointerId!==id) return; id=null;
+      if(!moved) return;
+      el._sup=true; setTimeout(function(){ el._sup=false; },80);
+      if(e.timeStamp-lt>90) v=0;
+      var pos=el.scrollLeft, t0=performance.now();
+      (function f(n){
+        var dt=Math.min(32,n-t0); t0=n;
+        pos-=v*dt; var before=el.scrollLeft; el.scrollLeft=pos;
+        if(Math.abs(el.scrollLeft-pos)>1.5){ v=0; }
+        v*=Math.exp(-dt/320);
+        if(Math.abs(v)>0.015){ raf=requestAnimationFrame(f); } else { document.body.classList.remove("scrolling"); }
+      })(t0);
+      if(Math.abs(v)<=0.015) document.body.classList.remove("scrolling");
+    }
+    el.addEventListener("pointerup",end,{passive:true});
+    el.addEventListener("pointercancel",end,{passive:true});
+    el.addEventListener("click",function(e){ if(el._sup){ e.stopPropagation(); e.preventDefault(); el._sup=false; } },true);
+    el.addEventListener("wheel",function(e){ if(Math.abs(e.deltaX)>Math.abs(e.deltaY)){ el.scrollLeft+=e.deltaX; e.preventDefault(); } },{passive:false});
+  }
+  function scan(root){ (root.querySelectorAll?root.querySelectorAll(SEL):[]).forEach(setup); if(root.matches&&root.matches(SEL)) setup(root); }
+  function init(){ scan(document); new MutationObserver(function(recs){ for(var i=0;i<recs.length;i++){ var a=recs[i].addedNodes; for(var j=0;j<a.length;j++){ if(a[j].nodeType===1&&!(a[j].classList&&a[j].classList.contains("rip"))) scan(a[j]); } } }).observe(document.body,{childList:true,subtree:true}); }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",init); else init();
+})();
