@@ -1170,3 +1170,10 @@ body.scrolling *,body.scrolling *::before,body.scrolling *::after{animation-play
 /* v7.8 glide rows: JS drives horizontal drag + inertia, the browser keeps vertical scroll */
 .glide{overflow-x:hidden!important;touch-action:pan-y!important;overscroll-behavior-x:none;-webkit-user-select:none;user-select:none}
 .glide>*{-webkit-user-drag:none}
+
+/* v7.9 adherence map: cap cell size on wide screens, keep the grid centered and compact */
+.heat{max-width:430px;margin-inline:auto;grid-template-columns:30px repeat(7,minmax(0,1fr));gap:5px;overflow:hidden}
+.heat i{aspect-ratio:1;max-height:52px;width:100%}
+.heat>span:not([style]){font-weight:700;color:var(--navy);opacity:.6}
+.legend{max-width:430px;margin-inline:auto}
+.heat i.today{outline:2px solid var(--navy);outline-offset:1px;z-index:1}
