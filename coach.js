@@ -50,7 +50,8 @@ async function viewClients(el){
   const draw=q=>{ const list=C.filter(c=>!q||(c.full_name||"").includes(q)||(c.email||"").includes(q));
     $("#cl").innerHTML=list.length?list.map(c=>{ const wk=currentWeek(c); return `<div class="client" data-id="${c.id}"><div class="av">${initials(c)}</div>
       <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${(s=>s?s.icon+" "+esc(s.text)+" · ":"")(subStatus(c))}${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
-      <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}</div>`; }).join(""):emptyBox("🙋","ضيف أول عميل من الزرار اللي فوق");
+      <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","ضيف أول عميل من الزرار اللي فوق");
+    $("#cl").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); deleteClientFlow(C.find(c=>c.id===b.dataset.del),async()=>{ await loadClients(); viewClients(el); }); });
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
   draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
@@ -277,7 +278,7 @@ function setupAccount(el){
   $("#gp").onclick=()=>$("#newPass").value=genPass();
   $("#sp").onclick=async()=>{ const pw=$("#newPass").value; if(await call({action:"set_password",user_id:p.id,password:pw})){ navigator.clipboard?.writeText(pw); toast("✓ اتغيّرت واتنسخت: "+pw); } };
   $("#act").onclick=async()=>{ const { error } = await sb.from("profiles").update({active:!p.active}).eq("id",p.id); if(error) return toast(error.message); await refreshClient(); setupAccount(el); };
-  $("#del").onclick=async()=>{ if(!confirm(`حذف ${p.full_name||"العميل"} وكل بياناته نهائياً؟ مفيش رجوع.`)) return; if(await call({action:"delete_client",user_id:p.id})){ S.client=null; S.tab="clients"; await loadClients(); render(); } };
+  $("#del").onclick=()=>deleteClientFlow(p,async()=>{ S.client=null; S.tab="clients"; await loadClients(); render(); });
 }
 
 /* ======================================================================
@@ -346,3 +347,27 @@ boot();
 
 /* coach-only notes live in coach_private (clients cannot read them) */
 async function fillCoachNote(el,p){ const t=el.querySelector('[data-x="coach_notes"]'); if(!t) return; const { data } = await sb.from("coach_private").select("notes").eq("client_id",p.id).maybeSingle(); t.value=data?.notes||""; t.placeholder=""; }
+
+
+
+/* Delete a client and ALL their data (auth user, profile, plans, check-ins, chat, photos). Two-step Arabic confirmation. */
+function deleteClientFlow(c,done){
+  if(!c) return;
+  const nm=c.full_name||c.email||"العميل";
+  const body=openSheet(`<div class="between"><b style="font-size:1.1rem">🗑 حذف العميل نهائياً</b><button class="btn sm ghost" data-close>✕</button></div>
+    <div class="del-warn"><div class="del-ic">⚠️</div><p><b>${esc(nm)}</b></p>
+    <p>هيتحذف الحساب وكل بياناته: البرامج، التسجيلات، الأكل، المتابعات، الصور، والشات.</p><p><b>مفيش رجوع.</b> لو محتاج نسخة، نزّل النسخة الاحتياطية الأول.</p></div>
+    <label style="font-weight:700;display:block;margin:12px 0 6px">للتأكيد اكتب كلمة: حذف</label>
+    <input id="delConf" autocomplete="off" placeholder="حذف">
+    <div class="row" style="margin-top:12px"><button class="btn grow" type="button" data-close>إلغاء</button><button class="btn danger grow" type="button" id="delGo" disabled>🗑 احذف نهائياً</button></div>`);
+  const inp=body.querySelector("#delConf"), go=body.querySelector("#delGo");
+  inp.oninput=()=>{ go.disabled=inp.value.trim()!=="حذف"; };
+  body.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeSheet());
+  go.onclick=async()=>{
+    if(inp.value.trim()!=="حذف") return; go.disabled=true; go.textContent="جاري الحذف…";
+    const { data, error } = await sb.functions.invoke("coach-admin",{ body:{ action:"delete_client", user_id:c.id } });
+    const msg=await fnErr(error,data);
+    if(msg){ toast(msg); go.disabled=false; go.textContent="🗑 احذف نهائياً"; return; }
+    closeSheet(); toast("✓ اتحذف "+nm+" وكل بياناته"); await done();
+  };
+}
