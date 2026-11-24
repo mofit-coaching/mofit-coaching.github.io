@@ -28,6 +28,28 @@ function readProfile(root){
     meals_per_day:num(v("meals_per_day"))||3, activity_factor:+v("activity_factor"), goal, goal_adj:(GOALS.find(g=>g[0]===goal)||[0,0])[1],
     manual_kcal:num(v("manual_kcal")), protein_gpk:num(v("protein_gpk")), p_pct:(num(v("p_pct"))??30)/100, c_pct:(num(v("c_pct"))??40)/100, f_pct:(num(v("f_pct"))??30)/100 };
 }
+/* ---------- weekly report: one summary per active client, sent as a chat message from the coach ---------- */
+function weeklyReportBody(c,o,st){
+  const first=(c.full_name||"").split(" ")[0], wk=currentWeek(c), L=[`أهلاً ${first} 👋 ملخص أسبوعك (أسبوع ${wk}):`];
+  L.push(st.sets?`🏋 التمرين: ${st.ex} تمرين · ${st.sets} مجموعة مسجلة`:`🏋 التمرين: لسه مفيش تسجيل الأسبوع ده`);
+  if(o?.adherence7!=null) L.push(`🎯 الالتزام آخر 7 أيام: ${pct(o.adherence7)}`);
+  const W=o?.weights||[]; if(W.length>=2){ const d=W[W.length-1][1]-W[W.length-2][1]; L.push(`⚖ الوزن: ${fmt(W[W.length-1][1],1)} كجم (${d>0?"+":""}${fmt(d,1)} عن آخر قياس)`); }
+  L.push(!st.sets?`خلّينا نرجع للتسجيل من بكرة، وأنا معاك لو محتاج أي تعديل 💪`:(o?.adherence7!=null&&+o.adherence7<0.7)?`عايزين نرفع الالتزام الأسبوع الجاي – قولي إيه اللي واقف قدامك ونظبطه 🙏`:`شغل ممتاز، كمّل بنفس الثبات 🔥`);
+  return L.join("\n");
+}
+async function weeklyReportCard(host,C){
+  const act=C.filter(c=>c.active); if(!host) return;
+  if(!act.length){ host.innerHTML=""; return; }
+  host.innerHTML=`<div class="card-h"><div class="ic acc">📄</div><h2>تقرير الأسبوع<small>ملخص لكل عميل · بتبعته بإيدك من الشات</small></h2></div><p class="hint">بيحمّل…</p>`;
+  const minW=Math.min(...act.map(c=>currentWeek(c)));
+  const { data } = await sb.from("set_logs").select("client_id,exercise_id,week,reps,weight").gte("week",minW).range(0,4999);
+  const St={}; act.forEach(c=>{ const wk=currentWeek(c), rows=(data||[]).filter(s=>s.client_id===c.id&&s.week===wk&&logged(s)); St[c.id]={sets:rows.length, ex:new Set(rows.map(r=>r.exercise_id)).size}; });
+  host.innerHTML=`<div class="card-h"><div class="ic acc">📄</div><h2>تقرير الأسبوع<small>ملخص لكل عميل · بتبعته بإيدك من الشات</small></h2></div>`+act.map(c=>{ const o=S.overview?.[c.id], st=St[c.id]; return `<div class="alert-row wr" data-wr="${c.id}"><div class="av">${initials(c)}</div><div class="nm"><b>${esc(c.full_name||c.email)}</b><span class="pill ${st.sets?"acc-soft":"acc"}">🏋 ${st.sets} مجموعة</span>${o?.adherence7!=null?`<span class="pill">🎯 ${pct(o.adherence7)}</span>`:""}</div><button type="button" class="nudge-mini" data-wrs="${c.id}" aria-label="ابعت التقرير في الشات" title="ابعت التقرير في الشات">✉</button></div>`; }).join("");
+  host.querySelectorAll("[data-wrs]").forEach(b=>b.onclick=async e=>{ e.stopPropagation(); const cl=C.find(x=>x.id===b.dataset.wrs), body=weeklyReportBody(cl,S.overview?.[cl.id],St[cl.id]);
+    if(!confirm(`نبعت التقرير لـ ${cl.full_name||"العميل"} في الشات؟\n\n${body}`)) return; b.disabled=true;
+    const { error } = await sb.from("messages").insert({client_id:cl.id, sender_role:chatMine(), body}); b.disabled=false;
+    if(error) return toast("تعذر الإرسال، جرّب تاني"); b.classList.add("sent"); toast("✓ التقرير اتبعت في الشات"); });
+}
 async function viewClients(el){
   const C=S.coachClients;
   el.innerHTML=`<div class="grid3" style="margin-bottom:14px"><div class="stat dark"><div class="l">العملاء</div><div class="v">${C.length}</div></div>
@@ -35,6 +57,7 @@ async function viewClients(el){
       <div class="stat"><div class="l">برامج محفوظة</div><div class="v">${S.templates.length}</div></div></div>
     <button class="btn primary block" id="addBtn" style="margin-bottom:14px">+ إضافة عميل جديد</button>
     <div class="card" id="alerts"></div>
+    <div class="card" id="wrep"></div>
     <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
       ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
     <div class="card" id="bk"></div>
@@ -54,6 +77,7 @@ async function viewClients(el){
       <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","ضيف أول عميل من الزرار اللي فوق");
     $("#cl").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); deleteClientFlow(C.find(c=>c.id===b.dataset.del),async()=>{ await loadClients(); viewClients(el); }); });
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
+  weeklyReportCard($("#wrep"),C);
   draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
   $("#tplList").querySelectorAll("[data-tdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف البرنامج المحفوظ؟ (برامج العملاء الحالية مش هتتأثر)")) return; await sb.from("program_templates").delete().eq("id",b.dataset.tdel); await loadCoachTemplates(); viewClients(el); });
