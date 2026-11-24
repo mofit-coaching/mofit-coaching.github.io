@@ -131,7 +131,7 @@ function heatmap(p,H){
   const b0=(blockOf(wk)-1)*BLOCK;
   for(let w=b0+1;w<=Math.max(wk,b0+4)&&w<=b0+BLOCK;w++){
     html+=`<span>أ${w}</span>`;
-    for(let d=0;d<7;d++){ const iso=addDays(start,(w-1)*7+d), s=by[iso]; const lv=s===undefined||s===null?"":s>=.9?"l4":s>=.7?"l3":s>=.45?"l2":"l1"; html+=`<i class="${lv} ${iso===today()?"today":""}" title="${iso}"></i>`; }
+    for(let d=0;d<7;d++){ const iso=addDays(start,(w-1)*7+d), s=by[iso]; const lv=s===undefined||s===null?"":s>=.9?"l4":s>=.7?"l3":s>=.45?"l2":"l1"; html+=`<i class="${lv} ${iso===today()?"today":""}" style="--k:${(w-b0-1)+d}" title="${iso}"></i>`; }
   }
   return html+`</div><div class="legend"><span><i style="background:#FED7AA"></i>ضعيف</span><span><i style="background:#FB923C"></i>كويس</span><span><i style="background:#F97316"></i>ممتاز</span></div>`;
 }
