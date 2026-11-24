@@ -81,7 +81,7 @@ async function viewHome(el){
     ${tipCardHTML()}
     <div class="card" id="hF"></div>
     <div class="card" id="hH"></div>
-    <div class="card" id="hB"></div><div id="hLoad"></div><div id="hGoal"></div><div id="hComp"></div><div id="hStr"></div><div id="hHr"></div>`;
+    <div class="card" id="hB"></div><div id="hLoad"></div><div id="hGoal"></div><div id="hComp"></div><div id="hStr"></div><div id="hHr"></div><div id="hHealth"></div>`;
   wireInstall();
   $("#goTrain")&&($("#goTrain").onclick=()=>{ S.tab="train"; S.day=dn; S.week=wk; render(); });
   homeCheckinCard(p,wk);
@@ -123,6 +123,7 @@ async function viewHome(el){
   $("#hComp").innerHTML=cur?bodyCompCard(p,mW):"";
   $("#hStr").innerHTML=strengthCardHTML(p,sets.data||[],cur||p.start_weight);
   const drawHr=()=>{ $("#hHr").innerHTML=hrCardHTML(p); wireHr(p,drawHr); }; drawHr();
+  drawHealth(p);
 }
 function heatmap(p,H){
   const by=Object.fromEntries(H.map(h=>[h.log_date,dayScore(h)]));
