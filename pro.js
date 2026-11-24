@@ -123,6 +123,9 @@ function clientAlerts(c, o){
   const out=[], wk=currentWeek(c), lastAct=[o?.last_set?.slice(0,10), o?.last_habit, o?.last_meal].filter(Boolean).sort().pop();
   const idle=lastAct?daysBetween(lastAct,today()):(c.start_date&&daysBetween(c.start_date,today())>2?daysBetween(c.start_date,today()):null);
   if(c.active && idle!==null && idle>=3) out.push({p:3,icon:"😴",text:`مفيش تسجيل من ${idle} يوم`});
+  const sinceStart=c.start_date?daysBetween(c.start_date,today()):null, lastSet=o?.last_set?.slice(0,10), woIdle=lastSet?daysBetween(lastSet,today()):null;
+  if(c.active && !lastSet && sinceStart!==null && sinceStart>=2) { for(let i=out.length-1;i>=0;i--) if(/مفيش تسجيل/.test(out[i].text)) out.splice(i,1); out.push({p:3,icon:"👋",text:`عميل جديد: لسه ما سجلش أي تمرين (${sinceStart} يوم)`}); }
+  else if(c.active && woIdle!==null && woIdle>=3 && !out.some(x=>/مفيش تسجيل/.test(x.text))) out.push({p:2,icon:"🏋",text:`مفيش تمرين من ${woIdle} يوم`});
   if(o?.unreviewed) out.push({p:3,icon:"📝",text:`${o.unreviewed} متابعة مستنية ردك`});
   if(c.active && wk>1 && (o?.last_checkin_week||0) < wk-1) out.push({p:2,icon:"📸",text:`متابعة الأسبوع ${wk-1} ناقصة`});
   if(o?.adherence7!=null && +o.adherence7<0.7) out.push({p:2,icon:"📉",text:`الالتزام ${pct(o.adherence7)} آخر 7 أيام`});
