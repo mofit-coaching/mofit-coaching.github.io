@@ -269,7 +269,7 @@ async function ensureHealth(){
   const { data, error } = await sb.from("health_screens").select("client_id").eq("client_id",S.me.id).maybeSingle();
   if(error || data) return;              // offline or already done → don't block
   return new Promise(res=>{
-    const body=openSheet(`<b style="font-size:1.1rem">🩺 قبل ما نبدأ – استبيان الأمان</b>
+    const body=openSheet(`<div class="onb-step">خطوة ١ من ٢ · بتاخد دقيقة</div><b style="font-size:1.1rem">🩺 قبل ما نبدأ – استبيان الأمان</b>
       <p class="hint">مطلوب مرة واحدة. لو أي إجابة "أيوه" الكوتش هيطلب تصريح من دكتور قبل التمارين التقيلة – ده لسلامتك.</p>
       ${PARQ.map(([k,q])=>`<div class="item" style="padding:8px 0;display:block"><div style="margin-bottom:6px">${q}</div><div class="seg" data-q="${k}"><button data-v="0" class="on">لأ</button><button data-v="1">أيوه</button></div></div>`).join("")}
       <label class="f">لو في "أيوه" – اكتب التفاصيل<textarea id="hDet" rows="2"></textarea></label>
