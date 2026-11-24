@@ -403,8 +403,10 @@ async function viewHabits(el){
    ====================================================================== */
 async function viewBody(el){
   S.bodySeg=S.bodySeg||"m";
-  el.innerHTML=`<div class="seg" style="margin-bottom:14px"><button data-bs="m" class="${S.bodySeg==="m"?"on":""}">📏 القياسات</button><button data-bs="c" class="${S.bodySeg==="c"?"on":""}">📸 المتابعة الأسبوعية</button></div><div id="bodyHost"></div>`;
+  el.innerHTML=`<div class="seg" style="margin-bottom:14px"><button data-bs="m" class="${S.bodySeg==="m"?"on":""}">📏 القياسات</button><button data-bs="c" class="${S.bodySeg==="c"?"on":""}">📸 المتابعة الأسبوعية</button><button data-bs="p" class="${S.bodySeg==="p"?"on":""}">🎬 بوزينج</button><button data-bs="k" class="${S.bodySeg==="k"?"on":""}">🏁 بيك ويك</button></div><div id="bodyHost"></div>`;
   el.querySelectorAll("[data-bs]").forEach(b=>b.onclick=()=>{ S.bodySeg=b.dataset.bs; viewBody(el); });
+  if(S.bodySeg==="p") return viewPosing($("#bodyHost"));
+  if(S.bodySeg==="k") return viewPeak($("#bodyHost"));
   return S.bodySeg==="c" ? viewCheckin($("#bodyHost")) : viewMeasures($("#bodyHost"));
 }
 function weightTrend(B,p){
