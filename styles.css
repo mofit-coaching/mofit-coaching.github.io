@@ -1130,3 +1130,10 @@ main>*{animation:rise2 .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(v
 #dayCards .daycard{width:98px;padding:9px 10px;border-radius:16px}
 #dayCards .daycard b{font-size:.92rem}
 #dayCards .daycard small{font-size:.68rem}
+
+/* v7.4 native, snap-free, jump-free swiping: no re-entry animation on day/week rows */
+.scroller{scroll-snap-type:none!important;scroll-behavior:auto!important;-webkit-overflow-scrolling:touch}
+.scroller .daycard,.scroller .chip{scroll-snap-align:none!important}
+#dayCards .daycard,#wkChips .chip,#wkChips .chip.on,#wkChips .chip.cur:not(.on){animation:none!important}
+#wkChips .chip.on{box-shadow:0 8px 18px -6px rgba(11,18,32,.6),0 0 0 2px rgba(255,107,26,.55)}
+#dayCards .daycard .dot{animation:none!important}
