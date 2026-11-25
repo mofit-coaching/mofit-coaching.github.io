@@ -1,471 +1,518 @@
 /* ======================================================================
-   COACH: CLIENTS
+   AUTH / BOOT / NAV
    ====================================================================== */
-async function loadClients(){
-  const [{ data }, { data:ov }] = await Promise.all([ sb.from("profiles").select("*").eq("role","client").order("created_at",{ascending:false}), sb.rpc("coach_overview") ]);
-  S.coachClients=data||[]; S.overview=Object.fromEntries((ov||[]).map(o=>[o.client_id,o])); await loadHealth(); await loadEvents();
+$("#loginForm").addEventListener("submit", async e=>{
+  e.preventDefault(); $("#loginErr").textContent="";
+  const { error } = await sb.auth.signInWithPassword({ email:$("#loginEmail").value.trim(), password:$("#loginPass").value });
+  if(error){ $("#loginErr").textContent="الإيميل أو كلمة السر غير صحيحة"; return; }
+  boot();
+});
+async function logout(){ await sb.auth.signOut(); location.reload(); }
+
+async function boot(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if(!session){ $("#loginView").classList.remove("hidden"); $("#appView").classList.add("hidden"); return; }
+  let { data:me } = await sb.from("profiles").select("*").eq("id",session.user.id).single();
+  if(me) cacheSet("me",me); else { me=cacheGet("me"); if(!me||me.id!==session.user.id){ toast("تعذر تحميل الحساب"); return; } }
+  if(!me.active){ await sb.auth.signOut(); $("#loginView").classList.remove("hidden"); $("#loginErr").textContent=me.signup_days?"طلبك قيد المراجعة – الكوتش هيفعّل حسابك بعد تأكيد الاشتراك":"الحساب غير مفعّل – تواصل مع الكوتش"; return; }
+  S.me=me; $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
+  await loadVideos(); flushQueue();
+  if(me.role==="coach"){ S.tab="clients"; await Promise.all([loadClients(),loadCoachTemplates(),loadDietTemplates()]); }
+  else { await openClient(me); const qt=new URLSearchParams(location.search).get("tab"); if(qt==="supps"&&S.supps?.length){ S.tab="supps"; } else if(qt==="train"||qt==="food"){ S.tab=qt; if(qt==="food") S.date=today(); } }
+  render();
+  (async()=>{ if(me.role==="client"){ try{ await ensureHealth(); }catch(e){} } setTimeout(maybeOnboard,400); })();
 }
-function profileFields(p={}){
-  return `<div class="grid2">
-    <label class="f">النوع<select data-p="sex"><option value=""></option>${["ذكر","أنثى"].map(s=>`<option ${p.sex===s?"selected":""}>${s}</option>`).join("")}</select></label>
-    <label class="f">العمر<input inputmode="numeric" data-p="age" value="${esc(p.age??"")}"></label>
-    <label class="f">الطول (سم)<input inputmode="decimal" data-p="height_cm" value="${esc(p.height_cm??"")}"></label>
-    <label class="f">الوزن عند البداية (كجم)<input inputmode="decimal" data-p="start_weight" value="${esc(p.start_weight??"")}"></label>
-    <label class="f">🎯 الوزن المستهدف (كجم)<input inputmode="decimal" data-p="target_weight" value="${esc(p.target_weight??"")}"></label>
-    <label class="f">تاريخ البداية<input type="date" data-p="start_date" value="${esc(p.start_date??today())}"></label>
-    <label class="f">عدد الوجبات<select data-p="meals_per_day">${[2,3,4,5,6].map(n=>`<option ${(+p.meals_per_day||3)===n?"selected":""}>${n}</option>`).join("")}</select></label>
-    <label class="f">مستوى النشاط<select data-p="activity_factor">${ACTIVITY.map(([l,v])=>`<option value="${v}" ${(+p.activity_factor||1.2)===v?"selected":""}>${l}</option>`).join("")}</select></label>
-    <label class="f">الهدف<select data-p="goal">${GOALS.map(([l])=>`<option ${p.goal===l?"selected":""}>${l}</option>`).join("")}</select></label>
-    <label class="f">سعرات يدوية (اختياري)<input inputmode="decimal" data-p="manual_kcal" value="${esc(p.manual_kcal??"")}"></label>
-    <label class="f">بروتين جم/كجم (اختياري)<input inputmode="decimal" data-p="protein_gpk" value="${esc(p.protein_gpk??"")}"></label></div>
-    <div class="grid3"><label class="f">بروتين %<input inputmode="decimal" data-p="p_pct" value="${Math.round((p.p_pct??0.3)*100)}"></label>
-    <label class="f">كارب %<input inputmode="decimal" data-p="c_pct" value="${Math.round((p.c_pct??0.4)*100)}"></label>
-    <label class="f">دهون %<input inputmode="decimal" data-p="f_pct" value="${Math.round((p.f_pct??0.3)*100)}"></label></div>`;
+async function openClient(p){
+  S.client=p; S.week=currentWeek(p); S.date=today(); S.bodyWeek=null;
+  const { data, error } = await sb.from("program_exercises").select("*").eq("client_id",p.id).order("day_no").order("position");
+  S.program=error? (cacheGet("prog_"+p.id)||[]) : (data||[]); if(!error) cacheSet("prog_"+p.id,S.program);
+  S.progPending=!!p.program_pending&&S.me?.role!=="coach"; if(S.progPending) S.program=[];
+  const days=[...new Set(S.program.map(e=>e.day_no))];
+  S.day = todayDayNo() || days[0] || 1;
+  S.supps=[]; if(S.me?.role!=="coach") await loadSupps(p);
 }
-function readProfile(root){
-  const v=k=>root.querySelector(`[data-p="${k}"]`).value, goal=v("goal");
-  return { sex:v("sex")||null, age:num(v("age")), height_cm:num(v("height_cm")), start_weight:num(v("start_weight")), target_weight:num(v("target_weight")), start_date:v("start_date")||null,
-    meals_per_day:num(v("meals_per_day"))||3, activity_factor:+v("activity_factor"), goal, goal_adj:(GOALS.find(g=>g[0]===goal)||[0,0])[1],
-    manual_kcal:num(v("manual_kcal")), protein_gpk:num(v("protein_gpk")), p_pct:(num(v("p_pct"))??30)/100, c_pct:(num(v("c_pct"))??40)/100, f_pct:(num(v("f_pct"))??30)/100 };
+async function refreshClient(){ const { data } = await sb.from("profiles").select("*").eq("id",S.client.id).single(); const tab=S.tab, day=S.day, wk=S.week; await openClient(data); S.tab=tab; S.day=day; S.week=wk; }
+function tabs(){
+  if(S.me.role==="coach" && !S.client) return [["clients","العملاء"],["videos","التمارين"],["foods","الأطعمة"]];
+  const t=[["home","الرئيسية"],...(S.progPending?[]:[["train","التمرين"]]),["food","التغذية"],["habits","العادات"],["body","التقدم"]];
+  if(S.me.role!=="coach" && S.supps?.length) t.push(["supps","المكملات"]);
+  if(S.me.role==="coach") t.push(["setup","التحكم"]);
+  if(S.me.role!=="coach" && S.aiOn) t.push(["ai","المساعد"]);
+  return t;
 }
-/* ---------- weekly report: one summary per active client, sent as a chat message from the coach ---------- */
-function weeklyReportBody(c,o,st){
-  const first=(c.full_name||"").split(" ")[0], wk=currentWeek(c), L=[`أهلاً ${first} 👋 ملخص أسبوعك (أسبوع ${wk}):`];
-  L.push(st.sets?`🏋 التمرين: ${st.ex} تمرين · ${st.sets} مجموعة مسجلة`:`🏋 التمرين: لسه مفيش تسجيل الأسبوع ده`);
-  if(o?.adherence7!=null) L.push(`🎯 الالتزام آخر 7 أيام: ${pct(o.adherence7)}`);
-  const W=o?.weights||[]; if(W.length>=2){ const d=W[W.length-1][1]-W[W.length-2][1]; L.push(`⚖ الوزن: ${fmt(W[W.length-1][1],1)} كجم (${d>0?"+":""}${fmt(d,1)} عن آخر قياس)`); }
-  L.push(!st.sets?`خلّينا نرجع للتسجيل من بكرة، وأنا معاك لو محتاج أي تعديل 💪`:(o?.adherence7!=null&&+o.adherence7<0.7)?`عايزين نرفع الالتزام الأسبوع الجاي – قولي إيه اللي واقف قدامك ونظبطه 🙏`:`شغل ممتاز، كمّل بنفس الثبات 🔥`);
-  return L.join("\n");
+function renderTop(){
+  const c=S.client, coachHome=S.me.role==="coach"&&!c;
+  if(coachHome){
+    $("#top").innerHTML=`<div class="top-row"><div class="logo">MO<b>FIT</b></div><span class="pill glass">لوحة الكوتش</span><div class="sp"></div><button class="ibtn" onclick="logout()">خروج</button></div>
+      <div class="hello"><div class="av">${initials(S.me)}</div><div><h1>أهلاً كوتش ${esc((S.me.full_name||"").split(" ")[0])} 👋</h1><p>${S.coachClients.length} عميل · ${S.coachClients.filter(x=>x.active).length} مفعّل</p></div></div>`;
+    return;
+  }
+  const wk=currentWeek(c), t=targets(c);
+  $("#top").innerHTML=`<div class="top-row"><div class="logo">MO<b>FIT</b></div><div class="sp"></div>${S.me.role==="coach"?"":`<button class="ibtn" onclick="contactCoach()" title="كلّم الكوتش">💬 الكوتش</button><button class="ibtn" onclick="logout()">خروج</button>`}</div>
+    <div class="hello"><div class="av">${initials(c)}</div><div><h1>${S.me.role==="coach"?esc(c.full_name||c.email):"أهلاً، "+esc((c.full_name||"").split(" ")[0])+" 👋"}</h1>
+      <p>${esc(c.goal||"")}${c.level?" · "+LEVELS[c.level]?.icon+" "+esc(c.level):""}${t.kcal?" · "+fmt(t.kcal)+" kcal":""}</p></div>
+      <div class="ringwrap">${ring(wInBlock(wk),BLOCK,{size:64,stroke:7,color:"#F97316",track:"rgba(255,255,255,.15)",label:wInBlock(wk),sub:wk>BLOCK?"بلوك "+blockOf(wk):"من 12",textColor:"#fff"})}</div></div>`;
 }
-async function weeklyReportCard(host,C){
-  const act=C.filter(c=>c.active); if(!host) return;
-  if(!act.length){ host.innerHTML=""; return; }
-  host.innerHTML=`<div class="card-h"><div class="ic acc">📄</div><h2>تقرير الأسبوع<small>ملخص لكل عميل · بتبعته بإيدك من الشات</small></h2></div><p class="hint">بيحمّل…</p>`;
-  const minW=Math.min(...act.map(c=>currentWeek(c)));
-  const { data } = await sb.from("set_logs").select("client_id,exercise_id,week,reps,weight").gte("week",minW).range(0,4999);
-  const St={}; act.forEach(c=>{ const wk=currentWeek(c), rows=(data||[]).filter(s=>s.client_id===c.id&&s.week===wk&&logged(s)); St[c.id]={sets:rows.length, ex:new Set(rows.map(r=>r.exercise_id)).size}; });
-  host.innerHTML=`<div class="card-h"><div class="ic acc">📄</div><h2>تقرير الأسبوع<small>ملخص لكل عميل · بتبعته بإيدك من الشات</small></h2></div>`+act.map(c=>{ const o=S.overview?.[c.id], st=St[c.id]; return `<div class="alert-row wr" data-wr="${c.id}"><div class="av">${initials(c)}</div><div class="nm"><b>${esc(c.full_name||c.email)}</b><span class="pill ${st.sets?"acc-soft":"acc"}">🏋 ${st.sets} مجموعة</span>${o?.adherence7!=null?`<span class="pill">🎯 ${pct(o.adherence7)}</span>`:""}</div><button type="button" class="nudge-mini" data-wrs="${c.id}" aria-label="ابعت التقرير في الشات" title="ابعت التقرير في الشات">✉</button></div>`; }).join("");
-  host.querySelectorAll("[data-wrs]").forEach(b=>b.onclick=async e=>{ e.stopPropagation(); const cl=C.find(x=>x.id===b.dataset.wrs), body=weeklyReportBody(cl,S.overview?.[cl.id],St[cl.id]);
-    if(!confirm(`نبعت التقرير لـ ${cl.full_name||"العميل"} في الشات؟\n\n${body}`)) return; b.disabled=true;
-    const { error } = await sb.from("messages").insert({client_id:cl.id, sender_role:chatMine(), body}); b.disabled=false;
-    if(error) return toast("تعذر الإرسال، جرّب تاني"); b.classList.add("sent"); toast("✓ التقرير اتبعت في الشات"); });
-}
-/* ---------- progress analysis: plateau (lift flat 3+ logged weeks) + deload suggestion. Suggestions only, nothing edits a program. ---------- */
-function progressAnalysis(c,exs,sets){
-  const wk=currentWeek(c), out={plateaus:[],deload:null}; if(isDeload(c,wk)) return out;
-  const byEx={}; sets.forEach(s=>{ if(logged(s)&&s.week<=wk){ ((byEx[s.exercise_id]=byEx[s.exercise_id]||{})[s.week]=(byEx[s.exercise_id][s.week]||[])).push(s); } });
-  const best=ws=>Math.max(0,...ws.map(s=>e1rm(s)||0)); let dropped=0, tracked=0;
-  exs.forEach(ex=>{ const W=byEx[ex.id]; if(!W) return; const wks=Object.keys(W).map(Number).filter(w=>!isDeload(c,w)).sort((a,b)=>a-b); if(wks.length<3) return;
-    const B=wks.map(w=>best(W[w])), n=B.length, last3=B.slice(-3), prior=Math.max(0,...B.slice(0,-3)), top=Math.max(...last3);
-    if(B[n-1]<B[n-2]) dropped++; tracked++;
-    const base=B[n-3]; if(base>0 && Math.max(B[n-2],B[n-1])<=base*1.01 && wks[n-1]>=wk-1) out.plateaus.push({name:ex.name,weeks:3,top:Math.round(top)}); });
-  const lastW=sets.filter(s=>s.week===wk-1&&logged(s)); const fail=lastW.filter(isFailure).length;
-  if(lastW.length>=10 && fail/lastW.length>=0.5) out.deload={why:`${Math.round(fail/lastW.length*100)}% من مجموعات الأسبوع اللي فات وصلت للفشل`};
-  else if(tracked>=3 && dropped/tracked>=0.5) out.deload={why:`الأوزان نزلت في ${dropped} من ${tracked} تمارين`};
-  return out;
-}
-async function progressCard(host,C){
-  if(!host) return; const act=C.filter(c=>c.active); if(!act.length){ host.innerHTML=""; return; }
-  host.innerHTML=`<div class="card-h"><div class="ic acc">📈</div><h2>تحليل التقدم<small>ثبات الأوزان واقتراحات الديلود</small></h2></div><p class="hint">بيحلّل…</p>`;
-  const minW=Math.max(1,Math.min(...act.map(c=>currentWeek(c)))-6);
-  const [{ data:sets }, { data:exs }] = await Promise.all([ sb.from("set_logs").select("client_id,exercise_id,week,set_no,reps,weight,rir,failure").gte("week",minW).range(0,9999), sb.from("program_exercises").select("id,client_id,name").in("client_id",act.map(c=>c.id)).range(0,4999) ]);
-  const rows=act.map(c=>({c,a:progressAnalysis(c,(exs||[]).filter(e=>e.client_id===c.id),(sets||[]).filter(s=>s.client_id===c.id))})).filter(r=>r.a.plateaus.length||r.a.deload);
-  host.innerHTML=`<div class="card-h"><div class="ic acc">📈</div><h2>تحليل التقدم<small>${rows.length?rows.length+" عميل فيهم ملاحظات":"مفيش ثبات ولا إجهاد ملحوظ 👌"}</small></h2></div>`+rows.map(({c,a})=>`<div class="alert-row" data-pg="${c.id}"><div class="av">${initials(c)}</div><div class="nm"><b>${esc(c.full_name||c.email)}</b>${a.deload?`<span class="pill acc">🔄 اقتراح ديلود: ${esc(a.deload.why)}</span>`:""}${a.plateaus.slice(0,4).map(p=>{ const alts=(typeof altsFor==="function"?altsFor(p.name):[]).slice(0,2); return `<span class="pill acc-soft">➖ ${esc(p.name)} ثابت 3 أسابيع${alts.length?" · بدائل: "+alts.map(esc).join("، "):""}</span>`; }).join("")}</div></div>`).join("")+(rows.length?`<p class="hint">دي اقتراحات بس – مفيش برنامج بيتغيّر لوحده. اضغط على العميل لتعديل البرنامج.</p>`:"");
-  host.querySelectorAll("[data-pg]").forEach(r=>r.onclick=async()=>{ await openClient(C.find(x=>x.id===r.dataset.pg)); S.tab="setup"; S.setupTab="program"; render(); window.scrollTo(0,0); });
-}
-async function viewClients(el){
-  const C=S.coachClients;
-  el.innerHTML=`<div class="grid3" style="margin-bottom:14px"><div class="stat dark"><div class="l">العملاء</div><div class="v">${C.length}</div></div>
-      <div class="stat acc"><div class="l">مفعّل</div><div class="v">${C.filter(c=>c.active).length}</div></div>
-      <div class="stat"><div class="l">برامج محفوظة</div><div class="v">${S.templates.length}</div></div></div>
-    <button class="btn primary block" id="addBtn" style="margin-bottom:14px">+ إضافة عميل جديد</button>
-    <div class="card" id="alerts"></div>
-    <div class="card" id="aidg" hidden></div>
-    <div class="card" id="wrep"></div>
-    <div class="card" id="pgan"></div>
-    <div class="card" id="ciov"></div>
-    <div class="card" id="mlst"></div>
-    <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
-      ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
-    <div class="card" id="bk"></div>
-    <div class="card" id="prices"></div>
-    <div class="card"><div class="card-h"><div class="ic acc">✍</div><h2>برامج الكوتش المحفوظة<small>بتظهر في قائمة "برنامج الكوتش" عند اختيار النظام</small></h2></div><div id="tplList"></div></div>`;
-  const AL=Object.fromEntries(C.map(c=>{ const a=clientAlerts(c,S.overview?.[c.id]), h=healthAlert(c); if(h) a.push(h); a.push(...eventAlerts(c)); const r=rateAlert(c); if(r) a.push(r); return [c.id,a.sort((x,y)=>y.p-x.p)]; }));
-  const urgent=C.filter(c=>AL[c.id].length).sort((a,b)=>AL[b.id][0].p-AL[a.id][0].p||AL[b.id].length-AL[a.id].length);
-  $("#alerts").innerHTML=`<div class="card-h"><div class="ic acc">🔔</div><h2>يحتاجوا اهتمامك النهارده<small>${urgent.length?urgent.length+" عميل":"كله تمام 👌"}</small></h2></div>`+
-    (urgent.length?urgent.map(c=>`<div class="alert-row" data-id="${c.id}"><div class="av">${initials(c)}</div><div class="nm"><b>${esc(c.full_name||c.email)}</b>${AL[c.id].map(a=>`<span class="pill ${a.p>=3?"acc":a.p==2?"acc-soft":""}">${a.icon} ${esc(a.text)}</span>`).join(" ")}</div><button type="button" class="nudge-mini" data-nudge="${c.id}" title="ابعت رسالة في الشات" aria-label="ابعت رسالة في الشات">✉</button>${c.phone?`<a class="wa-mini" href="${esc(remindLink(c,AL[c.id][0]))}" target="_blank" rel="noopener" title="تذكير واتساب" onclick="event.stopPropagation()">💬</a>`:""}</div>`).join(""):`<p class="hint">مفيش تنبيهات – كل العملاء بيسجلوا ومتابعاتهم متردّ عليها.</p>`);
-  $("#alerts").querySelectorAll("[data-nudge]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); const cl=C.find(x=>x.id===b.dataset.nudge); nudgeClient(cl,AL[cl.id][0],b); });
-  $("#alerts").querySelectorAll("[data-id]").forEach(r=>r.onclick=async()=>{ const c=C.find(x=>x.id===r.dataset.id), a=AL[c.id][0]; await openClient(c);
-    if(/متابعة/.test(a.text)){ S.tab="body"; S.bodySeg="c"; const o=S.overview?.[c.id]; S.ciWeek=/ناقصة/.test(a.text)?currentWeek(c)-1:(o?.last_checkin_week||currentWeek(c)); } else if(/البلوك/.test(a.text)){ S.tab="setup"; S.setupTab="program"; } else if(/اشتراك|مدفوع/.test(a.text)){ S.tab="setup"; S.setupTab="data"; } else S.tab="home";
-    render(); window.scrollTo(0,0); });
-  const draw=q=>{ const list=C.filter(c=>!q||(c.full_name||"").includes(q)||(c.email||"").includes(q));
-    $("#cl").innerHTML=list.length?list.map(c=>{ const wk=currentWeek(c); return `<div class="client" data-id="${c.id}"><div class="av">${initials(c)}${(()=>{ if(!c.active) return ""; const a=AL[c.id]||[], m=a.length?a[0].p:0, lv=m>=3?"bad":m==2?"mid":"good"; return `<i class="risk ${lv}" title="${esc(a.length?a.slice(0,2).map(x=>x.text).join(" · "):"تمام")}"></i>`; })()}</div>
-      <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${seenHTML(c)}${(s=>s?s.icon+" "+esc(s.text)+" · ":"")(subStatus(c))}${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
-      <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","لسه مفيش عملاء","ضيف أول عميل وابدأ ابنِ برنامجه: تمرين وأكل ومتابعة من مكان واحد.",{label:"+ إضافة عميل جديد",click:"#addBtn"});
-    $("#cl").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); deleteClientFlow(C.find(c=>c.id===b.dataset.del),async()=>{ await loadClients(); viewClients(el); }); });
-    $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
-  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C); checkinOverviewCard($("#ciov"),C);
-  if(typeof aiDigestCard==="function") aiDigestCard(C,AL); mlStorageMeter($("#mlst"));
-  draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
-  $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
-  $("#tplList").querySelectorAll("[data-tdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف البرنامج المحفوظ؟ (برامج العملاء الحالية مش هتتأثر)")) return; await sb.from("program_templates").delete().eq("id",b.dataset.tdel); await loadCoachTemplates(); viewClients(el); });
-  $("#addBtn").onclick=()=>addClientSheet(el);
-  const age=backupAge();
-  $("#bk").innerHTML=`<div class="card-h"><div class="ic ${age===null||age>14?"acc":""}">📦</div><h2>النسخة الاحتياطية<small>${age===null?"⚠ عمرك ما نزّلت نسخة – اعمل واحدة دلوقتي":age>14?"⚠ آخر نسخة من "+age+" يوم":"✅ آخر نسخة من "+age+" يوم"}</small></h2></div>
-    <p class="hint">ملف واحد فيه كل العملاء والبرامج والتسجيلات والأطعمة. احفظه على Google Drive كل أسبوعين.</p><button class="btn navy block" id="bkBtn">📦 نزّل نسخة احتياطية كاملة</button>`;
-  $("#bkBtn").onclick=e=>exportBackup(e.currentTarget);
-  coachPricesCard($("#prices"));
-}
-function addClientSheet(el){
-  const body=openSheet(`<div class="between"><b style="font-size:1.1rem">عميل جديد</b><button class="btn sm ghost" data-close>✕</button></div>
-    <div class="seg" style="margin:10px 0 14px"><button class="on" data-st="1">1 · الحساب</button><button data-st="2">2 · البيانات</button><button data-st="3">3 · التمرين</button></div>
-    <div data-step="1"><label class="f">اسم العميل<input id="nName"></label><label class="f">الإيميل (اسم الدخول)<input id="nEmail" type="email" autocomplete="off"></label>
-      <label class="f">كلمة السر<div class="row"><input id="nPass" class="grow" autocomplete="new-password" value="${genPass()}"><button class="btn sm" id="gen">توليد</button></div></label></div>
-    <div data-step="2" class="hidden">${profileFields({})}</div>
-    <div data-step="3" class="hidden" id="nSys">${systemFields(3,"متوسط")}</div>
-    <p class="err" id="nErr"></p>
-    <div class="row"><button class="btn grow hidden" id="nBack">→ السابق</button><button class="btn navy grow" id="nNext">التالي ←</button><button class="btn primary grow hidden" id="nCreate">إنشاء الحساب ✓</button></div><div id="nDone"></div>`);
-  let step=1; const getSys=wireSystemPicker($("#nSys"),null);
-  const go=n=>{ step=n; body.querySelectorAll("[data-step]").forEach(d=>d.classList.toggle("hidden",+d.dataset.step!==n)); body.querySelectorAll("[data-st]").forEach(b=>b.classList.toggle("on",+b.dataset.st===n));
-    $("#nBack").classList.toggle("hidden",n===1); $("#nNext").classList.toggle("hidden",n===3); $("#nCreate").classList.toggle("hidden",n!==3); };
-  body.querySelectorAll("[data-st]").forEach(b=>b.onclick=()=>go(+b.dataset.st));
-  $("#nNext").onclick=()=>go(step+1); $("#nBack").onclick=()=>go(step-1);
-  body.querySelector("[data-close]").onclick=closeSheet; $("#gen").onclick=()=>$("#nPass").value=genPass();
-  $("#nCreate").onclick=async()=>{
-    $("#nErr").textContent=""; const btn=$("#nCreate"); btn.disabled=true; btn.textContent="جارٍ الإنشاء…";
-    const email=$("#nEmail").value.trim(), password=$("#nPass").value, full_name=$("#nName").value.trim(), {sys,level}=getSys();
-    const { data, error } = await adminCall({ body:{ action:"create_client", email, password, full_name, profile:readProfile(body) } });
-    btn.disabled=false; btn.textContent="إنشاء الحساب ✓";
-    const msg=await fnErr(error,data); if(msg){ $("#nErr").textContent=msg; return; }
-    if(sys) await applyProgram({id:data.id}, sys, level); else await sb.from("profiles").update({level}).eq("id",data.id);
-    const link=location.href.split("#")[0].split("?")[0];
-    const share=`أهلاً ${full_name} 👋\nده حسابك في Mofit:\n🔗 ${link}\n📧 ${email}\n🔑 ${password}`;
-    $("#nDone").innerHTML=`<div class="card" style="background:var(--good-soft);box-shadow:none;margin-top:12px"><b>✓ تم إنشاء الحساب</b><pre style="white-space:pre-wrap;font-family:inherit;margin:8px 0">${esc(share)}</pre>
-      <div class="row"><button class="btn sm navy" id="cp">📋 نسخ الرسالة</button><a class="btn sm" style="text-decoration:none" target="_blank" href="https://wa.me/?text=${encodeURIComponent(share)}">واتساب ↗</a></div></div>`;
-    $("#cp").onclick=()=>navigator.clipboard.writeText(share).then(()=>toast("✓ اتنسخت"));
-    $("#nCreate").classList.add("hidden"); $("#nBack").classList.add("hidden");
-    await loadClients(); viewClients(el);
-  };
+function render(){
+  renderTop();
+  $("#nav").innerHTML=tabs().map(([k,l])=>`<button data-tab="${k}" class="${S.tab===k?"on":""}">${ICON[k]}<span>${l}</span></button>`).join("");
+  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; render(); window.scrollTo(0,0); });
+  const m=$("#main"); m.innerHTML="";
+  if(S.me.role==="coach" && S.client){
+    const bar=document.createElement("div"); bar.className="coachbar";
+    bar.innerHTML=`<div class="av">${initials(S.client)}</div><b>وضع الكوتش<small>أي تعديل هنا بيتحفظ في بيانات ${esc(S.client.full_name||"العميل")}</small></b><button class="btn sm navy">← العملاء</button>`;
+    bar.querySelector("button").onclick=async()=>{ S.client=null; S.tab="clients"; stopRest(); await loadClients(); render(); };
+    m.appendChild(bar);
+  }
+  const host=document.createElement("div"); m.appendChild(host);
+  ({home:viewHome,train:viewTrain,food:viewFood,habits:viewHabits,body:viewBody,setup:viewSetup,supps:viewSupps,clients:viewClients,videos:viewVideos,foods:viewFoods,ai:window.viewAiChat}[S.tab]||viewHome)(host);
 }
 
 /* ======================================================================
-   COACH: CLIENT CONTROL PANEL
+   HOME
    ====================================================================== */
-async function viewSetup(el){
-  const tabsH=[["data","👤 البيانات"],["program","🏋️ التمرين"],["diet","🥗 التغذية"],["supps","💊 المكملات"],["report","📄 تقرير"],["account","🔐 الحساب"]];
-  el.innerHTML=`<div class="seg" style="margin-bottom:14px">${tabsH.map(([k,l])=>`<button data-sub="${k}" class="${S.setupTab===k?"on":""}">${l}</button>`).join("")}</div><div id="sub"></div>`;
-  el.querySelectorAll("[data-sub]").forEach(b=>b.onclick=()=>{ S.setupTab=b.dataset.sub; viewSetup(el); });
-  const sub=$("#sub");
-  if(S.setupTab==="data") return setupData(sub);
-  if(S.setupTab==="program") return setupProgram(sub);
-  if(S.setupTab==="diet") return setupDiet(sub);
-  if(S.setupTab==="supps") return setupSupps(sub);
-  if(S.setupTab==="report") return viewReport(sub);
-  return setupAccount(sub);
+async function viewHome(el){
+  const p=S.client, t=targets(p), wk=currentWeek(p), dn=todayDayNo();
+  const todayEx=S.program.filter(e=>e.day_no===dn);
+  el.innerHTML=`${S.progPending?"":`<div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
+      ${dn?`<div class="hero-body">${anatomySVG(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<div>${muscleLegend(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<small class="hero-sub">${todayEx.length} تمارين · ${todayEx.reduce((a,e)=>a+(+e.sets||0),0)} مجموعة</small></div></div><button class="btn primary block" style="margin-top:10px" id="goTrain">ابدأ التمرين ←</button>`
+          :`<p class="hint">😴 الراحة جزء من التطور. سجّل نومك ومياهك وخطواتك في العادات.</p>`}</div>`}
+    <div id="hToday"></div><div id="hMiss"></div>
+    <div class="card" id="hN"><div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2></div><p class="muted">جارٍ التحميل…</p></div>
+    <div id="hSteps"></div><div id="hCI"></div><div id="hCardio"></div>
+    <div id="hFlame"></div><div id="hStreak"></div><div id="hFirst"></div>
+    <div id="ghHome"></div>${S.me.role==="client"?installCardHTML():""}
+    ${tipCardHTML()}
+    <div class="card" id="hF"></div>
+    <div class="card" id="hH"></div>
+    <div class="card" id="hB"></div><div id="hLoad"></div><div id="hGoal"></div><div id="hComp"></div><div id="hStr"></div><div id="hHr"></div><div id="hHealth"></div>`;
+  wireInstall();
+  window.ghRenderHomeCard&&S.me.role==="client"&&window.ghRenderHomeCard($("#ghHome"),p,()=>viewHome(el));
+  window.stepsClientCard&&window.stepsClientCard($("#hSteps"),p);
+  $("#goTrain")&&($("#goTrain").onclick=()=>{ S.tab="train"; S.day=dn; S.week=wk; render(); });
+  homeCheckinCard(p,wk);
+  const id=p.id;
+  const [meals,hab,body,sets]=await Promise.all([
+    sb.from("meal_items").select("kcal,protein,carbs,fat").eq("client_id",id).eq("log_date",today()),
+    sb.from("habits").select("*").eq("client_id",id).order("log_date"),
+    sb.from("body_logs").select("*").eq("client_id",id).order("week"),
+    sb.from("set_logs").select("exercise_id,week,set_no,reps,weight,rir,failure").eq("client_id",id),
+  ]);
+  const mc=$("#hMiss"); if(mc){ mc.innerHTML=missedCard(p, sets.data); const b=$("#doMissed"); if(b) b.onclick=()=>{ S.tab="train"; S.day=+b.dataset.d; S.week=+b.dataset.w; render(); }; }
+  const tot=sumMacros(meals.data||[]);
+  $("#hN").innerHTML=`<div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2><button class="btn sm" id="goFood">سجّل أكلك</button></div>
+    <div style="display:flex;gap:16px;align-items:center">${ring(tot.kcal,t.kcal||1,{size:118,label:fmt(tot.kcal),sub:"من "+fmt(t.kcal)+" kcal"})}
+    <div style="flex:1">${macroRow("بروتين",tot.P,t.P,"جم")}${macroRow("كارب",tot.C,t.C,"جم","navy")}${macroRow("دهون",tot.F,t.F,"جم","navy")}</div></div>`;
+  $("#goFood").onclick=()=>{ S.tab="food"; S.date=today(); render(); };
+  $("#hF").innerHTML=`<div class="card-h"><div class="ic acc">🔥</div><h2>الفشل العضلي<small>الأسبوع ${wk}</small></h2></div>`+failureSummary((sets.data||[]).filter(s=>s.week===wk));
+  const H=hab.data||[];
+  $("#hCardio").innerHTML=cardioCardHTML(p,H,wk); wireCardioCard();
+  loadCardHTML(p).then(h=>{ const x=$("#hLoad"); if(x) x.innerHTML=h; });
+  if(typeof flameHeroHTML==="function") flameHeroHTML(p).then(h=>{ const x=$("#hFlame"); if(x){ x.innerHTML=h; if(window.flameAfter) flameAfter(x,p); } }).catch(()=>{});
+  if(typeof firstWeekHTML==="function"&&S.me.role==="client") firstWeekHTML(p).then(h=>{ const x=$("#hFirst"); if(x){ x.innerHTML=h; if(window.firstWeekAfter) firstWeekAfter(x,p); } }).catch(()=>{});
+  if(typeof streakCardHTML==="function") streakCardHTML(p).then(h=>{ const x=$("#hStreak"); if(x){ x.innerHTML=h; if(window.streakAfter&&S.me.role==="client") streakAfter(p); } }).catch(()=>{});
+  $("#hH").innerHTML=`<div class="card-h"><div class="ic">✅</div><h2>الالتزام<small>${H.length} يوم مسجّل</small></h2></div>
+    <div class="grid4"><div class="stat"><div class="l">🥗 الدايت</div><div class="v">${pct(avg(H.map(h=>h.diet)))}</div></div>
+    <div class="stat"><div class="l">💪 التمرين</div><div class="v">${pct(avg(H.map(h=>h.training)))}</div></div>
+    <div class="stat"><div class="l">🏃 الكارديو</div><div class="v">${pct(avg(H.map(h=>h.cardio)))}</div></div>
+    <div class="stat"><div class="l">💤 النوم</div><div class="v num">${fmt(avg(H.map(h=>h.sleep_hours)),1)}</div><div class="s">ساعة</div></div></div>
+    <div style="margin-top:12px">${heatmap(p,H)}</div>`;
+  const B=(body.data||[]).filter(b=>b.weight), startW=(body.data||[]).find(b=>b.week===0)?.weight ?? p.start_weight, cur=B.length?+B[B.length-1].weight:null;
+  const bmi=cur&&p.height_cm?cur/((p.height_cm/100)**2):null, ch=cur&&startW?cur-startW:null;
+  $("#hB").innerHTML=`<div class="card-h"><div class="ic">⚖</div><h2>الجسم<small>الوزن والقياسات</small></h2></div>
+    <div class="grid3"><div class="stat dark"><div class="l">الوزن الحالي</div><div class="v num">${fmt(cur,1)}</div><div class="s">كجم</div></div>
+    <div class="stat ${ch!==null&&ch<0?"acc":""}"><div class="l">التغيّر</div><div class="v num">${ch===null?"—":(ch>0?"+":"")+fmt(ch,1)}</div><div class="s">كجم منذ البداية</div></div>
+    <div class="stat"><div class="l">BMI</div><div class="v num">${fmt(bmi,1)}</div></div></div>${lineChart(B.map(b=>({x:b.week,y:+b.weight})),"الوزن (كجم)")}`;
+  // v5: today's focus + science cards
+  const exIds=new Set(todayEx.map(e=>e.id)), sDay=(sets.data||[]).filter(s=>s.week===wk&&exIds.has(s.exercise_id)).length;
+  const ht=$("#hToday"); if(ht&&S.me.role==="client"){ ht.innerHTML=todayCardHTML(p,{dn,setsThisDay:sDay,meals:(meals.data||[]).length,habitToday:H.find(h=>h.log_date===today()),ready:readinessToday()}); wireToday(dn,wk); }
+  const lastM=[...(body.data||[])].reverse().find(b=>b.waist||b.bodyfat)||{}, mW={...lastM, weight:lastM.weight||cur};
+  $("#hGoal").innerHTML=goalCardHTML(p,body.data||[]);
+  $("#hComp").innerHTML=cur?bodyCompCard(p,mW):"";
+  $("#hStr").innerHTML=strengthCardHTML(p,sets.data||[],cur||p.start_weight);
+  const drawHr=()=>{ $("#hHr").innerHTML=hrCardHTML(p); wireHr(p,drawHr); }; drawHr();
+  drawHealth(p);
 }
-function setupData(el){
-  const p=S.client, t=targets(p);
-  el.innerHTML=`<div class="card dark"><div class="card-h"><div class="ic">🧮</div><h2>الأهداف المحسوبة<small>Mifflin-St Jeor · TDEE = BMR × النشاط</small></h2></div>
-      <div class="grid3"><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">BMR</div><div class="v num">${fmt(t.bmr)}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">TDEE</div><div class="v num">${fmt(t.tdee)}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">السعرات</div><div class="v num" style="color:var(--acc)">${fmt(t.kcal)}</div></div>
-      <div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">بروتين</div><div class="v num">${fmt(t.P)}</div><div class="s">جم${t.P&&p.start_weight?" · "+fmt(t.P/p.start_weight,2)+" جم/كجم":""}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">كارب</div><div class="v num">${fmt(t.C)}</div><div class="s">جم</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">دهون</div><div class="v num">${fmt(t.F)}</div><div class="s">جم</div></div></div></div>
-    <div class="card"><div class="card-h"><div class="ic acc">💳</div><h2>الاشتراك<small>${(s=>s?s.icon+" "+esc(s.text):"لم يحدد")(subStatus(p))}</small></h2></div>
-      <div class="grid2"><label class="f">الباقة<input id="sPlan" placeholder="شهري / 3 شهور…" value="${esc(p.sub_plan??"")}"></label>
-      <label class="f">السعر<input id="sPrice" inputmode="decimal" value="${esc(p.sub_price??"")}"></label>
-      <label class="f">من<input type="date" id="sStart" value="${esc(p.sub_start??"")}"></label>
-      <label class="f">إلى<input type="date" id="sEnd" value="${esc(p.sub_end??"")}"></label></div>
-      <div class="row" style="margin-bottom:10px">${[[1,0],[3,1],[6,2],[12,6]].map(([m,f])=>`<button class="chip" data-sm="${m+f}" data-plan="${f?esc(planTitle({months:m,free_months:f})):"شهري"}">${f?`${m}+${f} 🎁`:"+1 شهر"}</button>`).join("")}<label class="row" style="gap:6px;margin-inline-start:auto;font-weight:700"><input type="checkbox" id="sPaid" style="width:auto;min-height:0" ${p.sub_paid?"checked":""}> مدفوع</label></div>
-      <label class="f">ملاحظات الدفع<input id="sNotes" value="${esc(p.sub_notes??"")}"></label>
-      <label class="f">📱 رقم واتساب العميل (للتذكيرات)<input id="sPhone" inputmode="tel" dir="ltr" placeholder="01xxxxxxxxx" value="${esc(p.phone??"")}"></label>
-      <button class="btn navy block" id="sSave">حفظ الاشتراك</button></div>
-    <div class="card"><div class="card-h"><div class="ic">👤</div><h2>بيانات العميل</h2></div>
-      <label class="f">الاسم<input data-x="full_name" value="${esc(p.full_name??"")}"></label>${profileFields(p)}
-      <label class="f">ملاحظات الكوتش (خاصة – العميل مش بيشوفها)<textarea rows="2" data-x="coach_notes" placeholder="بيتحمل…"></textarea></label>
-      <button class="btn primary block" id="pSave">حفظ البيانات</button></div>`;
-  el.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{ const st=$("#sStart").value||today(); $("#sStart").value=st; const d=new Date(st+"T00:00:00"); d.setMonth(d.getMonth()+(+b.dataset.sm)); d.setDate(d.getDate()-1); $("#sEnd").value=d.toISOString().slice(0,10); $("#sPlan").value=b.dataset.plan; });
-  el.insertAdjacentHTML("afterbegin",healthCard(p)+painCard(p)+'<div class="card" id="aicH" hidden></div>'); fillCoachNote(el,p); el.insertAdjacentHTML("beforeend",assessmentCardHTML(p)); wireAssessment($("#ohsa"),p);
-  if(typeof aiClientCard==="function") aiClientCard(p);
-  el.querySelectorAll("[data-pres]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("client_events").update({resolved_at:new Date().toISOString()}).eq("id",b.dataset.pres); if(error) return toast("تعذر الحفظ"); await loadEvents(); toast("تم ✓"); setupData(el); });
-  $("#hClear")&&($("#hClear").onclick=async()=>{ const { error } = await sb.from("health_screens").update({cleared_at:new Date().toISOString()}).eq("client_id",p.id); if(error) return toast("تعذر الحفظ"); await loadHealth(); toast("تم ✓"); setupData(el); });
-  $("#sSave").onclick=async()=>{ if($("#sPhone").value.trim()&&!normPhone($("#sPhone").value)) return toast("رقم الواتساب مش صحيح"); const { error } = await sb.from("profiles").update({sub_plan:$("#sPlan").value.trim()||null, sub_price:num($("#sPrice").value), sub_start:$("#sStart").value||null, sub_end:$("#sEnd").value||null, sub_paid:$("#sPaid").checked, sub_notes:$("#sNotes").value.trim()||null, phone:normPhone($("#sPhone").value)}).eq("id",p.id);
-    if(error) return toast(error.message); await refreshClient(); toast("✓ اتحفظ الاشتراك"); setupData(el); };
-  $("#pSave").onclick=async()=>{
-    const upd={...readProfile(el), full_name:el.querySelector('[data-x="full_name"]').value.trim(), };
-    const { error:ne } = await sb.from("coach_private").upsert({client_id:p.id, notes:el.querySelector('[data-x="coach_notes"]').value.trim()||null, updated_at:new Date().toISOString()},{onConflict:"client_id"}); if(ne) return toast(ne.message);
-    const { error } = await sb.from("profiles").update(upd).eq("id",p.id); if(error) return toast(error.message);
-    await refreshClient(); toast("✓ اتحفظت"); render();
-  };
+function heatmap(p,H){
+  const by=Object.fromEntries(H.map(h=>[h.log_date,dayScore(h)]));
+  const start=p.start_date||today(), wk=currentWeek(p);
+  let html=`<div class="heat"><span></span>${["1","2","3","4","5","6","7"].map(d=>`<span style="text-align:center">${d}</span>`).join("")}`;
+  const b0=(blockOf(wk)-1)*BLOCK;
+  for(let w=b0+1;w<=Math.max(wk,b0+4)&&w<=b0+BLOCK;w++){
+    html+=`<span>أ${w}</span>`;
+    for(let d=0;d<7;d++){ const iso=addDays(start,(w-1)*7+d), s=by[iso]; const lv=s===undefined||s===null?"":s>=.9?"l4":s>=.7?"l3":s>=.45?"l2":"l1"; html+=`<i class="${lv} ${iso===today()?"today":""}" style="--k:${(w-b0-1)+d}" title="${iso}"></i>`; }
+  }
+  return html+`</div><div class="legend"><span><i style="background:#FED7AA"></i>ضعيف</span><span><i style="background:#FB923C"></i>كويس</span><span><i style="background:#F97316"></i>ممتاز</span></div>`;
 }
-function setupProgram(el){
-  const p=S.client, days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
-  if(!days.includes(S.day)&&days.length) S.day=days[0];
-  el.innerHTML=`<div id="brHost"></div><div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
-      <div id="sysBox">${systemFields(p.training_days||3, p.level||"متوسط")}</div>
-      <button class="btn primary block" id="sysApply" style="margin-top:10px">تطبيق على ${esc(p.full_name||"العميل")}</button>
-      <p class="hint">⚠ التطبيق بيستبدل البرنامج الحالي ويمسح المجموعات المسجلة على التمارين القديمة.</p></div>
-    <div class="card"><div class="card-h"><div class="ic">🔄</div><h2>أسابيع الديلود<small>العميل بيشوف مجموعات أقل ~40% وRIR 3-4 – بتتكرر في كل بلوك (كل 12 أسبوع)</small></h2></div>
-      <div class="row" style="gap:6px" id="dl">${[...Array(12)].map((_,i)=>`<button class="chip ${(p.deload_weeks||[]).includes(i+1)?"on":""}" data-dw="${i+1}">${i+1}</button>`).join("")}</div>
-      <div class="row" style="margin-top:10px"><span class="hint grow">الافتراضي حسب المستوى: مبتدئ بدون · متوسط أسبوع 6 · متقدم 4 و8</span><button class="btn sm navy" id="dlSave">حفظ</button></div></div>
-    ${cardioEditorHTML(p)}
-    <div class="card"><div class="card-h"><div class="ic acc">📆</div><h2>جدول الأسبوع<small>اسحب الأيام ورتّبها – وحط أيام راحة بينها</small></h2></div>
-      <div id="wk"></div>
-      <div class="row" style="margin-top:10px"><button class="btn grow" id="wkAuto">⚡ توزيع تلقائي للراحة</button><button class="btn primary grow" id="wkSave">حفظ الجدول</button></div>
-      <p class="hint">الدورة 7 أيام وبتبدأ من تاريخ البداية${p.start_date?" ("+esc(p.start_date)+")":""}. المجموعات المسجلة بتفضل مع تمارينها.</p></div>
-    <div class="card"><div class="card-h"><div class="ic dark">✏️</div><h2>تعديل البرنامج يدوياً<small>العدات · RIR · الراحة · التمبو · رابط الفيديو</small></h2></div>
-      <div class="scroller">${[1,2,3,4,5,6,7].map(d=>`<button class="chip ${S.day===d?"on":""}" data-d="${d}">يوم ${d}${days.includes(d)?" ("+S.program.filter(e=>e.day_no===d).length+")":""}</button>`).join("")}</div>
-      <div class="row" style="margin:10px 0"><input id="dLbl" class="grow" placeholder="اسم اليوم (مثلاً Push / Upper A)" value="${esc(dayLabel(S.day))}"><button class="btn sm" id="dLblSave">حفظ الاسم</button></div>
-      <div id="pList"></div>
-      <div class="row"><button class="btn navy grow" id="exAdd">+ تمرين ليوم ${S.day}</button>${S.program.length?`<button class="btn grow" id="tplSave">💾 حفظ كبرنامج كوتش</button>`:""}</div></div>`;
-  const getSys=wireSystemPicker($("#sysBox"), p.split_key, p.id);
-  weekEditor($("#wk"), el); wireCardioEditor(p);
-  blockReviewHTML(p).then(h=>{ const x=$("#brHost"); if(x){ x.innerHTML=h; wireBlockReview(p,el); } });
-  el.querySelectorAll("[data-dw]").forEach(b=>b.onclick=()=>b.classList.toggle("on"));
-  $("#dlSave").onclick=async()=>{ const w=[...el.querySelectorAll("[data-dw].on")].map(b=>+b.dataset.dw); const { error } = await sb.from("profiles").update({deload_weeks:w}).eq("id",p.id); if(error) return toast(error.message); await refreshClient(); toast("✓ اتحفظ"); };
-  $("#sysApply").onclick=async()=>{
-    const {sys,level}=getSys(); if(!sys) return toast("اختار نظام");
-    if(S.program.length && !confirm(`استبدال برنامج ${p.full_name||""} الحالي بـ "${sys.name}" (${level})؟`)) return;
-    if(await applyProgram(p, sys, level)){ await refreshClient(); S.day=1; toast("✓ تم تطبيق النظام"); render(); }
-  };
-  el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{S.day=+b.dataset.d; setupProgram(el);});
-  $("#dLblSave").onclick=async()=>{ const v=$("#dLbl").value.trim()||null; const { error } = await sb.from("program_exercises").update({day_label:v}).eq("client_id",p.id).eq("day_no",S.day); if(error) return toast(error.message); S.program.filter(e=>e.day_no===S.day).forEach(e=>e.day_label=v); toast("✓ اتحفظ"); };
-  const exs=S.program.filter(e=>e.day_no===S.day), list=$("#pList");
-  list.innerHTML=exs.length?"":emptyBox("😴","يوم راحة","مفيش تمارين في اليوم ده.","","es-sm");
+function failureSummary(sets){
+  const done=sets.filter(logged);
+  if(!done.length) return emptyBox("🏋️","لسه مفيش مجموعات الأسبوع ده","سجّل أول مجموعة في تمرينك وهتلاقي ملخص الفشل والـRIR هنا.","","es-sm");
+  const fail=done.filter(isFailure).length, near=done.filter(s=>!isFailure(s)&&s.rir!==null&&+s.rir<=2).length, far=done.length-fail-near;
+  const w=v=>(v/done.length*100).toFixed(1)+"%";
+  return `<div class="grid4"><div class="stat"><div class="l">مجموعات</div><div class="v">${done.length}</div></div>
+    <div class="stat acc"><div class="l">🔥 للفشل</div><div class="v">${fail}</div></div>
+    <div class="stat"><div class="l">RIR 1-2</div><div class="v">${near}</div></div>
+    <div class="stat"><div class="l">متوسط RIR</div><div class="v num">${fmt(avg(done.map(s=>s.rir)),1)}</div></div></div>
+    <div class="stack"><i style="width:${w(fail)};background:#F97316"></i><i style="width:${w(near)};background:#0F172A"></i><i style="width:${w(far)};background:#CBD5E1"></i></div>
+    <div class="legend"><span><i style="background:#F97316"></i>فشل (RIR 0)</span><span><i style="background:#0F172A"></i>قريبة RIR 1-2</span><span><i style="background:#CBD5E1"></i>RIR 3+</span></div>`;
+}
+
+/* ======================================================================
+   TRAINING
+   ====================================================================== */
+async function viewTrain(el){
+  if(S.progPending){ S.tab="home"; return viewHome(el); }
+  const p=S.client, wkNow=currentWeek(p), tdn=todayDayNo();
+  const days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
+  if(!days.length){ el.innerHTML=`<div class="card">${S.me.role==="coach"?emptyBox("📋","العميل ده لسه مالوش برنامج","حط برنامج التمرين من تبويب التحكم وهيظهرله هنا.",{label:"⚙️ روح للتحكم",go:"setup"}):emptyBox("📋","برنامجك بيتجهّز","الكوتش لسه ما حطش برنامج التمرين – هيظهر هنا أول ما يخلص.")}</div>`; return; }
+  const maxD=Math.max(...days);
+  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📅</div><h2>${esc(p.split_name||"برنامج التمرين")}<small>${p.level?LEVELS[p.level]?.icon+" "+esc(p.level)+" · ":""}${days.length} أيام في الأسبوع</small></h2></div>
+      <div class="scroller" id="dayCards">${[...Array(7)].map((_,i)=>{ const d=i+1, has=days.includes(d); return `<button class="daycard ${S.day===d?"on":""} ${has?"":"rest"}" data-d="${d}">${d===tdn?'<span class="dot"></span>':""}<b>${has?"يوم "+d:"راحة"}</b><small>${has?esc(dayLabel(d)||S.program.filter(e=>e.day_no===d).length+" تمارين"):"😴 استشفاء"}</small>${has?`<span class="dmus">${Object.entries(muscleVol(S.program.filter(e=>e.day_no===d).map(e=>[e.name,e.sets]))).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([m])=>`<i style="background:${mColor(m)}" title="${m}"></i>`).join("")}</span>`:""}</button>`; }).join("")}</div>
+      <div class="muted" style="margin:8px 0 6px;font-weight:700">الأسبوع</div>
+      ${blockNavHTML(S.week,p)}<div class="scroller" id="wkChips">${blockWeeks(S.week).map(w=>`<button class="chip ${S.week===w?"on":""} ${wkNow===w?"cur":""}" data-w="${w}">${w}${isDeload(p,w)?" 🔄":""}</button>`).join("")}</div></div>
+    <div class="card tools hidden" id="tTools"></div><div id="tPrep"></div><div id="exList"></div><div class="card" id="failCard"></div>`;
+  { const dc=$("#dayCards"), wc=$("#wkChips"), sel=dc&&dc.querySelector(".daycard.on");
+    [dc,wc].forEach(r=>{ if(!r) return; let x0=0; r.addEventListener("pointerdown",e=>{x0=e.clientX;r._drag=false;},{passive:true}); r.addEventListener("pointermove",e=>{ if(Math.abs(e.clientX-x0)>8) r._drag=true; },{passive:true}); const end=()=>setTimeout(()=>{r._drag=false;},140); r.addEventListener("pointerup",end,{passive:true}); r.addEventListener("pointercancel",()=>{r._drag=true;end();},{passive:true}); r.addEventListener("click",e=>{ if(r._drag){ e.stopPropagation(); e.preventDefault(); } },true); });
+    if(dc){ if(window._dcX!=null) dc.scrollLeft=window._dcX; else if(sel){ const dr=dc.getBoundingClientRect(), sr=sel.getBoundingClientRect(), t=dc.scrollLeft+(sr.left-dr.left)-(dc.clientWidth-sr.width)/2; if(sr.left<dr.left||sr.right>dr.right) dc.scrollLeft=t; } }
+    if(wc){ if(window._wcX!=null) wc.scrollLeft=window._wcX; }
+    window._dcX=null; window._wcX=null; }
+  el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{ window._dcX=$("#dayCards")?.scrollLeft; S.day=+b.dataset.d; viewTrain(el);});
+  el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ window._wcX=$("#wkChips")?.scrollLeft; S.week=+b.dataset.w; viewTrain(el);});
+  const allEx=S.program.filter(e=>e.day_no===S.day), exs=trainMode()==="quick"?allEx.slice(0,4):allEx, list=$("#exList");
+  const tt=$("#tTools"); if(allEx.length&&S.me.role!=="coach"&&S.week===wkNow){ tt.classList.remove("hidden"); tt.innerHTML=trainToolsHTML();
+    tt.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ setTrainMode(trainMode()===b.dataset.mode?"":b.dataset.mode); viewTrain(el); });
+    $("#rdyBtn").onclick=()=>openReadiness(()=>viewTrain(el)); }
+  if(!exs.length){ list.innerHTML=`<div class="card">${emptyBox("😴","يوم راحة واستشفاء","الراحة جزء من التطور – سجّل نومك ومياهك وخطواتك النهارده.",{label:"✅ سجّل عاداتك",go:"habits"})}</div>`; $("#failCard").remove(); return; }
+  const ids=exs.map(e=>e.id);
+  const { data, error:le } = await sb.from("set_logs").select("*").in("exercise_id",ids).in("week",[S.week,S.week-1].filter(w=>w>=1));
+  const ck="logs_"+p.id+"_"+S.day+"_"+S.week, logs=le? (cacheGet(ck)||[]) : (data||[]); if(!le) cacheSet(ck,logs);
+  const lastBy={}, bestPrev={}; try{ const { data:hist } = await sb.from("set_logs").select("exercise_id,week,set_no,reps,weight,rir,failure").in("exercise_id",ids).lt("week",S.week); (hist||[]).forEach(h=>{ if(logged(h)){ const k=h.exercise_id+"_"+h.set_no; if(!lastBy[k]||h.week>lastBy[k].week) lastBy[k]=h; } const x=e1rm(h)||0; if(x>(bestPrev[h.exercise_id]||0)) bestPrev[h.exercise_id]=x; }); }catch(e){}
+  const firstC=exs.findIndex(e=>isCompound(e.name));
+  const seenM=new Set(), firstOfM=exs.map(e=>{ const m=muscleOf(e.name); if(m==="أخرى"||seenM.has(m)) return false; seenM.add(m); return true; });
+  const prevW=ex=>Math.max(0,...[...Array(ex.sets)].map((_,i)=>+(get(ex.id,S.week-1,i+1)?.weight)||0));
+  const deload=isDeload(p,S.week);
+  const tp=$("#tPrep"); if(tp&&!deload){ tp.innerHTML=warmupCardHTML(p,exs,S.day); wireWarmup(tp); }
+  if(deload) list.insertAdjacentHTML("beforeend",`<div class="card dark"><div class="card-h"><div class="ic">🔄</div><h2>أسبوع ديلود (تخفيف)<small>مجموعات أقل بحوالي 40% · أوزان أخف ~10% · RIR 3-4 · الهدف استشفاء مش أرقام</small></h2></div></div>`);
+  const get=(ex,w,n)=>logs.find(l=>l.exercise_id===ex&&l.week===w&&l.set_no===n);
   exs.forEach((ex,idx)=>{
-    const d=document.createElement("div"); d.className="edit-ex"; const lib=S.videos[(ex.name||"").toUpperCase()];
-    d.innerHTML=`<div class="between" style="margin-bottom:8px"><b>${idx+1}. ${esc(ex.name)}</b><div class="row"><button class="btn sm" data-up>▲</button><button class="btn sm" data-dn>▼</button></div></div>
-      <div class="grid3"><label class="f">اسم التمرين<input data-e="name" value="${esc(ex.name)}"></label>
-        <label class="f">المجموعات<input inputmode="numeric" data-e="sets" value="${ex.sets}"></label>
-        <label class="f">العدات<input data-e="target_reps" placeholder="8-12" value="${esc(ex.target_reps??"")}"></label>
-        <label class="f">RIR<input data-e="target_rir" placeholder="1-2" value="${esc(ex.target_rir??"")}"></label>
-        <label class="f">الراحة (ثانية)<input inputmode="numeric" data-e="rest_sec" placeholder="90" value="${esc(ex.rest_sec??"")}"></label>
-        <label class="f">التمبو<input data-e="tempo" placeholder="3-1-1-0" value="${esc(ex.tempo??"")}"></label></div>
-      <label class="f">🎬 رابط فيديو الأداء (YouTube)<input data-e="video_url" placeholder="${lib?"من المكتبة: "+esc(lib):"https://youtu.be/…"}" value="${esc(ex.video_url??"")}"></label>
-      <label class="f">ملاحظات للعميل<input data-e="notes" value="${esc(ex.notes??"")}"></label>
-      <div class="row"><button class="btn sm primary" data-save>حفظ</button>${videoFor(ex)?`<button class="btn sm" data-play>▶ معاينة</button>`:""}<span class="grow"></span><button class="btn sm danger" data-del>حذف</button></div>`;
-    d.querySelector("[data-save]").onclick=async()=>{
-      const v=k=>d.querySelector(`[data-e="${k}"]`).value.trim();
-      const upd={name:(v("name")||ex.name).toUpperCase(),sets:Math.min(Math.max(num(v("sets"))||3,1),10),target_reps:v("target_reps")||null,target_rir:v("target_rir")||null,rest_sec:num(v("rest_sec")),tempo:v("tempo")||null,video_url:v("video_url")||null,notes:v("notes")||null};
-      const { error } = await sb.from("program_exercises").update(upd).eq("id",ex.id); if(error) return toast(error.message); Object.assign(ex,upd); toast("✓ اتحفظ"); setupProgram(el);
-    };
-    d.querySelector("[data-play]")&&(d.querySelector("[data-play]").onclick=()=>openVideo(ex));
-    d.querySelector("[data-del]").onclick=async()=>{ if(!confirm("حذف التمرين وكل المجموعات المسجلة له؟")) return; const { error } = await sb.from("program_exercises").delete().eq("id",ex.id); if(error) return toast(error.message); S.program=S.program.filter(e=>e.id!==ex.id); setupProgram(el); };
-    const move=async dir=>{ const j=idx+dir; if(j<0||j>=exs.length) return; const a=exs[idx], b=exs[j];
-      await Promise.all([sb.from("program_exercises").update({position:j}).eq("id",a.id), sb.from("program_exercises").update({position:idx}).eq("id",b.id)]);
-      a.position=j; b.position=idx; S.program.sort((x,y)=>x.day_no-y.day_no||x.position-y.position); setupProgram(el); };
-    d.querySelector("[data-up]").onclick=()=>move(-1); d.querySelector("[data-dn]").onclick=()=>move(1);
-    list.appendChild(d);
+    const box=document.createElement("div"); box.className="ex"; const vid=videoFor(ex);
+    const nSets=modeSets(weekSets(ex,p,S.week)), restS=modeRest(ex.rest_sec||90), alt=altChoice(ex.id), hint=progressionHint(ex,[...Array(ex.sets)].map((_,i)=>get(ex.id,S.week-1,i+1)).filter(Boolean),deload);
+    const mus=muscleOf(ex.name); box.style.setProperty("--mc",mColor(mus));
+    box.innerHTML=`<div class="ex-h"><div class="ex-n">${idx+1}</div><div class="ex-t">${mus!=="أخرى"?mChip(mus):""}<b data-vid>${esc(alt||ex.name)}</b>${alt?`<small style="display:block;color:#FDBA74;font-size:.7rem">بديل لـ ${esc(ex.name)}</small>`:""}
+        <div class="ex-tags"><span class="pill glass">🎯 ${nSets}×${esc(ex.target_reps||"—")}</span>${deload?`<span class="pill glass">RIR 3-4</span>`:ex.target_rir?`<span class="pill glass">RIR ${esc(modeRir(ex.target_rir))}</span>`:""}<button class="pill glass" data-alt style="border:0;cursor:pointer">⇄ بديل</button><button class="pill glass" data-hist style="border:0;cursor:pointer">📈 السجل</button><button class="pill glass" data-pain style="border:0;cursor:pointer" title="حاسس بألم؟">🤕</button>${ex.rest_sec?`<span class="pill glass">⏱ ${restS}ث</span>`:""}${ex.tempo?`<span class="pill glass">🕒 ${esc(ex.tempo)}</span>`:""}<span class="pill acc" data-best></span></div></div>
+        ${vid?`<button class="play" data-vid title="شاهد الأداء الصحيح">${ICON.play}</button>`:""}</div>
+      <div class="ex-b">${hint?`<div class="prog ${hint.kind}">${hint.text}</div>`:""}${ex.tempo?tempoBlocks(ex.tempo):""}${ex.notes?`<p class="hint" style="margin:0 0 8px">📝 ${esc(ex.notes)}</p>`:""}${deload?"":idx===firstC?warmupHTML(hint?.w||prevW(ex)):firstOfM[idx]?feederHTML(hint?.w||prevW(ex),mus):""}
+        <div class="set-head"><span>#</span><span>العدات</span><span>الوزن كجم</span><span>RIR</span><span>فشل</span><span></span></div><div data-sets></div>
+        <button class="btn sm restbtn" data-rest>⏱ ابدأ الراحة (${restS} ث)</button></div>`;
+    box.querySelectorAll("[data-vid]").forEach(b=>b.onclick=()=>openVideo(alt?{...ex,name:alt,video_url:null}:ex));
+    box.querySelector("[data-alt]").onclick=()=>openAlts(ex,()=>viewTrain(el));
+    box.querySelector("[data-hist]").onclick=()=>openExHistory(ex);
+    box.querySelector("[data-rest]").onclick=()=>startRest(restS, ex.name);
+    box.querySelector("[data-pain]").onclick=()=>openPain(ex,()=>openAlts(ex,()=>viewTrain(el)));
+    const setsEl=box.querySelector("[data-sets]");
+    const updBest=()=>{ const best=Math.max(0,...[...Array(nSets)].map((_,i)=>e1rm(get(ex.id,S.week,i+1)||{})||0)); box.querySelector("[data-best]").textContent=best?"1RM≈"+fmt(best,1):""; };
+    for(let n=1;n<=nSets;n++){
+      const cur=get(ex.id,S.week,n)||{}, prev0=get(ex.id,S.week-1,n), prev=(prev0&&logged(prev0))?prev0:(lastBy[ex.id+"_"+n]||prev0), prevOld=prev&&prev.week!==S.week-1;
+      const row=document.createElement("div"); row.className="set"+(logged(cur)?" done":"");
+      row.innerHTML=`<div class="no">${n}</div>
+        <input inputmode="numeric" placeholder="${esc(ex.target_reps||"عدات")}" value="${esc(cur.reps??"")}" data-k="reps">
+        <input inputmode="decimal" placeholder="${hint?.w?fmt(hint.w,2):(prev?.weight??"كجم")}" value="${esc(cur.weight??"")}" data-k="weight">
+        <select data-k="rir"><option value="">—</option>${[0,1,2,3,4,5].map(v=>`<option value="${v}" ${cur.rir!==null&&cur.rir!==undefined&&+cur.rir===v?"selected":""}>${v}</option>`).join("")}</select>
+        <button class="fail ${cur.failure?"on":""}" data-k="failure" title="وصلت للفشل">🔥</button>
+        <button class="more" title="تمبو / راحة / ملاحظات">⋯</button>
+        ${prev&&logged(prev)?`<div class="prev">${prevOld?"آخر مرة (أسبوع "+prev.week+")":"الأسبوع اللي فات"}: <b class="num">${fmt(prev.reps)}×${fmt(prev.weight,1)}</b>${prev.rir!==null?" · RIR "+prev.rir:""}${isFailure(prev)?" · 🔥":""}</div>`:""}
+        <div class="set-x hidden"><input placeholder="تمبو ${esc(ex.tempo||"")}" value="${esc(cur.tempo??"")}" data-k="tempo"><input inputmode="numeric" placeholder="راحة ث" value="${esc(cur.rest_sec??"")}" data-k="rest_sec"><input placeholder="ملاحظات" value="${esc(cur.notes??"")}" data-k="notes"></div>`;
+      row.querySelector(".more").onclick=()=>row.querySelector(".set-x").classList.toggle("hidden");
+      const save=async(startTimer)=>{
+        const v=k=>row.querySelector(`[data-k="${k}"]`);
+        const rec={ client_id:p.id, exercise_id:ex.id, week:S.week, set_no:n, reps:num(v("reps").value), weight:num(v("weight").value), rir:num(v("rir").value),
+          failure:v("failure").classList.contains("on"), tempo:v("tempo").value.trim()||null, rest_sec:num(v("rest_sec").value), notes:[alt?"بديل: "+alt:null, v("notes").value.trim()||null].filter(Boolean).join(" · ")||null };
+        if(rec.rir===0){ rec.failure=true; v("failure").classList.add("on"); }
+        const wasDone=row.classList.contains("done");
+        const { data:saved, error, queued } = await dbWrite({op:"upsert",table:"set_logs",row:rec,onConflict:"exercise_id,week,set_no"});
+        if(error){ toast("خطأ في الحفظ: "+error.message); return; }
+        if(queued) toast("📴 اتحفظت على الموبايل");
+        if(S.me.role!=="coach"&&S.week===wkNow) markWorkoutStart(p.id,S.day);
+        const i=logs.findIndex(l=>l.exercise_id===ex.id&&l.week===S.week&&l.set_no===n); if(i>=0) logs[i]=saved; else logs.push(saved);
+        row.classList.toggle("done",logged(saved)); updBest(); renderFailCard();
+        try{ navigator.vibrate&&navigator.vibrate(25); }catch(e){}
+        const pr=e1rm(saved)||0; if(bestPrev[ex.id]>0&&pr>bestPrev[ex.id]*1.005){ celebratePR(alt||ex.name,pr,bestPrev[ex.id]); bestPrev[ex.id]=pr; }
+        cacheSet(ck,logs); if(startTimer && !wasDone && rec.reps!==null && n<nSets) startRest(rec.rest_sec||restS, `${ex.name} · بعد مجموعة ${n}`);
+      };
+      row.querySelectorAll("input,select").forEach(i=>i.addEventListener("change",()=>save(i.dataset.k==="reps"||i.dataset.k==="weight")));
+      row.querySelector(".fail").onclick=e=>{ e.currentTarget.classList.toggle("on"); save(false); };
+      setsEl.appendChild(row);
+    }
+    updBest(); list.appendChild(box);
   });
-  $("#exAdd").onclick=async()=>{ const name=prompt("اسم التمرين"); if(!name) return;
-    const L=LEVELS[p.level]||LEVELS["متوسط"], c=isCompound(name.toUpperCase());
-    const { data, error } = await sb.from("program_exercises").insert({client_id:p.id,day_no:S.day,position:exs.length,name:name.trim().toUpperCase(),sets:3,target_reps:c?"6-10":"10-15",target_rir:c?L.rir.c:L.rir.i,rest_sec:c?L.rest.c:L.rest.i,tempo:c?L.tempo.c:L.tempo.i,day_label:dayLabel(S.day)||null}).select().single();
-    if(error) return toast(error.message); S.program.push(data); setupProgram(el); };
-  $("#tplSave")&&($("#tplSave").onclick=async()=>{ const name=prompt("اسم برنامج الكوتش", p.split_name||"برنامج الكوتش"); if(!name) return;
-    const ds=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
-    const plan=ds.map(d=>({label:dayLabel(d)||("Day "+d), ex:S.program.filter(e=>e.day_no===d).map(e=>[e.name,e.sets,e.target_reps,e.target_rir,e.rest_sec,e.tempo,e.notes,e.video_url])}));
-    const { error } = await sb.from("program_templates").insert({name:name.trim(),days:ds.length,plan}); if(error) return toast(error.message); await loadCoachTemplates(); toast("✓ اتحفظ كبرنامج كوتش"); });
-}
-const WEEKDAYS=["الأحد","الاتنين","التلات","الأربع","الخميس","الجمعة","السبت"];
-function weekEditor(host, panel){
-  const p=S.client, train=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
-  let slots=[...Array(7)].map((_,i)=>train.includes(i+1)?{t:"d",d:i+1}:{t:"r"});
-  const wd=i=>p.start_date?WEEKDAYS[new Date(addDays(p.start_date,i)+"T00:00:00").getDay()]:"";
-  const draw=()=>{
-    host.innerHTML=`<div class="wk-list">${slots.map((s,i)=>{ const n=s.t==="d"?S.program.filter(e=>e.day_no===s.d).length:0;
-      return `<div class="wk-slot ${s.t==="r"?"rest":""}" data-i="${i}"><span class="wk-grip">⠿</span><div class="wk-day"><b>${i+1}</b><small>${wd(i)}</small></div>
-        <div class="wk-body">${s.t==="d"?`<b>${esc(dayLabel(s.d)||"يوم تمرين")}</b><small>${n} تمارين</small>`:`<b>😴 راحة</b><small>استشفاء</small>`}</div>
-        <button class="btn sm" data-up="${i}" ${i===0?"disabled":""}>▲</button><button class="btn sm" data-dn="${i}" ${i===6?"disabled":""}>▼</button></div>`; }).join("")}</div>`;
-    const swap=(i,j)=>{ [slots[i],slots[j]]=[slots[j],slots[i]]; draw(); };
-    host.querySelectorAll("[data-up]").forEach(b=>b.onclick=()=>swap(+b.dataset.up,+b.dataset.up-1));
-    host.querySelectorAll("[data-dn]").forEach(b=>b.onclick=()=>swap(+b.dataset.dn,+b.dataset.dn+1));
-    if(window.Sortable) Sortable.create(host.querySelector(".wk-list"),{handle:".wk-grip",animation:180,ghostClass:"wk-ghost",forceFallback:true,fallbackTolerance:3,
-      onEnd:()=>{ slots=[...host.querySelectorAll(".wk-slot")].map(x=>slots[+x.dataset.i]); draw(); }});
+  if(S.week===wkNow){ const fin=document.createElement("div"); list.appendChild(fin);
+    const drawFin=async()=>{ fin.innerHTML=await finishCardHTML(p,S.day,S.week); const b=fin.querySelector("#finBtn"); if(b) b.onclick=()=>openFinish(p,S.day,S.week,exs,logs,drawFin); };
+    drawFin(); }
+  const renderFailCard=async()=>{
+    const fc=$("#failCard"); if(!fc) return;
+    const { data:all } = await sb.from("set_logs").select("exercise_id,week,reps,weight,rir,failure").eq("client_id",p.id);
+    const A=(all||[]).filter(s=>ids.includes(s.exercise_id));
+    let html=`<div class="card-h"><div class="ic acc">🔥</div><h2>متتبع الفشل العضلي<small>يوم ${S.day} · الأسبوع ${S.week}</small></h2></div>`+failureSummary(A.filter(s=>s.week===S.week));
+    html+=`<div class="scrollx" style="margin-top:12px"><table><tr><th style="text-align:start">التمرين</th><th>🔥</th><th>أفضل 1RM</th><th>التطور</th></tr>`;
+    exs.forEach(ex=>{
+      const mine=A.filter(s=>s.exercise_id===ex.id), wk=mine.filter(s=>s.week===S.week);
+      const best=w=>Math.max(0,...mine.filter(s=>s.week===w).map(s=>e1rm(s)||0));
+      const nowB=best(S.week), prevW=[...Array(S.week-1)].map((_,i)=>S.week-1-i).find(w=>best(w)>0), prevB=prevW?best(prevW):0, diff=nowB&&prevB?(nowB-prevB)/prevB:null;
+      html+=`<tr><td style="text-align:start;font-size:.74rem">${esc(ex.name)}</td><td>${wk.filter(isFailure).length}/${wk.filter(logged).length}</td><td class="num">${nowB?fmt(nowB,1):"—"}</td>
+        <td>${diff===null?"—":`<span class="pill ${diff>=0?"good":"navy"}">${diff>=0?"▲":"▼"} ${Math.abs(diff*100).toFixed(1)}%</span>`}</td></tr>`;
+    });
+    fc.innerHTML=html+`</table></div><p class="hint">1RM تقديري = الوزن × (1 + (العدات + RIR) ÷ 30) · التطور مقارنة بآخر أسبوع مسجّل.</p>`;
   };
-  draw();
-  $("#wkAuto").onclick=()=>{ const ds=slots.filter(s=>s.t==="d"), pos=DEFAULT_SLOTS[ds.length]||[]; slots=[...Array(7)].map(()=>({t:"r"})); ds.forEach((s,k)=>slots[pos[k]-1]=s); draw(); };
-  $("#wkSave").onclick=async()=>{
-    const moves=slots.map((s,i)=>s.t==="d"&&s.d!==i+1?{from:s.d,to:i+1}:null).filter(Boolean);
-    if(!moves.length) return toast("مفيش تغيير");
-    for(const m of moves){ const ids=S.program.filter(e=>e.day_no===m.from).map(e=>e.id);
-      const { error } = await sb.from("program_exercises").update({day_no:m.to}).in("id",ids); if(error) return toast(error.message); }
-    await refreshClient(); S.day=slots.findIndex(s=>s.t==="d")+1||1; toast("✓ اتحفظ الجدول"); setupProgram(panel);
-  };
-}
-async function setupDiet(el){
-  const p=S.client, n=Math.max(1,Math.min(+p.meals_per_day||3,8));
-  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic acc">🍽</div><h2>الوجبات<small>عددها وأسماؤها</small></h2></div>
-      <div class="grid2"><label class="f">عدد الوجبات<select id="mCount">${[2,3,4,5,6].map(x=>`<option ${n===x?"selected":""}>${x}</option>`).join("")}</select></label>
-      ${[...Array(n)].map((_,i)=>`<label class="f">${MEAL_ICONS[i]} اسم الوجبة ${i+1}<input data-mn="${i}" value="${esc(mealName(p,i+1))}"></label>`).join("")}</div>
-      <button class="btn navy block" id="mSave">حفظ الوجبات</button></div>
-    <div class="card"><div class="card-h"><div class="ic dark">📚</div><h2>قوالب الدايت<small>احفظ الخطة كقالب وطبّقها على أي عميل – مع ضبط تلقائي لسعراته</small></h2></div>
-      <div id="dtList"></div>
-      <div class="row" style="margin-top:8px"><button class="btn grow" id="dtSave">💾 حفظ خطة ${esc(p.full_name||"العميل")} كقالب</button></div></div>
-    <p class="hint" style="margin:0 4px 10px">📋 الخطة دي بتظهر للعميل في صفحة التغذية – يقدر يعلّم على اللي أكله بضغطة ✓، ويقدر يعدّل فيها.</p>
-    <div id="planHost"></div>`;
-  $("#mSave").onclick=async()=>{ const names=[...el.querySelectorAll("[data-mn]")].map(i=>i.value.trim()||null);
-    const { error } = await sb.from("profiles").update({meals_per_day:+$("#mCount").value, meal_names:names}).eq("id",p.id); if(error) return toast(error.message);
-    await refreshClient(); toast("✓ اتحفظ"); setupDiet(el); };
-  $("#mCount").onchange=async()=>{ await sb.from("profiles").update({meals_per_day:+$("#mCount").value}).eq("id",p.id); await refreshClient(); setupDiet(el); };
-  const tk=targets(p).kcal;
-  $("#dtList").innerHTML=(S.dietTpl||[]).length?S.dietTpl.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>${esc(t.name)}</b><small>${fmt(t.kcal)} kcal · ${t.items.length} صنف · ${t.meals_per_day||"—"} وجبات</small></div>
-      <button class="btn sm primary" data-dta="${t.id}">تطبيق</button><button class="x" data-dtd="${t.id}">✕</button></div>`).join(""):emptyBox("📋","مفيش قوالب لسه","احفظ أي خطة كقالب وهتلاقيها هنا جاهزة تطبقها لأي عميل.","","es-sm");
-  el.querySelectorAll("[data-dta]").forEach(b=>b.onclick=async()=>{ const t=S.dietTpl.find(x=>x.id===b.dataset.dta);
-    const scale=tk&&t.kcal&&Math.abs(tk-t.kcal)/t.kcal>0.03 ? confirm(`القالب ${fmt(t.kcal)} kcal وهدف العميل ${fmt(tk)} kcal.\nأضبط الكميات تلقائياً على ${fmt(tk)}؟ (إلغاء = زي ما هو)`) : false;
-    if(!confirm("استبدال خطة الدايت الحالية بالقالب؟")) return;
-    if(await applyDietTemplate(p,t,scale?tk:null)){ await refreshClient(); toast("✓ اتطبق القالب"); setupDiet(el); } });
-  el.querySelectorAll("[data-dtd]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف القالب؟")) return; await sb.from("diet_templates").delete().eq("id",b.dataset.dtd); await loadDietTemplates(); setupDiet(el); });
-  $("#dtSave").onclick=async()=>{ const { data:items } = await sb.from("diet_plan_items").select("*").eq("client_id",p.id).order("meal_no").order("position");
-    if(!items?.length) return toast("الخطة فاضية"); const name=prompt("اسم القالب", `${fmt(sumMacros(items).kcal)} kcal – ${p.goal||""}`); if(!name) return;
-    const { error } = await sb.from("diet_templates").insert({name:name.trim(), kcal:Math.round(sumMacros(items).kcal), meals_per_day:+p.meals_per_day||3,
-      items:items.map(i=>({meal_no:i.meal_no,food_id:i.food_id,food_name:i.food_name,unit:i.unit,qty:+i.qty,kcal:+i.kcal,protein:+i.protein,carbs:+i.carbs,fat:+i.fat,notes:i.notes}))});
-    if(error) return toast(error.message); await loadDietTemplates(); toast("✓ اتحفظ القالب"); setupDiet(el); };
-  renderMeals($("#planHost"),{mode:"plan"});
-}
-function setupAccount(el){
-  const p=S.client;
-  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📧</div><h2>الإيميل (اسم الدخول)</h2></div>
-      <div class="row"><input id="newEmail" class="grow" type="email" value="${esc(p.email??"")}"><button class="btn sm navy" id="se">تغيير</button></div></div>
-    <div class="card"><div class="card-h"><div class="ic dark">🔑</div><h2>كلمة السر</h2></div>
-      <div class="row"><input id="newPass" class="grow" placeholder="كلمة سر جديدة" autocomplete="new-password"><button class="btn sm" id="gp">توليد</button><button class="btn sm navy" id="sp">تغيير</button></div></div>
-    <div class="card"><div class="card-h"><div class="ic">⚙️</div><h2>حالة الحساب<small>${p.active?"مفعّل – العميل يقدر يدخل":"موقوف – العميل مش هيقدر يدخل"}</small></h2></div>
-      <div class="row"><button class="btn grow" id="act">${p.active?"⏸ إيقاف الحساب":"▶ تفعيل الحساب"}</button><button class="btn danger grow" id="del">🗑 حذف العميل نهائياً</button></div></div>`;
-  const call=async body=>{ const { data, error } = await adminCall({body}); const msg=await fnErr(error,data); if(msg){ toast(msg); return false; } return true; };
-  $("#se").onclick=async()=>{ if(await call({action:"set_email",user_id:p.id,email:$("#newEmail").value.trim()})){ await refreshClient(); toast("✓ اتغيّر الإيميل"); } };
-  $("#gp").onclick=()=>$("#newPass").value=genPass();
-  $("#sp").onclick=async()=>{ const pw=$("#newPass").value; if(await call({action:"set_password",user_id:p.id,password:pw})){ navigator.clipboard?.writeText(pw); toast("✓ اتغيّرت واتنسخت: "+pw); } };
-  $("#act").onclick=async()=>{ const { error } = await sb.from("profiles").update({active:!p.active}).eq("id",p.id); if(error) return toast(error.message); await refreshClient(); setupAccount(el); };
-  $("#del").onclick=()=>deleteClientFlow(p,async()=>{ S.client=null; S.tab="clients"; await loadClients(); render(); });
+  renderFailCard();
 }
 
 /* ======================================================================
-   COACH: EXERCISE VIDEO LIBRARY
+   NUTRITION (day log + coach plan) — also used as the plan editor
    ====================================================================== */
-async function viewVideos(el){
-  const [{ data:lib }, { data:ex }] = await Promise.all([ sb.from("exercise_videos").select("*"), sb.from("program_exercises").select("name,client_id") ]);
-  const usedBy={}; (ex||[]).forEach(e=>{ const n=e.name.toUpperCase(); (usedBy[n]=usedBy[n]||new Set()).add(e.client_id); });
-  const altMap=Object.fromEntries((lib||[]).map(v=>[v.name,v.alternatives||[]]));
-  const names=new Set([...(ex||[]).map(e=>e.name.toUpperCase()), ...Object.values(B).flat().map(e=>e[0]), ...MOFIT_TEMPLATE.map(e=>e.name), ...(lib||[]).map(v=>v.name)]);
-  const map=Object.fromEntries((lib||[]).filter(v=>v.video_url).map(v=>[v.name,v.video_url]));
-  const all=[...names].sort((a,b)=>(usedBy[b]?.size||0)-(usedBy[a]?.size||0)||a.localeCompare(b)), withVid=all.filter(n=>map[n]).length;
-  const used=all.filter(n=>usedBy[n]), usedVid=used.filter(n=>map[n]).length;
-  el.innerHTML=`<div class="card dark"><div class="card-h"><div class="ic">🎬</div><h2>مكتبة التمارين<small>فيديو الأداء + البدائل – مرة واحدة وتظهر عند كل العملاء</small></h2></div>
-      <div class="bar" style="background:rgba(255,255,255,.15)"><i style="width:${all.length?withVid/all.length*100:0}%"></i></div><p class="hint">${withVid} من ${all.length} تمرين في المكتبة ليهم فيديو</p></div>
-    <div class="card" style="border:1.5px solid var(--acc-line)"><div class="card-h"><div class="ic acc">🎯</div><h2>تمارين عملائك<small>${usedVid} من ${used.length} ليهم فيديو${used.length-usedVid?` · ناقص ${used.length-usedVid}`:" · كله تمام 👌"}</small></h2></div>
-      <div class="bar"><i style="width:${used.length?usedVid/used.length*100:0}%"></i></div>
-      <p class="hint" style="margin:8px 0 0">ابدأ بالناقص – مرتبين حسب عدد العملاء اللي عندهم التمرين. زرار 🔎 بيفتح بحث يوتيوب، اختار الفيديو وانسخ لينكه هنا.</p></div>
-    <div class="card"><div class="row" style="margin-bottom:10px"><input id="vq" class="grow" placeholder="🔍 ابحث عن تمرين"><select id="vf" style="width:auto"><option value="usedno">عملائي – بدون فيديو</option><option value="used">عملائي – الكل</option><option value="">المكتبة كلها</option><option value="no">بدون فيديو</option><option value="yes">بفيديو</option></select></div>
-      <div class="row" style="margin-bottom:12px"><input id="vNew" class="grow" placeholder="+ تمرين جديد للمكتبة"><button class="btn sm navy" id="vAdd">إضافة</button></div><div id="vl"></div></div>`;
-  const draw=()=>{ const q=$("#vq").value.trim().toUpperCase(), f=$("#vf").value;
-    const ok=n=> f==="usedno"? usedBy[n]&&!map[n] : f==="used"? !!usedBy[n] : (!f||(f==="yes")===!!map[n]);
-    const list=all.filter(n=>(!q||n.includes(q))&&ok(n)).slice(0,80);
-    $("#vl").innerHTML=list.map(n=>`<div class="edit-ex" data-n="${esc(n)}"><div class="between"><b>${map[n]?"🎬":"⚪"} ${esc(n)}${usedBy[n]?` <span class="pill acc-soft">👥 ${usedBy[n].size}</span>`:""}</b><span class="row" style="gap:6px"><a class="btn sm" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${encodeURIComponent(n.toLowerCase()+" exercise proper form")}" title="بحث يوتيوب">🔎</a>${map[n]?`<button class="btn sm" data-play>▶</button>`:""}</span></div>
-      <div class="row" style="margin-top:6px"><input class="grow" data-url placeholder="🎬 https://youtu.be/…" value="${esc(map[n]||"")}"></div>
-      <div class="row" style="margin-top:6px"><input class="grow" data-alts placeholder="⇄ البدائل (افصل بفاصلة) – الافتراضي: ${esc((DEFAULT_ALTS[n]||[]).join("، ")||"لا يوجد")}" value="${esc((altMap[n]||[]).join(", "))}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox(f==="usedno"&&!q?"👌":"🔎",f==="usedno"&&!q?"كل تمارين عملائك ليها فيديو":"مفيش نتائج",f==="usedno"&&!q?"":"جرّب اسم تمرين تاني أو غيّر الفلتر.","","es-sm");
-    $("#vl").querySelectorAll("[data-n]").forEach(r=>{ const n=r.dataset.n;
-      r.querySelector("[data-save]").onclick=async()=>{ const url=r.querySelector("[data-url]").value.trim(), alts=r.querySelector("[data-alts]").value.split(/[,،]/).map(x=>x.trim().toUpperCase()).filter(Boolean);
-        const { error } = (url||alts.length)? await sb.from("exercise_videos").upsert({name:n,video_url:url||null,alternatives:alts.length?alts:null,updated_at:new Date().toISOString()}) : await sb.from("exercise_videos").delete().eq("name",n);
-        if(error) return toast(error.message); if(url) map[n]=url; else delete map[n]; altMap[n]=alts; await loadVideos(); toast("✓ اتحفظ"); draw(); };
-      r.querySelector("[data-play]")&&(r.querySelector("[data-play]").onclick=()=>openVideo({name:n})); }); };
-  $("#vq").oninput=draw; $("#vf").onchange=draw;
-  $("#vAdd").onclick=()=>{ const n=$("#vNew").value.trim().toUpperCase(); if(!n) return; if(!all.includes(n)) all.unshift(n); $("#vq").value=n; $("#vNew").value=""; draw(); };
-  draw();
-}
-
-/* ======================================================================
-   COACH: FOODS
-   ====================================================================== */
-async function viewFoods(el){
-  el.innerHTML=`<div class="card dark"><div class="card-h"><div class="ic">🍎</div><h2>قاعدة بيانات الأطعمة<small id="fc">خاصة – العملاء بيبحثوا فيها بس، مش بيشوفوها كاملة</small></h2></div></div>
-    <div class="card"><input id="fq" placeholder="🔍 ابحث…"><div id="fl" style="margin-top:8px"></div></div>
-    <div class="card"><div class="card-h"><div class="ic acc">➕</div><h2>صنف جديد<small>جم/مل: القيم لكل 100 · حبة/شريحة: اكتب قيم القطعة الواحدة</small></h2></div>
-     <label class="f">الاسم<input id="fn"></label>
-     <div class="grid3"><label class="f">الوحدة<select id="fu">${["جم","مل","حبة","شريحة","قطعة","كوب","ملعقة كبيرة","سكوب","رغيف"].map(u=>`<option>${u}</option>`).join("")}</select></label>
-     <label class="f">سعرات<input id="fk" inputmode="decimal"></label><label class="f">بروتين<input id="fp" inputmode="decimal"></label>
-     <label class="f">كارب<input id="fcb" inputmode="decimal"></label><label class="f">دهون<input id="ff" inputmode="decimal"></label></div>
-     <div class="grid3">${[["sodium_mg","صوديوم (مجم)"],["potassium_mg","بوتاسيوم (مجم)"],["magnesium_mg","ماغنيسيوم (مجم)"],["iron_mg","حديد (مجم)"],["calcium_mg","كالسيوم (مجم)"],["zinc_mg","زنك (مجم)"],["fiber_g","ألياف (جم)"]].map(([k,l])=>`<label class="f">${l}<input data-fm="${k}" inputmode="decimal" placeholder="اختياري"></label>`).join("")}</div>
-     <p class="hint" id="fuHint"></p><button class="btn primary block" id="fAdd">إضافة</button></div>`;
-  const { count } = await sb.from("foods").select("id",{count:"exact",head:true}); $("#fc").textContent=fmt(count)+" صنف · خاصة – العملاء بيبحثوا فيها بس";
-  const hint=()=>{ const u=$("#fu").value; $("#fuHint").innerHTML=COUNT_UNITS(u)?`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fone" checked style="width:auto;min-height:0"> القيم اللي كتبتها لـ ${u} واحدة</label>`:`القيم لكل 100 ${u}.`; };
-  $("#fu").onchange=hint; hint();
-  let timer; $("#fq").oninput=()=>{ clearTimeout(timer); timer=setTimeout(async()=>{
-    const q=$("#fq").value.trim(); if(q.length<2){ $("#fl").innerHTML=""; return; }
-    const { data } = await sb.from("foods").select("*").ilike("name",`%${q.replace(/[%_,()]/g," ")}%`).limit(40);
-    $("#fl").innerHTML=(data||[]).map(f=>{ const u=unitInfo(f); return `<div class="food-r"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(f.name)}<small>${esc(f.category||"")} · ${u.base}: ${fmt(u.per.kcal)} kcal · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}${hasMinCols(f)&&hasMinData(f)?`<br>${MIN_KEYS.filter(([kk])=>f[kk]!=null).map(([kk,l,un,d])=>l.replace(/^\S+\s/,"")+" "+fmt(u.cnt?f[kk]/100:f[kk],d+(u.cnt?1:0))).join(" · ")}${f.mineral_source&&/تقدير/.test(f.mineral_source)?" (تقدير)":""}`:""}</small></div></div>`; }).join("")||emptyBox("🔎","مفيش نتايج","جرّب كلمة تانية، أو ضيف الصنف من زرار «صنف جديد».","","es-sm");
+function openFoodPicker(title, onPick, opts={}){
+  const body=openSheet(`<div class="between"><b>${esc(title)}</b><button class="btn sm ghost" data-close>✕</button></div>
+    <input id="fpQ" placeholder="🔍 اكتب اسم الصنف (حرفين على الأقل)…" style="margin-top:10px" autocomplete="off"><div id="fpRes" style="margin-top:8px"></div>`);
+  body.querySelector("[data-close]").onclick=closeSheet;
+  const q=$("#fpQ"), res=$("#fpRes"); let timer; setTimeout(()=>q.focus(),100);
+  q.oninput=()=>{ clearTimeout(timer); timer=setTimeout(async()=>{
+    const term=q.value.trim(); if(term.length<2){ res.innerHTML=""; return; }
+    const { data:f } = await sb.rpc("search_foods",{q:term});
+    res.innerHTML=(f||[]).length?f.map(x=>{ const u=unitInfo(x); return `<div class="food-r" data-id="${x.id}"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(x.name)}<small>${u.base}: <b>${fmt(u.per.kcal)} kcal</b> · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}</small></div><span class="pill">${esc(x.unit)}</span></div>`; }).join("")
+      :emptyBox("🔎","مفيش نتائج","اكتب اسم الصنف بشكل تاني"+(S.me.role==="coach"?"، أو ضيفه من تبويب الأطعمة":"")+".","","es-sm");
+    res.querySelectorAll("[data-id]").forEach(d=>d.onclick=()=>pickQty(f.find(x=>x.id==d.dataset.id)));
   },250); };
-  $("#fAdd").onclick=async()=>{
-    const k=$("#fone")?.checked?100:1;
-    const rec={name:$("#fn").value.trim(),unit:$("#fu").value,kcal:(num($("#fk").value)||0)*k,protein:(num($("#fp").value)||0)*k,carbs:(num($("#fcb").value)||0)*k,fat:(num($("#ff").value)||0)*k,source:"الكوتش"};
-    let anyMin=false; document.querySelectorAll("[data-fm]").forEach(i=>{ const x=num(i.value); if(x!=null){ rec[i.dataset.fm]=x*k; anyMin=true; } }); if(anyMin) rec.mineral_source="أدخله الكوتش";
-    if(!rec.name) return toast("اكتب اسم الصنف");
-    const { error } = await sb.from("foods").insert(rec); if(error) return toast(error.message); toast("✓ اتضاف"); viewFoods(el);
+  if(opts.match) body.querySelector("#fpQ").insertAdjacentHTML("beforebegin",`<div class="prog reps" style="margin-top:8px">⇄ تبديل ${esc(opts.match.food_name)} (${fmt(opts.match.kcal)} kcal) – الكمية هتتحسب تلقائياً بنفس السعرات</div>`);
+  function pickQty(food){
+    const u=unitInfo(food);
+    body.innerHTML=`<div class="between"><button class="btn sm ghost" data-back>→ رجوع</button><button class="btn sm ghost" data-close>✕</button></div>
+      <b style="font-size:1.05rem">${esc(food.name)}</b>
+      <div class="unitbox"><span class="u">${u.base}</span> <span style="color:#CBD5E1;font-size:.8rem">${u.cnt?"القيم لكل "+esc(food.unit)+" واحد":"القيم لكل 100 "+esc(food.unit)}</span>
+        <div class="g4"><div><b class="num">${fmt(u.per.kcal)}</b><small>سعرات</small></div><div><b class="num">${fmt(u.per.P,1)}</b><small>بروتين</small></div><div><b class="num">${fmt(u.per.C,1)}</b><small>كارب</small></div><div><b class="num">${fmt(u.per.F,1)}</b><small>دهون</small></div></div></div>
+      <label class="f">${u.qtyLabel}</label>
+      <div class="stepper"><button data-s="-1">−</button><input id="fpQty" inputmode="decimal" value="${u.def}"><button data-s="1">+</button></div>
+      <div class="scroller" style="margin-top:8px">${u.quick.map(v=>`<button class="chip" data-q="${v}">${v} ${esc(food.unit)}</button>`).join("")}</div>
+      <div class="card" style="background:var(--acc-soft);box-shadow:none;margin:10px 0" id="fpPrev"></div>
+      <button class="btn primary block" id="fpAdd">إضافة</button>`;
+    const qi=$("#fpQty"), step=u.cnt?1:10;
+    if(opts.match&&food.kcal>0) qi.value=roundQty(opts.match.kcal/(food.kcal/100),food.unit);
+    const prev=()=>{ const qv=num(qi.value)||0, c=foodCalc(food, qv); $("#fpPrev").innerHTML=`<div class="between"><b>${fmt(qv,1)} ${esc(food.unit)}</b><b style="color:var(--acc)" class="num">${fmt(c.kcal)} kcal</b></div><div class="muted">بروتين ${fmt(c.protein,1)} · كارب ${fmt(c.carbs,1)} · دهون ${fmt(c.fat,1)} جم</div>${mineralLine(food,qv)}`; };
+    qi.oninput=prev; prev();
+    body.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{ qi.value=Math.max(0,(num(qi.value)||0)+(+b.dataset.s)*step); prev(); });
+    body.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{ qi.value=b.dataset.q; prev(); });
+    body.querySelector("[data-close]").onclick=closeSheet;
+    body.querySelector("[data-back]").onclick=()=>openFoodPicker(title,onPick);
+    if(opts.match){ const m=opts.match; const cmp=()=>{ const c=foodCalc(food,num(qi.value)||0); $("#fpPrev").insertAdjacentHTML("beforeend",`<div class="muted" style="margin-top:4px">مقارنة بالأصلي: ب ${c.protein-m.protein>=0?"+":""}${fmt(c.protein-m.protein,1)} · ك ${c.carbs-m.carbs>=0?"+":""}${fmt(c.carbs-m.carbs,1)} · د ${c.fat-m.fat>=0?"+":""}${fmt(c.fat-m.fat,1)} جم</div>`); }; const op=qi.oninput; qi.oninput=()=>{op();cmp();}; cmp(); }
+    $("#fpAdd").textContent=opts.match?"تبديل":"إضافة";
+    $("#fpAdd").onclick=async()=>{ const qv=num(qi.value); if(!qv||qv<=0) return toast("اكتب الكمية"); await onPick(food,qv); closeSheet(); };
+  }
+}
+function qtyText(i){ return `${fmt(i.qty,COUNT_UNITS(i.unit)?2:0)} ${esc(i.unit||"جم")}`; }
+
+async function viewFood(el){ return renderMeals(el,{mode:"day"}); }
+async function renderMeals(el,{mode}){
+  const p=S.client, t=targets(p), meals=Math.max(1,Math.min(+p.meals_per_day||3,8)), planMode=mode==="plan";
+  el.innerHTML=(planMode?"":`<div class="card"><div class="between"><button class="btn sm" id="dPrev">→</button><div style="text-align:center"><b>${niceDate(S.date)}</b><div class="muted num">${S.date}</div></div><button class="btn sm" id="dNext">←</button></div>
+      <input type="date" id="fDate" value="${S.date}" style="margin-top:8px"></div>`)+`<div class="card dark" id="fTot"></div><div id="meals"></div>`;
+  if(!planMode){
+    $("#fDate").onchange=e=>{S.date=e.target.value; renderMeals(el,{mode});};
+    $("#dPrev").onclick=()=>{S.date=addDays(S.date,-1); renderMeals(el,{mode});};
+    $("#dNext").onclick=()=>{S.date=addDays(S.date,1); renderMeals(el,{mode});};
+  }
+  const [pl,lg]=await Promise.all([
+    sb.from("diet_plan_items").select("*").eq("client_id",p.id).order("meal_no").order("position"),
+    planMode?{data:[]}:sb.from("meal_items").select("*").eq("client_id",p.id).eq("log_date",S.date).order("created_at")]);
+  if(!el.isConnected) return; /* user switched tab while loading */
+  const plan=pl.data||[], items=lg.data||[];
+  const drawTot=()=>{ const tot=sumMacros(planMode?plan:items);
+    $("#fTot").innerHTML=`<div class="card-h"><div class="ic">${planMode?"📋":"🔥"}</div><h2>${planMode?"إجمالي الخطة":"ملخص اليوم"}<small>${planMode?"مقارنة بأهداف العميل":"المتبقي: "+(t.kcal?fmt(t.kcal-tot.kcal):"—")+" kcal"}</small></h2></div>
+      <div style="display:flex;gap:16px;align-items:center">${ring(tot.kcal,t.kcal||1,{size:112,track:"rgba(255,255,255,.15)",label:fmt(tot.kcal),sub:"من "+fmt(t.kcal),textColor:"#fff"})}
+      <div style="flex:1;color:#fff">${macroRow("بروتين",tot.P,t.P,"جم")}${macroRow("كارب",tot.C,t.C,"جم")}${macroRow("دهون",tot.F,t.F,"جم")}</div></div>${planMode?mineralTotHTML(plan):mineralTotHTML(items,"اللي اتاكل النهارده")}`; };
+  drawTot();
+  const wrap=$("#meals");
+  for(let m=1;m<=meals;m++){
+    const box=document.createElement("div"); box.className="meal"; let edit=planMode;
+    const draw=()=>{
+      const mp=plan.filter(i=>i.meal_no===m), ml=items.filter(i=>i.meal_no===m);
+      const used=new Set(); const match=pi=>{ const x=ml.find(l=>!used.has(l.id)&&l.food_id===pi.food_id&&+l.qty===+pi.qty); if(x){used.add(x.id);} return x; };
+      const planRows=mp.map(pi=>({pi, hit:planMode?null:match(pi)}));
+      const extras=ml.filter(l=>!used.has(l.id));
+      const sPlan=sumMacros(mp), sEat=sumMacros(ml);
+      box.innerHTML=`<div class="meal-h"><div class="ic">${MEAL_ICONS[m-1]}</div><b>${esc(mealName(p,m))}<small>${planMode?`${fmt(sPlan.kcal)} kcal · ب ${fmt(sPlan.P)} · ك ${fmt(sPlan.C)} · د ${fmt(sPlan.F)}`:`أكلت ${fmt(sEat.kcal)} من ${fmt(sPlan.kcal)} kcal في الخطة`}</small></b>
+          ${planMode?"":`<button class="btn sm ${edit?"navy":""}" data-edit>${edit?"تم":"✎ الخطة"}</button>`}</div>
+        ${mp.length||edit?`<div class="sub">📋 خطة الكوتش</div>`:""}
+        ${planRows.map(({pi,hit})=>`<div class="item plan">${planMode||edit?"":`<button class="tick ${hit?"on":""}" data-tick="${pi.id}" title="أكلتها">✓</button>`}
+          <div class="nm">${esc(pi.food_name)}<small>${qtyText(pi)}${pi.notes?" · "+esc(pi.notes):""}</small></div><span class="kc num">${fmt(pi.kcal)}</span>${hit?"":`<button class="x" data-swap="${pi.id}" title="تبديل بصنف تاني">⇄</button>`}${edit?`<button class="x" data-pdel="${pi.id}">✕</button>`:""}</div>`).join("")}
+        ${!planMode&&extras.length?`<div class="sub">🍽 أكلت كمان</div>`+extras.map(i=>`<div class="item"><div class="nm">${esc(i.food_name)}<small>${qtyText(i)} · ب ${fmt(i.protein,1)} · ك ${fmt(i.carbs,1)} · د ${fmt(i.fat,1)}</small></div><span class="kc num">${fmt(i.kcal)}</span><button class="x" data-ldel="${i.id}">✕</button></div>`).join(""):""}
+        ${!mp.length&&!ml.length&&!edit?`<div class="item"><span class="muted">مفيش أصناف لسه</span></div>`:""}
+        <div class="meal-f">${edit?`<button class="btn sm navy grow" data-padd>+ صنف للخطة</button>`:`${mp.length?`<button class="btn sm grow" data-all>✓ أكلت الوجبة كلها</button>`:""}<button class="btn sm primary grow" data-ladd>+ سجّل صنف</button>`}</div>`;
+      box.querySelector("[data-edit]")&&(box.querySelector("[data-edit]").onclick=()=>{edit=!edit; draw();});
+      const logOne=async pi=>{ const rec={id:crypto.randomUUID(),client_id:p.id,log_date:S.date,meal_no:m,food_id:pi.food_id,food_name:pi.food_name,unit:pi.unit,qty:pi.qty,kcal:pi.kcal,protein:pi.protein,carbs:pi.carbs,fat:pi.fat}; MIN_KEYS.forEach(([k])=>{ if(pi[k]!==undefined) rec[k]=pi[k]; });
+        const { data:ins, error } = await dbWrite({op:"insert",table:"meal_items",row:rec}); if(error){ toast(error.message); return; } items.push(ins); };
+      box.querySelectorAll("[data-swap]").forEach(b=>b.onclick=()=>{ const pi=plan.find(i=>i.id===b.dataset.swap);
+        openFoodPicker("تبديل "+pi.food_name, async(food,qty)=>{ const upd={food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)};
+          const { error } = await sb.from("diet_plan_items").update(upd).eq("id",pi.id); if(error) return toast(error.message); Object.assign(pi,upd); draw(); drawTot(); toast("✓ اتبدّل"); }, {match:pi}); });
+      box.querySelectorAll("[data-tick]").forEach(b=>b.onclick=async()=>{
+        const pr=planRows.find(r=>r.pi.id===b.dataset.tick);
+        if(pr.hit){ const { error } = await dbWrite({op:"delete",table:"meal_items",match:{id:pr.hit.id}}); if(error) return toast(error.message); items.splice(items.findIndex(i=>i.id===pr.hit.id),1); }
+        else await logOne(pr.pi);
+        draw(); drawTot(); });
+      box.querySelector("[data-all]")&&(box.querySelector("[data-all]").onclick=async()=>{ for(const r of planRows) if(!r.hit) await logOne(r.pi); draw(); drawTot(); toast("✓ اتسجلت الوجبة"); });
+      box.querySelectorAll("[data-ldel]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("meal_items").delete().eq("id",b.dataset.ldel); if(error) return toast(error.message); items.splice(items.findIndex(i=>i.id===b.dataset.ldel),1); draw(); drawTot(); });
+      box.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("diet_plan_items").delete().eq("id",b.dataset.pdel); if(error) return toast(error.message); plan.splice(plan.findIndex(i=>i.id===b.dataset.pdel),1); draw(); drawTot(); });
+      box.querySelector("[data-ladd]")&&(box.querySelector("[data-ladd]").onclick=()=>openFoodPicker("سجّل في "+mealName(p,m), async(food,qty)=>{
+        const { data:ins, error } = await sb.from("meal_items").insert({client_id:p.id,log_date:S.date,meal_no:m,food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)}).select().single();
+        if(error) return toast(error.message); items.push(ins); draw(); drawTot(); toast("✓ اتسجل"); }));
+      box.querySelector("[data-padd]")&&(box.querySelector("[data-padd]").onclick=()=>openFoodPicker("أضف لخطة "+mealName(p,m), async(food,qty)=>{
+        const { data:ins, error } = await sb.from("diet_plan_items").insert({client_id:p.id,meal_no:m,position:mp.length,food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)}).select().single();
+        if(error) return toast(error.message); plan.push(ins); draw(); drawTot(); toast("✓ اتضاف للخطة"); }));
+    };
+    draw(); wrap.appendChild(box);
+  }
+}
+
+/* ======================================================================
+   HABITS
+   ====================================================================== */
+function dayScore(h){ return avg([h.diet,h.training,h.cardio,h.sleep_quality].map(v=>v===undefined?null:v)); }
+
+/* ======================================================================
+   CYCLE (private: only the client + coach; never in league or shared views)
+   ====================================================================== */
+function cycleStarts(rows){ const per=new Set(rows.filter(r=>r.kind==="period").map(r=>r.log_date)); return [...per].filter(d=>!per.has(addDays(d,-1))).sort(); }
+function cycleInfo(rows,date){
+  const all=cycleStarts(rows), st=all.filter(d=>d<=date); if(!st.length) return null;
+  const last=st[st.length-1], day=Math.round((new Date(date)-new Date(last))/864e5)+1;
+  const gaps=all.slice(1).map((d,i)=>(new Date(d)-new Date(all[i]))/864e5).filter(g=>g>=18&&g<=45);
+  const len=gaps.length?Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length):28, mid=Math.round(len/2);
+  if(day>len+10) return {stale:true,last};
+  return {day,len,last,phase:day<=5?"فترة الدورة":day<=mid-2?"بعد الدورة":day<=mid+1?"منتصف الدورة":"قبل الدورة"};
+}
+async function cycleCard(host,p,rerender){
+  if(!host||!p) return;
+  const coach=S.me&&S.me.role==="coach";
+  if(p.sex!=="أنثى"){ host.innerHTML=""; return; }
+  if(!coach&&localStorage.getItem("cyc_hide")==="1"){
+    host.innerHTML=`<div class="muted" style="text-align:center;margin:4px 0 12px;font-size:.8rem">🌸 كارد الدورة مخفي · <a href="#" id="cycShow" style="color:var(--acc,#ff6a13);font-weight:700">إظهار</a></div>`;
+    $("#cycShow").onclick=e=>{ e.preventDefault(); localStorage.removeItem("cyc_hide"); rerender&&rerender(); }; return;
+  }
+  const { data }=await sb.from("cycle_logs").select("log_date,kind").eq("client_id",p.id).gte("log_date",addDays(S.date,-120)).order("log_date");
+  const rows=data||[], by={}; rows.forEach(r=>by[r.log_date]=r.kind);
+  const info=cycleInfo(rows,S.date), cur=by[S.date];
+  const K=[["period","🩸","فترة الدورة"],["pms","🌙","قبل الدورة"]];
+  const strip=Array.from({length:28},(_,i)=>{ const d=addDays(S.date,i-27), k=by[d]; return `<i title="${d}" style="aspect-ratio:1/1;border-radius:6px;display:block;background:${k==="period"?"#e0507a":"rgba(128,128,150,.2)"};${k==="pms"?"box-shadow:inset 0 0 0 2px #f0a24b;":""}${d===S.date?"outline:2px solid var(--acc,#ff8a2b);outline-offset:1px;":""}"></i>`; }).join("");
+  const line=info?(info.stale?`آخر دورة سجلتيها كانت ${niceDate(info.last)}`:`النهارده يوم ${info.day} من دورتك تقريباً · ${info.phase}`):(coach?"مفيش دورة متسجلة لسه":"سجّلي أول يوم دورة وهنحسبلك باقي الأيام");
+  host.innerHTML=`<div class="card"><div class="card-h"><div class="ic" style="background:rgba(224,80,122,.18)">🌸</div><h2>دورتك<small>اختياري · ${coach?"للقراءة فقط":"خاص بيكي وبالكوتش بس"}</small></h2></div>
+    ${coach?"":`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">${K.map(([k,e,t])=>`<button class="chip ${cur===k?"on":""}" data-ck="${k}" style="min-height:44px">${e} ${t}</button>`).join("")}</div>`}
+    <div style="font-weight:700;margin-bottom:8px">${line}</div>
+    <div style="display:grid;grid-template-columns:repeat(14,1fr);gap:4px;margin-bottom:10px" dir="ltr">${strip}</div>
+    <div class="muted" style="font-size:.78rem;line-height:1.7">${coach?"تقدير تقريبي من الأيام المسجلة، بيساعدك تفسّر تغيّر الوزن وتظبط البرنامج بنفسك.":"الكوتش بيشوفها عشان يفهم تغيّر وزنك ويظبط برنامجك بنفسه. التطبيق مش بيغيّر حاجة لوحده ومش بيدّي نصايح طبية. مش هتظهر لأي حد تاني، ولا في الدوري."}${coach?"":` <a href="#" id="cycHide" style="color:var(--acc,#ff6a13);font-weight:700">إخفاء الكارد</a>`}</div></div>`;
+  if(coach) return;
+  host.querySelectorAll("[data-ck]").forEach(b=>b.onclick=async()=>{
+    const k=b.dataset.ck; let r;
+    if(cur===k) r=await sb.from("cycle_logs").delete().eq("client_id",p.id).eq("log_date",S.date);
+    else r=await sb.from("cycle_logs").upsert({client_id:p.id,log_date:S.date,kind:k},{onConflict:"client_id,log_date"});
+    if(r.error) return toast("مقدرتش أحفظ، جرّب تاني"); toast("✓ اتحفظ"); cycleCard(host,p,rerender);
+  });
+  const h=$("#cycHide"); if(h) h.onclick=e=>{ e.preventDefault(); localStorage.setItem("cyc_hide","1"); rerender&&rerender(); };
+}
+async function viewHabits(el){
+  const p=S.client;
+  const { data:all } = await sb.from("habits").select("*").eq("client_id",p.id).order("log_date");
+  const H=all||[], cur=H.find(h=>h.log_date===S.date)||{}, rec={...cur}, w=weekOfDate(p,S.date);
+  const scoreRow=(k,l)=>`<div style="margin-bottom:12px"><div class="muted" style="font-weight:700;margin-bottom:6px">${l}</div><div class="scorerow" data-score="${k}">${SCORE.map(([v,e,t])=>`<button class="chip ${cur[k]!==null&&cur[k]!==undefined&&+cur[k]===v?"on":""}" data-v="${v}">${e} ${t}</button>`).join("")}</div></div>`;
+  el.innerHTML=`<div class="card"><div class="between"><button class="btn sm" id="dPrev">→</button><div style="text-align:center"><b>${niceDate(S.date)}</b><div class="muted">${w?"الأسبوع "+w:""}</div></div><button class="btn sm" id="dNext">←</button></div></div>
+    <div class="card"><div class="card-h"><div class="ic acc">⭐</div><h2>يومك<small>اختار درجة التزامك</small></h2><div id="dayScore">${ring(dayScore(cur)||0,1,{size:56,stroke:6,label:pct(dayScore(cur))})}</div></div>
+      <style>.scorerow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.scorerow .chip{padding:6px 2px;font-size:.74rem;min-height:40px;text-align:center;white-space:nowrap}</style>${scoreRow("diet","🥗 الدايت")}${scoreRow("training","💪 التمرين")}${scoreRow("cardio","🏃 الكارديو")}${scoreRow("sleep_quality","😴 جودة النوم")}
+      <div class="grid2"><label class="f">🤯 التوتر<select data-k="stress"><option value=""></option>${STRESS.map(s=>`<option ${cur.stress===s?"selected":""}>${s}</option>`).join("")}</select></label>
+       <label class="f">💤 ساعات النوم<input inputmode="decimal" data-k="sleep_hours" value="${esc(cur.sleep_hours??"")}"></label>
+       <label class="f">💧 المياه (لتر)<input inputmode="decimal" data-k="water_l" value="${esc(cur.water_l??"")}"></label>
+       <label class="f">👣 الخطوات${p.steps_goal?` <small>(الهدف ${fmt(p.steps_goal)})</small>`:""}<input inputmode="numeric" data-k="steps" value="${esc(cur.steps??"")}"></label>
+       <label class="f">🏃 دقايق الكارديو${p.cardio_plan?.minutes?` <small>(المطلوب ${fmt(p.cardio_plan.minutes)})</small>`:""}<input inputmode="numeric" data-k="cardio_min" value="${esc(cur.cardio_min??"")}"></label>
+</div>
+      <div id="ghSlot"></div>
+      <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
+      <button class="btn primary block" id="hSave">حفظ اليوم</button></div>
+    <div id="cycSlot"></div>
+    <div class="card"><div class="card-h"><div class="ic">🗓</div><h2>خريطة الالتزام<small>كل مربع = يوم</small></h2></div>${heatmap(p,H)}</div>
+    <div class="card" id="hWeeks"></div>`;
+  $("#dPrev").onclick=()=>{S.date=addDays(S.date,-1); viewHabits(el);};
+  $("#dNext").onclick=()=>{S.date=addDays(S.date,1); viewHabits(el);};
+  window.ghRenderStepsSlot&&window.ghRenderStepsSlot($("#ghSlot"),p,()=>viewHabits(el));
+  cycleCard($("#cycSlot"),p,()=>viewHabits(el));
+  el.querySelectorAll("[data-score]").forEach(g=>g.querySelectorAll("button").forEach(b=>b.onclick=()=>{
+    g.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); rec[g.dataset.score]=+b.dataset.v;
+    $("#dayScore").innerHTML=ring(dayScore(rec)||0,1,{size:56,stroke:6,label:pct(dayScore(rec))}); }));
+  $("#hSave").onclick=async()=>{
+    const v=k=>el.querySelector(`[data-k="${k}"]`);
+    const out={client_id:p.id,log_date:S.date,diet:rec.diet??null,training:rec.training??null,cardio:rec.cardio??null,sleep_quality:rec.sleep_quality??null,
+      stress:v("stress").value||null,sleep_hours:num(v("sleep_hours").value),water_l:num(v("water_l").value),steps:num(v("steps").value),cardio_min:num(v("cardio_min").value),notes:v("notes").value.trim()||null,updated_at:new Date().toISOString()};
+    const { error, queued } = await dbWrite({op:"upsert",table:"habits",row:out,onConflict:"client_id,log_date"}); if(error) return toast(error.message); toast(queued?"📴 اتحفظ على الموبايل":"✓ اتحفظ"); if(!queued) viewHabits(el);
+  };
+  const wk=currentWeek(p), by={}; H.forEach(h=>{ const x=weekOfDate(p,h.log_date); if(x) (by[x]=by[x]||[]).push(h); });
+  $("#hWeeks").innerHTML=`<div class="card-h"><div class="ic">📊</div><h2>المتوسط الأسبوعي</h2></div><div class="scrollx"><table><tr><th>أسبوع</th><th>دايت</th><th>تمرين</th><th>كارديو</th><th>نوم</th><th>ساعات</th><th>خطوات</th><th>أيام</th></tr>
+    ${blockWeeks(wk).filter(w=>w<=Math.max(wk,BLOCK)).map(w=>{ const a=by[w]||[], c=w===wk?"cur":""; return `<tr><td class="${c}"><b>${w}</b></td><td class="${c}">${pct(avg(a.map(h=>h.diet)))}</td><td class="${c}">${pct(avg(a.map(h=>h.training)))}</td><td class="${c}">${pct(avg(a.map(h=>h.cardio)))}</td><td class="${c}">${pct(avg(a.map(h=>h.sleep_quality)))}</td><td class="${c} num">${fmt(avg(a.map(h=>h.sleep_hours)),1)}</td><td class="${c} num">${fmt(avg(a.map(h=>h.steps)))}</td><td class="${c}">${a.length||""}</td></tr>`; }).join("")}</table></div>`;
+}
+
+/* ======================================================================
+   BODY
+   ====================================================================== */
+async function viewBody(el){
+  S.bodySeg=S.bodySeg||"m";
+  el.innerHTML=`<div class="seg" style="margin-bottom:14px"><button data-bs="m" class="${S.bodySeg==="m"?"on":""}">📏 القياسات</button><button data-bs="c" class="${S.bodySeg==="c"?"on":""}">📸 المتابعة الأسبوعية</button><button data-bs="p" class="${S.bodySeg==="p"?"on":""}">🎬 بوزينج</button><button data-bs="k" class="${S.bodySeg==="k"?"on":""}">🏁 بيك ويك</button></div><div id="bodyHost"></div>`;
+  el.querySelectorAll("[data-bs]").forEach(b=>b.onclick=()=>{ S.bodySeg=b.dataset.bs; viewBody(el); });
+  if(S.bodySeg==="p") return viewPosing($("#bodyHost"));
+  if(S.bodySeg==="k") return viewPeak($("#bodyHost"));
+  return S.bodySeg==="c" ? viewCheckin($("#bodyHost")) : viewMeasures($("#bodyHost"));
+}
+function weightTrend(B,p){
+  const W=B.filter(b=>b.weight&&b.week>=0).map(b=>({x:b.week,y:+b.weight})).sort((a,b)=>a.x-b.x);
+  if(W.length<3) return null;
+  const MA=W.map((pt,i)=>{ const w=W.slice(Math.max(0,i-2),i+1); return {x:pt.x,y:w.reduce((a,q)=>a+q.y,0)/w.length}; });
+  const R=W.slice(-4), n=R.length, mx=R.reduce((a,q)=>a+q.x,0)/n, my=R.reduce((a,q)=>a+q.y,0)/n;
+  const den=R.reduce((a,q)=>a+(q.x-mx)**2,0), rate=den?R.reduce((a,q)=>a+(q.x-mx)*(q.y-my),0)/den:0;
+  const last=MA[MA.length-1].y, pctWk=rate/last*100, g=p.goal||"";
+  let kind="ok", text="الاتجاه ماشي كويس";
+  if(/تنشيف|خسارة|تخسيس/.test(g)){ if(rate>-0.1){ kind="warn"; text="الوزن واقف – وقت تعدّل السعرات أو الكارديو"; } else if(pctWk<-1){ kind="warn"; text="النزول سريع – خلي بالك على العضلات"; } else text="نزول مضبوط 👌"; }
+  else if(/زيادة|تضخيم|بناء/.test(g)){ if(rate<0.05){ kind="warn"; text="الوزن مش بيزيد – وقت تزوّد السعرات"; } else if(pctWk>0.5){ kind="warn"; text="الزيادة سريعة – ممكن تبقى دهون زيادة"; } else text="زيادة مضبوطة 👌"; }
+  else text=Math.abs(rate)<0.15?"الوزن ثابت":"الوزن بيتغير";
+  return {MA,rate,kind,text,last};
+}
+function weightTrendCard(B,p){
+  const t=weightTrend(B,p); if(!t) return `<div class="card"><div class="card-h"><div class="ic acc">📉</div><h2>اتجاه الوزن<small>بيظهر بعد 3 قياسات</small></h2></div></div>`;
+  return `<div class="card wtrend ${t.kind}"><div class="card-h"><div class="ic acc">📉</div><h2>اتجاه الوزن<small>متوسط متحرك – مش وزن يوم واحد</small></h2></div>
+    <div class="wt-row"><b class="num">${fmt(t.last,1)}</b><span>كجم (متوسط)</span><span class="pill ${t.kind==="warn"?"acc":"acc-soft"}">${t.rate>0?"▲":"▼"} ${fmt(Math.abs(t.rate),2)} كجم/أسبوع</span></div>
+    <p class="wt-v">${t.kind==="warn"?"⚠ ":"✅ "}${t.text}</p>${lineChart(t.MA,"كجم","#F97316")}</div>`;
+}
+async function viewMeasures(el){
+  const p=S.client, { data } = await sb.from("body_logs").select("*").eq("client_id",p.id).order("week");
+  const B=data||[], wk=currentWeek(p), sel=S.bodyWeek ?? (B.find(b=>b.week===0)?wk:0);
+  const cur=B.find(b=>b.week===sel)||{}, start=B.find(b=>b.week===0)||{};
+  const F=[["weight","⚖ الوزن","كجم"],["waist","الوسط","سم"],["neck","الرقبة","سم"],["chest","الصدر","سم"],["arm","الذراع","سم"],["thigh","الفخذ","سم"],["hips","الأرداف","سم"],["bodyfat","الدهون","%"]];
+  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📏</div><h2>القياسات الأسبوعية<small>مرة في الأسبوع – نفس اليوم والتوقيت</small></h2></div>
+      ${blockNavHTML(sel||1,p)}<div class="scroller">${[0,...blockWeeks(sel||wk||1)].map(i=>`<button class="chip ${sel===i?"on":""} ${wk===i&&i?"cur":""}" data-w="${i}">${i?"أسبوع "+i:"البداية"}${B.find(b=>b.week===i&&b.weight)?" ✓":""}</button>`).join("")}</div>
+      <div class="grid2" style="margin-top:12px"><label class="f">📅 التاريخ<input type="date" data-k="log_date" value="${esc(cur.log_date??today())}"></label>
+      ${F.map(([k,l,u])=>{ const d=sel&&start[k]&&cur[k]?cur[k]-start[k]:null; return `<label class="f">${l} (${u})<input inputmode="decimal" data-k="${k}" value="${esc(cur[k]??"")}">${d!==null?`<span class="pill ${d<0?"acc-soft":""}" style="margin-top:4px">${d>0?"▲":"▼"} ${fmt(Math.abs(d),1)} منذ البداية</span>`:""}</label>`; }).join("")}</div>
+      <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
+      <button class="btn primary block" id="bSave">حفظ ${sel?"الأسبوع "+sel:"قياسات البداية"}</button></div>
+    ${weightTrendCard(B,p)}
+    <div class="card"><div class="card-h"><div class="ic acc">⚖</div><h2>منحنى الوزن</h2></div>${lineChart(B.filter(b=>b.weight).map(b=>({x:b.week,y:+b.weight})),"كجم")}</div>
+    <div class="card"><div class="card-h"><div class="ic">📐</div><h2>منحنى الوسط</h2></div>${lineChart(B.filter(b=>b.waist).map(b=>({x:b.week,y:+b.waist})),"سم")}</div>`;
+  el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{S.bodyWeek=+b.dataset.w; viewMeasures(el);});
+  $("#bSave").onclick=async()=>{
+    const v=k=>el.querySelector(`[data-k="${k}"]`).value;
+    const rec={client_id:p.id,week:sel,log_date:v("log_date")||null,notes:v("notes").trim()||null,updated_at:new Date().toISOString()};
+    F.forEach(([k])=>rec[k]=num(v(k)));
+    const { error, queued } = await dbWrite({op:"upsert",table:"body_logs",row:rec,onConflict:"client_id,week"}); if(error) return toast(error.message); toast(queued?"📴 اتحفظ على الموبايل":"✓ اتحفظ"); if(!queued) viewMeasures(el);
   };
 }
 
-boot();
-
-/* coach-only notes live in coach_private (clients cannot read them) */
-async function fillCoachNote(el,p){ const t=el.querySelector('[data-x="coach_notes"]'); if(!t) return; const { data } = await sb.from("coach_private").select("notes").eq("client_id",p.id).maybeSingle(); t.value=data?.notes||""; t.placeholder=""; }
-
-
-
-/* Delete a client and ALL their data (auth user, profile, plans, check-ins, chat, photos). Two-step Arabic confirmation. */
-function deleteClientFlow(c,done){
-  if(!c) return;
-  const nm=c.full_name||c.email||"العميل";
-  const body=openSheet(`<div class="between"><b style="font-size:1.1rem">🗑 حذف العميل نهائياً</b><button class="btn sm ghost" data-close>✕</button></div>
-    <div class="del-warn"><div class="del-ic">⚠️</div><p><b>${esc(nm)}</b></p>
-    <p>هيتحذف الحساب وكل بياناته: البرامج، التسجيلات، الأكل، المتابعات، الصور، والشات.</p><p><b>مفيش رجوع.</b> لو محتاج نسخة، نزّل النسخة الاحتياطية الأول.</p></div>
-    <label style="font-weight:700;display:block;margin:12px 0 6px">للتأكيد اكتب كلمة: حذف</label>
-    <input id="delConf" autocomplete="off" placeholder="حذف">
-    <div class="row" style="margin-top:12px"><button class="btn grow" type="button" data-close>إلغاء</button><button class="btn danger grow" type="button" id="delGo" disabled>🗑 احذف نهائياً</button></div>`);
-  const inp=body.querySelector("#delConf"), go=body.querySelector("#delGo");
-  inp.oninput=()=>{ go.disabled=inp.value.trim()!=="حذف"; };
-  body.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeSheet());
-  go.onclick=async()=>{
-    if(inp.value.trim()!=="حذف") return; go.disabled=true; go.textContent="جاري الحذف…";
-    const { data, error } = await adminCall({ body:{ action:"delete_client", user_id:c.id } });
-    const msg=await fnErr(error,data);
-    if(msg){ toast(msg); go.disabled=false; go.textContent="🗑 احذف نهائياً"; return; }
-    closeSheet(); toast("✓ اتحذف "+nm+" وكل بياناته"); await done();
-  };
+async function homeCheckinCard(p,wk){
+  const host=$("#hCI"); if(!host) return;
+  const { data } = await sb.from("checkins").select("week,reviewed_at,coach_reply").eq("client_id",p.id).order("week",{ascending:false}).limit(3);
+  if(!host.isConnected) return;
+  const C=data||[], thisW=C.find(c=>c.week===wk), lastReply=C.find(c=>c.coach_reply), sub=S.me.role==="client"?subStatus(p):null;
+  host.innerHTML=(sub&&sub.cls!=="good"?`<div class="card" style="border:1.5px solid var(--acc-line)"><div class="card-h"><div class="ic acc">${sub.icon}</div><h2>اشتراكك<small>${esc(sub.text)}</small></h2><button class="btn sm primary" onclick="openPlansSheet()">جدّد</button></div></div>`:"")+
+    `<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>متابعة الأسبوع ${wk}<small>${thisW?(thisW.reviewed_at?"✓✓ الكوتش رد":"✓ اتبعتت – مستنية رد الكوتش"):"لسه ما اتبعتتش – وزن + صور + إحساسك"}</small></h2><button class="btn sm ${thisW?"":"primary"}" id="goCI">${thisW?"عرض":"ابعت"}</button></div>
+     ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
+  $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
 }
-
-
-/* ---------- check-in overview: all active clients at a glance (latest check-in, 5 ratings as dots, weight change) ---------- */
-function ciTone(k,v){ if(v==null) return "na"; const bad=k==="stress"||k==="hunger"?v>=4:v<=2, good=k==="stress"||k==="hunger"?v<=2:v>=4; return bad?"bad":good?"good":"mid"; }
-async function checkinOverviewCard(host,C){
-  if(!host) return; const act=C.filter(c=>c.active); if(!act.length){ host.innerHTML=""; return; }
-  const head=n=>`<div class="card-h"><div class="ic acc">📋</div><h2>متابعات العملاء<small>${n}</small></h2></div>`;
-  host.innerHTML=head("بيحمّل…");
-  const { data } = await sb.from("checkins").select("client_id,week,checkin_date,weight,energy,hunger,sleep,stress,adherence,reviewed_at").in("client_id",act.map(c=>c.id)).order("week",{ascending:false}).range(0,2999);
-  const by={}; (data||[]).forEach(r=>(by[r.client_id]=by[r.client_id]||[]).push(r));
-  const rows=act.map(c=>{ const L=by[c.id]||[], last=L[0], prev=L.find(r=>r.weight!=null&&last&&r.week<last.week&&last.weight!=null), wk=currentWeek(c), due=wk>1&&(!last||last.week<wk-1);
-    const bad=last?["energy","sleep","adherence","stress","hunger"].filter(k=>ciTone(k,last[k])==="bad").length:0;
-    return {c,last,wk,due,bad,dw:last&&prev?last.weight-prev.weight:null,score:(due?10:0)+bad*2+(last&&!last.reviewed_at?1:0)}; }).sort((a,b)=>b.score-a.score);
-  const late=rows.filter(r=>r.due).length;
-  host.innerHTML=head(late?late+" عميل متابعته ناقصة":"كله سلّم متابعته 👌")+rows.map(({c,last,wk,due,dw})=>`<div class="ciov-row" data-id="${c.id}"><div class="av">${initials(c)}</div>
-    <div class="nm"><b>${esc(c.full_name||c.email)}</b><small>${seenHTML(c)}${last?`آخر متابعة: أسبوع ${last.week}${last.reviewed_at?"":" · مستنية ردك"}`:"لسه ما بعتش متابعة"}</small></div>
-    <div class="ciov-dots" title="الطاقة · الجوع · النوم · التوتر · الالتزام">${last?["energy","hunger","sleep","stress","adherence"].map(k=>`<i class="d ${ciTone(k,last[k])}"></i>`).join(""):""}</div>
-    <div class="ciov-w">${due?`<span class="pill acc-soft">ناقصة</span>`:dw==null?`<span class="muted">—</span>`:`<b class="num">${dw>0?"+":""}${fmt(dw,1)}</b>`}</div></div>`).join("");
-  host.querySelectorAll("[data-id]").forEach(r=>r.onclick=async()=>{ const c=C.find(x=>x.id===r.dataset.id); await openClient(c); S.tab="body"; S.bodySeg="c"; S.ciWeek=Math.max(1,(by[c.id]?.[0]?.week)||currentWeek(c)); render(); window.scrollTo(0,0); });
-}
-
-/* ---------- last seen: "online now" / "last active X ago" from profiles.last_active_at (written by touchActive in core.js) ---------- */
-function seenSpan(c){
-  if(!c) return "";
-  const id=esc(c.id||"");
-  if(!c.last_active_at) return `<span class="seen none" data-seen="${id}"><i></i>لسه ما دخلش التطبيق</span>`;
-  const m=Math.max(0,Math.round((Date.now()-new Date(c.last_active_at).getTime())/6e4));
-  if(m<5) return `<span class="seen on" data-seen="${id}"><i></i>أونلاين دلوقتي</span>`;
-  const t=m<60?m+" د":m<1440?Math.floor(m/60)+" س":Math.floor(m/1440)+" يوم";
-  return `<span class="seen${m>=4320?" cold":""}" data-seen="${id}"><i></i>آخر ظهور من ${t}</span>`;
-}
-function seenHTML(c){ const s=seenSpan(c); return s?s+" · ":""; }
-/* keep the dots live: the clients list is loaded once at login, so re-read last_active_at every 45s while the coach has the app open and update the dots in place */
-(function(){ let busy=false;
-  async function refreshSeen(){ try{
-    if(busy||document.hidden||typeof S==="undefined"||!S.me||S.me.role!=="coach"||!S.coachClients) return; busy=true;
-    const { data } = await sb.from("profiles").select("id,last_active_at").eq("role","client");
-    if(data){ const m=Object.fromEntries(data.map(r=>[r.id,r.last_active_at])); S.coachClients.forEach(c=>{ if(c.id in m) c.last_active_at=m[c.id]; }); }
-    document.querySelectorAll("[data-seen]").forEach(el=>{ const c=S.coachClients.find(x=>x.id===el.dataset.seen); if(!c) return; const t=document.createElement("template"); t.innerHTML=seenSpan(c); const n=t.content.firstElementChild; if(n&&n.outerHTML!==el.outerHTML) el.replaceWith(n); });
-  }catch(e){} busy=false; }
-  setInterval(refreshSeen,45000); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refreshSeen(); });
-})();
