@@ -198,7 +198,7 @@ function setupData(el){
 function setupProgram(el){
   const p=S.client, days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
   if(!days.includes(S.day)&&days.length) S.day=days[0];
-  el.innerHTML=`<div id="brHost"></div><div class="card" style="${p.program_pending?"border:1.5px solid var(--acc-line,#FDBA74)":""}"><label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="progPend" ${p.program_pending?"checked":""} style="width:22px;height:22px;min-height:0;margin-top:2px"><span><b>البرنامج لسه متعملش</b><br><small class="muted">لما تفعّلها، العميل مبيشوفش أي حاجة من التمرين (التبويب والكارت اتشالوا). البرنامج بتاعك محفوظ زي ما هو.</small></span></label></div><div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
+  el.innerHTML=`<div id="brHost"></div><div class="card" style="${p.program_pending?"border:1.5px solid var(--acc-line,#FDBA74)":""}"><label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="progPend" ${p.program_pending?"checked":""} style="width:22px;height:22px;min-height:0;margin-top:2px"><span><b>البرنامج لسه متعملش</b><br><small class="muted">لما تفعّلها، العميل بيشوف رسالة متحركة إن الكوتش لسه بيجهّز التمرين، ومبيشوفش أي تمارين. البرنامج بتاعك محفوظ زي ما هو.</small></span></label></div><div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
       <div id="sysBox">${systemFields(p.training_days||3, p.level||"متوسط")}</div>
       <button class="btn primary block" id="sysApply" style="margin-top:10px">تطبيق على ${esc(p.full_name||"العميل")}</button>
       <p class="hint">⚠ التطبيق بيستبدل البرنامج الحالي ويمسح المجموعات المسجلة على التمارين القديمة.</p></div>
@@ -292,7 +292,7 @@ function weekEditor(host, panel){
 }
 async function setupDiet(el){
   const p=S.client, n=Math.max(1,Math.min(+p.meals_per_day||3,8));
-  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic acc">🍽</div><h2>الوجبات<small>عددها وأسماؤها</small></h2></div>
+  el.innerHTML=`<div class="card" style="${p.diet_pending?"border:1.5px solid var(--acc-line,#FDBA74)":""}"><label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="dietPend" ${p.diet_pending?"checked":""} style="width:22px;height:22px;min-height:0;margin-top:2px"><span><b>النظام الغذائي لسه متعملش</b><br><small class="muted">لما تفعّلها، العميل بيشوف رسالة متحركة إن الكوتش لسه بيجهّز النظام الغذائي بدل الأكل والماكروز. الخطة بتاعتك محفوظة.</small></span></label></div>`+`<div class="card"><div class="card-h"><div class="ic acc">🍽</div><h2>الوجبات<small>عددها وأسماؤها</small></h2></div>
       <div class="grid2"><label class="f">عدد الوجبات<select id="mCount">${[2,3,4,5,6].map(x=>`<option ${n===x?"selected":""}>${x}</option>`).join("")}</select></label>
       ${[...Array(n)].map((_,i)=>`<label class="f">${MEAL_ICONS[i]} اسم الوجبة ${i+1}<input data-mn="${i}" value="${esc(mealName(p,i+1))}"></label>`).join("")}</div>
       <button class="btn navy block" id="mSave">حفظ الوجبات</button></div>
@@ -304,6 +304,7 @@ async function setupDiet(el){
   $("#mSave").onclick=async()=>{ const names=[...el.querySelectorAll("[data-mn]")].map(i=>i.value.trim()||null);
     const { error } = await sb.from("profiles").update({meals_per_day:+$("#mCount").value, meal_names:names}).eq("id",p.id); if(error) return toast(error.message);
     await refreshClient(); toast("✓ اتحفظ"); setupDiet(el); };
+  $("#dietPend").onchange=async e=>{ const v=e.target.checked; const { error } = await sb.from("profiles").update({diet_pending:v}).eq("id",p.id); if(error){ e.target.checked=!v; return toast(error.message); } await refreshClient(); S.tab="setup"; toast(v?"✓ النظام الغذائي مخفي عن العميل لحد ما تلغي الخيار":"✓ النظام الغذائي ظاهر للعميل"); render(); };
   $("#mCount").onchange=async()=>{ await sb.from("profiles").update({meals_per_day:+$("#mCount").value}).eq("id",p.id); await refreshClient(); setupDiet(el); };
   const tk=targets(p).kcal;
   $("#dtList").innerHTML=(S.dietTpl||[]).length?S.dietTpl.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>${esc(t.name)}</b><small>${fmt(t.kcal)} kcal · ${t.items.length} صنف · ${t.meals_per_day||"—"} وجبات</small></div>
