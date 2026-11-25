@@ -71,6 +71,20 @@ const css=`
 .sc-btn:after{content:"";position:absolute;top:0;bottom:0;width:60px;left:-80px;background:linear-gradient(100deg,transparent,rgba(255,255,255,.55),transparent);transform:skewX(-20deg);animation:scsh 3.6s ease-in-out infinite}
 @keyframes scsh{0%,55%{left:-80px}100%{left:120%}}
 .sc-note{font-size:11.5px;color:#8591A8;margin:12px 0 0}
+.sc-podium{display:flex;align-items:flex-end;justify-content:center;gap:10px;margin-top:10px;direction:ltr}
+.sc-pod{width:96px;text-align:center}
+.sc-pod .tr{font-size:34px;line-height:1;filter:drop-shadow(0 4px 10px rgba(0,0,0,.45))}
+.sc-pod .bk{margin-top:8px;border-radius:12px 12px 0 0;display:grid;place-items:center;color:#fff;font:800 13px/1 var(--disp);border:1px solid rgba(255,255,255,.16);border-bottom:0}
+.sc-pod.p1 .bk{height:104px;background:linear-gradient(180deg,#FFC46B,#FF8A3D)}
+.sc-pod.p2 .bk{height:80px;background:linear-gradient(180deg,#CBD5E1,#7C8AA5)}
+.sc-pod.p3 .bk{height:64px;background:linear-gradient(180deg,#E2A06B,#9A5B2E)}
+.sc-chips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:14px}
+.sc-chip2{padding:7px 12px;border-radius:99px;font-size:12px;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#E2E8F0}
+.sc-rgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.sc-rstep{border-radius:16px;padding:14px 8px 12px;text-align:center;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09)}
+.sc-rstep .ic2{font-size:24px;line-height:1}
+.sc-rstep b{display:block;font-size:12.5px;margin-top:7px}
+.sc-rstep span{display:block;font-size:11px;color:#A9B4C8;margin-top:3px;line-height:1.55}
 @media(prefers-reduced-motion:reduce){.sc-rv{opacity:1;transform:none;transition:none}.sc-btn:after{animation:none;display:none}}
 `;
 const st=document.createElement("style");st.textContent=css;document.head.appendChild(st);
@@ -89,6 +103,8 @@ ${ph?"":`<div class="sc-cap"><b>${esc(r.name)}</b><span>${esc(r.stat)}</span></d
 function quotes(){const a=SHOWCASE.quotes||[],ph=!a.length;const list=ph?[{},{},{}]:a;
 return `<div class="sc-rv"><div class="sc-q" id="scq">${list.map(q=>`<div class="sc-qc${ph?" sc-ph":""}"><div class="sc-st">★★★★★</div><p>${ph?"رأي العميل عن تجربته مع البرنامج والمتابعة هيتنشر هنا بموافقته.":esc(q.text)}</p><div class="sc-who"><div class="sc-av">${ph?"؟":esc((q.name||"?").trim()[0])}</div><div><b>${ph?"عميل Mofit":esc(q.name)}</b>${q.meta?`<small>${esc(q.meta)}</small>`:""}</div></div></div>`).join("")}</div><div class="sc-dots" id="scd">${list.map((_,i)=>`<i${i?"":' class="on"'}></i>`).join("")}</div></div>`}
 function steps(){return `<div class="sc-steps">${(SHOWCASE.steps||[]).map((s,i)=>`<div class="sc-step sc-rv"><div class="no">${i+1}</div><div><b>${esc(s.t)}</b><span>${esc(s.d)}</span></div></div>`).join("")}</div>`}
+function league(){return `<div class="sc-podium sc-rv"><div class="sc-pod p2"><div class="tr">🥈</div><div class="bk">التاني</div></div><div class="sc-pod p1"><div class="tr">🥇</div><div class="bk">الأول</div></div><div class="sc-pod p3"><div class="tr">🥉</div><div class="bk">التالت</div></div></div><div class="sc-chips sc-rv"><span class="sc-chip2">🏆 مكافآت لأول 3</span><span class="sc-chip2">📊 ترتيب بيتحدث أول بأول</span><span class="sc-chip2">🎯 المشاركة اختيارية</span></div>`}
+function invite(){return `<div class="sc-rgrid sc-rv"><div class="sc-rstep"><div class="ic2">🔗</div><b>شارك لينكك</b><span>لينك وQR خاصين بيك من تبويب الإحالة</span></div><div class="sc-rstep"><div class="ic2">✍️</div><b>صاحبك يسجّل</b><span>يفتح اللينك ويعمل حسابه في دقيقة</span></div><div class="sc-rstep"><div class="ic2">🎁</div><b>الأسبوع علينا</b><span>أول ما الكوتش يفعّله، ليك أسبوع مجاني</span></div></div>`}
 const sec=(eb,h,sub,body)=>`<div class="sc-sec"><div class="sc-eyebrow sc-rv">${eb}</div><h2 class="sc-h sc-rv">${h}</h2>${sub?`<p class="sc-sub sc-rv">${sub}</p>`:""}${body}</div>`;
 function bindBA(el){const hd=el.querySelector(".hd");let drag=false;
 const set=p=>{p=Math.max(4,Math.min(96,p));el.style.setProperty("--p",p+"%");hd.setAttribute("aria-valuenow",Math.round(p))};
@@ -99,10 +115,11 @@ el.addEventListener("pointermove",e=>{if(drag)at(e)});
 hd.addEventListener("keydown",e=>{const v=+hd.getAttribute("aria-valuenow");if(e.key==="ArrowLeft"){set(v-5);e.preventDefault()}if(e.key==="ArrowRight"){set(v+5);e.preventDefault()}});
 el._hint=()=>{if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;const t0=performance.now();const f=t=>{const k=(t-t0)/1500;if(k>=1||drag){if(!drag)set(50);return}set(50+Math.sin(k*Math.PI*2)*22*(1-k));requestAnimationFrame(f)};requestAnimationFrame(f)}}
 window.drawShowcase=function(){const box=document.getElementById("showcase");if(!box||box.dataset.done)return;box.dataset.done=1;
-box.innerHTML=sec("RESULTS",'نتايج <b>حقيقية</b> من متدربينا',"اسحب وقارن قبل وبعد",results())+stats().replace('<div class="sc-stats','<div style="margin-top:22px"></div><div class="sc-stats')+sec("VOICES","بيقولوا إيه عننا","",quotes())+sec("HOW IT WORKS","إزاي <b>تبدأ</b>","تلات خطوات وبس",steps())+`<div class="sc-cta sc-rv"><a class="sc-btn" href="#plans" onclick="loginTab('plans');window.scrollTo({top:0,behavior:'smooth'});return false">ابدأ رحلتك، اشترك دلوقتي</a><p class="sc-note">* النتايج والآراء بتتنشر بموافقة العملاء، والنتيجة بتختلف من شخص لآخر.</p></div>`;
+box.innerHTML=sec("RESULTS",'نتايج <b>حقيقية</b> من متدربينا',"اسحب وقارن قبل وبعد",results())+stats().replace('<div class="sc-stats','<div style="margin-top:22px"></div><div class="sc-stats')+sec("VOICES","بيقولوا إيه عننا","",quotes())+sec("HOW IT WORKS","إزاي <b>تبدأ</b>","تلات خطوات وبس",steps())+sec("LEAGUE",'دوري <b>الأسبوع</b>',"الكوتش بيبدأ الدوري وانت بتختار تشارك — نقاطك من تمرينك والتزامك، وأول 3 ليهم المجد",league())+sec("INVITE FRIENDS",'ادعُ صحابك <b>وخد أسبوع هدية</b>',"كل صاحب يشترك من لينكك بيضيفلك أسبوع مجاني",invite())+`<div class="sc-cta sc-rv"><a class="sc-btn" href="#plans" onclick="loginTab('plans');window.scrollTo({top:0,behavior:'smooth'});return false">ابدأ رحلتك، اشترك دلوقتي</a><p class="sc-note">* النتايج والآراء بتتنشر بموافقة العملاء، والنتيجة بتختلف من شخص لآخر.</p></div>`;
 box.querySelectorAll(".sc-ba").forEach(bindBA);
 const io="IntersectionObserver" in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");const b=e.target.querySelector(".sc-ba");if(b&&b._hint&&!b._h){b._h=1;setTimeout(b._hint,350)}io.unobserve(e.target)}}),{threshold:.15}):null;
 box.querySelectorAll(".sc-rv").forEach(n=>io?io.observe(n):n.classList.add("in"));
 const q=document.getElementById("scq"),d=document.querySelectorAll("#scd i");if(q)q.addEventListener("scroll",()=>{const c=q.children;let best=0,bd=1e9;const mid=q.getBoundingClientRect().left+q.clientWidth/2;[...c].forEach((x,i)=>{const r=x.getBoundingClientRect();const dd=Math.abs(r.left+r.width/2-mid);if(dd<bd){bd=dd;best=i}});d.forEach((x,i)=>x.classList.toggle("on",i===best))},{passive:true})};
 if(document.readyState!=="loading")drawShowcase();else document.addEventListener("DOMContentLoaded",drawShowcase);
 })();
+
