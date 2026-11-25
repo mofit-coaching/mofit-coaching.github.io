@@ -418,12 +418,16 @@ function eventAlerts(c){
   const low=E.filter(e=>e.kind==="readiness"&&daysBetween(e.event_date,today())<=7&&+e.data?.score<2.8);
   if(low.length>=3) A.push({p:2,icon:"🪫",text:`جاهزية منخفضة ${low.length} مرات الأسبوع ده – راجع النوم والسعرات أو ادّيله ديلود`});
   if(c.program_started_at&&c.split_key){ const w=Math.floor(daysBetween(c.program_started_at.slice(0,10),today())/7); if(w>=10) A.push({p:1,icon:"🔁",text:`البرنامج بقاله ${w} أسبوع – وقت تجديد التمارين أو النظام`}); }
+  E.filter(e=>e.kind==="ai_flag"&&!e.resolved_at&&daysBetween(e.event_date,today())<=7).slice(0,2)
+    .forEach(x=>A.push({p:3,icon:"🤖",text:`المساعد حوّل سؤال ليك: ${String(x.data?.q||"").slice(0,60)}`}));
   return A;
 }
 function painCard(p){
   const P=(S.events||[]).filter(e=>e.client_id===p.id&&e.kind==="pain");
-  if(!P.length) return "";
-  return `<div class="card"><div class="card-h"><div class="ic acc">🤕</div><h2>تقارير الألم<small>آخر 30 يوم</small></h2></div>
+  const F=(S.events||[]).filter(e=>e.client_id===p.id&&e.kind==="ai_flag"&&!e.resolved_at);
+  if(!P.length&&!F.length) return "";
+  return `<div class="card"><div class="card-h"><div class="ic acc">🤕</div><h2>تقارير الألم وتنبيهات المساعد<small>آخر 30 يوم</small></h2></div>
+    ${F.map(e=>`<div class="pain-row serious"><div><b>🤖 سؤال محوّل من المساعد</b><small>${niceDate(e.event_date)} · ${esc(String(e.data?.q||"").slice(0,120))}</small></div><button class="btn sm" data-pres="${e.id}">تمت المتابعة ✓</button></div>`).join("")}
     ${P.map(e=>`<div class="pain-row ${e.data?.serious?"serious":""}"><div><b>${esc(e.data?.area||"")} · ${esc(e.data?.exercise||"")}</b><small>${niceDate(e.event_date)} · ${e.data?.type==="joint"?"ألم حاد/مفصل":"تعب عضلي"} · شدة ${esc(e.data?.level??"")}/10</small></div>
       ${e.resolved_at?`<span class="pill good">تمت المتابعة</span>`:`<button class="btn sm" data-pres="${e.id}">تمت المتابعة ✓</button>`}</div>`).join("")}
     <p class="hint">لو الألم في مفصل: بدّل التمرين من تبويب البرنامج، أو قلل المدى/الوزن، أو حوّله لنظام "ضهر آمن".</p></div>`;
