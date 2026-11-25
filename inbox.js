@@ -47,6 +47,25 @@ function inboxRow(it){
       ${top.kind==="approve"?`<button class="btn sm" data-a="approve">✅ فعّل</button>`:""}
       <button class="btn sm navy" data-a="open">👤 الملف</button></div></div>`;
 }
+/* broadcast: one chat message from the coach to a chosen group of ACTIVE clients */
+function bcastList(seg){ const C=(S.coachClients||[]).filter(c=>c.active); return seg==="sub"?C.filter(c=>{ const s=subStatus(c); return s&&s.cls!=="good"; }):C; }
+async function bcastSend(list,text){
+  const rows=list.map(c=>({client_id:c.id,sender_role:"coach",body:text}));
+  let ok=0; for(let i=0;i<rows.length;i+=20){ const { error } = await sb.from("messages").insert(rows.slice(i,i+20)); if(error) return {ok,error}; ok+=rows.slice(i,i+20).length; }
+  return {ok};
+}
+function bcastCard(host){
+  host.innerHTML=`<div class="card-h"><div class="ic acc">📢</div><h2>رسالة جماعية<small>رسالة واحدة في شات كل عميل</small></h2></div>
+    <label class="f">لمين<select id="bcSeg"><option value="all">كل العملاء المفعّلين</option><option value="sub">اللي اشتراكهم قرّب يخلص أو خلص</option></select></label>
+    <label class="f">الرسالة<textarea id="bcTxt" rows="3" maxlength="500" placeholder="مثال: بكرة يوم الوزن، سجّلوا وزنكم الصبح"></textarea></label>
+    <button class="btn navy block" id="bcGo">إرسال</button>`;
+  const go=host.querySelector("#bcGo");
+  go.onclick=async()=>{ const seg=host.querySelector("#bcSeg").value, txt=host.querySelector("#bcTxt").value.trim(); if(!txt) return toast("اكتب الرسالة الأول"); const list=bcastList(seg); if(!list.length) return toast("مفيش عملاء في الفئة دي");
+    if(!confirm(`هتتبعت الرسالة دي لـ ${list.length} عميل:\n\n${txt}\n\nمتأكد؟`)) return;
+    go.disabled=true; const r=await bcastSend(list,txt); go.disabled=false;
+    if(r.error) return toast(`اتبعتت لـ ${r.ok} بس، حصلت مشكلة: ${r.error.message}`);
+    host.querySelector("#bcTxt").value=""; toast(`✓ اتبعتت لـ ${r.ok} عميل`); };
+}
 async function viewInbox(el){
   const items=inboxItems(), C=S.coachClients||[];
   const pend=C.filter(c=>!c.active).length, subs=C.filter(c=>{ const s=subStatus(c); return s&&s.cls!=="good"; }).length, un=Object.values(CHAT.unread).reduce((a,b)=>a+b,0);
@@ -54,7 +73,9 @@ async function viewInbox(el){
     <div class="stat"><div class="l">💳 اشتراكات</div><div class="v num">${subs}</div></div><div class="stat dark"><div class="l">🆕 طلبات</div><div class="v num">${pend}</div></div></div>
     <div class="card"><div class="card-h"><div class="ic acc">📥</div><h2>الوارد<small>${items.length?items.length+" عميل محتاجك":"كله تمام 👌 مفيش حاجة مستنية"}</small></h2></div><div id="inbL">${items.map(inboxRow).join("")}</div></div>
     <div class="card" id="inbStp"></div>
+    <div class="card" id="bcast"></div>
     <button class="btn block" id="inbAll">👥 كل العملاء</button>`;
+  bcastCard($("#bcast"));
   $("#inbAll").onclick=()=>{ S.tab="clients"; render(); };
   window.stepsCoachCard&&window.stepsCoachCard($("#inbStp"),C);
   $("#inbL").onclick=async e=>{ const b=e.target.closest("[data-a]"), row=e.target.closest(".inb"); if(!b||!row) return; const c=C.find(x=>x.id===row.dataset.id);
