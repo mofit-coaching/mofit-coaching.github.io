@@ -277,3 +277,9 @@ document.addEventListener("scroll",s,{passive:true,capture:true});document.addEv
   startRest=function(){ const r=_s.apply(this,arguments); const el=$("#timer"); if(el){ el._fin=0; el.classList.remove("t-in"); void el.offsetWidth; el.classList.add("t-in"); clearTimeout(el._tin); el._tin=setTimeout(()=>el.classList.remove("t-in"),1000); } return r; };
 })();
 
+
+/* ---------- activity ping: lets the coach see "last active". One tiny RPC at most every 3 minutes while a client has the app open; silent if the function is missing. ---------- */
+(function(){ let last=0, busy=false;
+  const ping=async()=>{ try{ if(busy||document.hidden||typeof S==="undefined"||!S.me||S.me.role!=="client"||Date.now()-last<18e4) return; busy=true; last=Date.now(); await sb.rpc("touch_active"); }catch(e){} busy=false; };
+  document.addEventListener("visibilitychange",ping); window.addEventListener("focus",ping); setInterval(ping,20000); setTimeout(ping,4000);
+})();
