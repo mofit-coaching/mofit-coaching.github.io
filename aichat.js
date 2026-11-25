@@ -90,7 +90,7 @@ async function aichAsk(q){
 /* the tab screen (registered in the render map in views.js) */
 window.viewAiChat=async function(el){
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic acc">🤖</div><h2>المساعد الذكي<small>ردود فورية من برنامجك · متاح ٢٤ ساعة</small></h2></div>
-    <div class="aich-l" id="aichL" aria-live="polite"><div class="chat-empty">⏳ بيتحمل…</div></div>
+    <div class="aich-l" id="aichL" aria-live="polite"><div class="chat-empty"><div class="sk-wrap" role="status" aria-label="بيتحمل"><i class="sk sk-b"></i><i class="sk sk-l m"></i><i class="sk sk-l s"></i></div></div></div>
     <p class="aich-note">ردود فورية من برنامجك · الأسئلة الطبية أو الإصابات بتتحوّل للكوتش · الكوتش يقدر يشوف المحادثة دي</p>
     <div class="chat-q" id="aichChips"><button type="button" class="qr" data-q="عايز بديل لأكلة في نظامي">🍽 بديل أكل</button><button type="button" class="qr" data-q="اشرحلي فورم تمرين من برنامجي">🏋️ شرح تمرين</button><button type="button" class="qr" data-q="أنضبط جدول تمريني إزاي؟">🗓 جدول التمرين</button></div>
     <form class="aich-f" id="aichF" autocomplete="off"><input id="aichI" maxlength="600" placeholder="اسأل المساعد…" aria-label="سؤال للمساعد"><button class="btn primary" type="submit">إرسال</button></form></div>`;
