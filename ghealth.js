@@ -114,7 +114,7 @@ async function doConnect(cfg,btn,refresh,rerender){
             window.toast&&toast(r.today!=null?`✓ اتربط — خطواتك النهارده: ${r.today.toLocaleString("en-US")}`:"✓ اتربط حساب جوجل");
             refresh&&refresh(); return;
           }catch(e){
-            window.toast&&toast(e.code==="no_refresh"?"جوجل ماعملتش إذن كامل — امسح التطبيق من أذونات حسابك وجرب تاني":"تعذر الربط — جرب تاني");
+            window.toast&&toast(e.code==="scope_missing"?"\u062c\u0648\u062c\u0644 \u0645\u0627 \u0633\u0645\u062d\u0634 \u0628\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u062e\u0637\u0648\u0627\u062a \u2014 \u0641\u0639\u0651\u0644 \u062e\u0627\u0646\u0629 \u0627\u0644\u062e\u0637\u0648\u0627\u062a \u0648\u0627\u0631\u0628\u0637 \u062a\u0627\u0646\u064a":e.code==="no_refresh"?"جوجل ماعملتش إذن كامل — امسح التطبيق من أذونات حسابك وجرب تاني":"تعذر الربط — جرب تاني");
           }
         }else if(resp&&(resp.error||resp.type)){
           if(!/popup_closed|closed/i.test(resp.error||resp.type||"")) window.toast&&toast("الربط اتلغى");
@@ -137,14 +137,25 @@ async function doDisconnect(p,rerender){
 
 async function doResync(p,btn,refresh,rerender){
   btn.disabled=true; btn.classList.add("spin");
+  const say=m=>{ window.toast&&toast(m); };
   try{
     const r=await call("sync_me");
-    window.toast&&toast(r.today!=null?`\u2713 \u0627\u062a\u062d\u062f\u062b\u062a \u2014 \u062e\u0637\u0648\u0627\u062a\u0643 \u0627\u0644\u0646\u0647\u0627\u0631\u062f\u0647: ${r.today.toLocaleString("en-US")}`:"\u2713 \u0627\u062a\u062d\u062f\u062b\u062a \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629");
+    if(typeof r.today==="number"){
+      say("\u2713 \u0627\u062a\u062d\u062f\u062b\u062a \u2014 \u062e\u0637\u0648\u0627\u062a\u0643 \u0627\u0644\u0646\u0647\u0627\u0631\u062f\u0647: "+r.today.toLocaleString("en-US"));
+    }else{
+      /* Google answered but sent no steps for today: say so, never fake a success. */
+      const why=r.reason||"no_data";
+      say(why==="scope_missing"
+        ?"\u062c\u0648\u062c\u0644 \u0645\u0627 \u0633\u0645\u062d\u0634 \u0628\u0642\u0631\u0627\u0621\u0629 \u0627\u0644\u062e\u0637\u0648\u0627\u062a \u2014 \u0627\u0641\u0635\u0644 \u0648\u0627\u0631\u0628\u0637 \u062a\u0627\u0646\u064a \u0648\u0641\u0639\u0651\u0644 \u062e\u0627\u0646\u0629 \u0627\u0644\u062e\u0637\u0648\u0627\u062a"
+        :why==="api_error"
+        ?"\u062c\u0648\u062c\u0644 \u0631\u062c\u0651\u0639 \u062e\u0637\u0623 \u2014 \u062c\u0631\u0628 \u0643\u0645\u0627\u0646 \u0634\u0648\u064a\u0629"
+        :"\u062c\u0648\u062c\u0644 \u0645\u0627 \u0631\u062c\u0651\u0639\u0634 \u0623\u064a \u062e\u0637\u0648\u0627\u062a \u0644\u0644\u0646\u0647\u0627\u0631\u062f\u0647 \u2014 \u062a\u0623\u0643\u062f \u0625\u0646 \u062e\u0637\u0648\u0627\u062a\u0643 \u0645\u062a\u0633\u062c\u0644\u0629 \u0641\u064a Google Health \u0648\u0625\u0646\u0643 \u0641\u0639\u0651\u0644\u062a \u0625\u0630\u0646 \u0627\u0644\u062e\u0637\u0648\u0627\u062a");
+    }
     refresh&&refresh();      /* rebuilds the view: steps field + last-sync line */
     rerender&&rerender();
   }catch(e){
     btn.disabled=false; btn.classList.remove("spin");
-    window.toast&&toast(e.code==="not_connected"?"\u062c\u0648\u062c\u0644 \u0645\u0634 \u0645\u062a\u0635\u0644 \u2014 \u0627\u0631\u0628\u0637\u0647 \u0627\u0644\u0623\u0648\u0644":"\u062a\u0639\u0630\u0631 \u0627\u0644\u062a\u062d\u062f\u064a\u062b \u2014 \u062c\u0631\u0628 \u062a\u0627\u0646\u064a");
+    say(e.code==="not_connected"?"\u062c\u0648\u062c\u0644 \u0645\u0634 \u0645\u062a\u0635\u0644 \u2014 \u0627\u0631\u0628\u0637\u0647 \u0627\u0644\u0623\u0648\u0644":"\u062a\u0639\u0630\u0631 \u0627\u0644\u062a\u062d\u062f\u064a\u062b \u2014 \u062c\u0631\u0628 \u062a\u0627\u0646\u064a");
   }
 }
 
