@@ -65,9 +65,19 @@ async function drawPublicPlans(){
   document.querySelectorAll(".ltab").forEach(b=>b.onclick=()=>loginTab(b.dataset.lt));
   const fp=$("#forgotLink"); if(fp) fp.href=waLink("السلام عليكم كوتش، نسيت كلمة السر بتاعة Mofit 🙏\nالإيميل: ");
   const gen=$("#askLink"); if(gen) gen.href=waLink("السلام عليكم كوتش 👋 عندي استفسار عن الاشتراك في Mofit");
-  // shareable link: mofit-coaching.github.io/#prices opens the price list directly
-  if(/^#(prices|plans|offers)$/i.test(location.hash) || new URLSearchParams(location.search).has("prices")) loginTab("plans");
-  if(/^#(join|signup)$/i.test(location.hash) || new URLSearchParams(location.search).has("join")) loginTab("signup");
+  // shareable links: #prices / ?prices opens the price list, #join / ?join=1 the signup form
+  const urlTab=()=>{
+    let t=null;
+    if(/^#(prices|plans|offers)$/i.test(location.hash) || new URLSearchParams(location.search).has("prices")) t="plans";
+    if(/^#(join|signup)$/i.test(location.hash) || new URLSearchParams(location.search).has("join")) t="signup";
+    return t;
+  };
+  const applyUrlTab=()=>{ const t=urlTab(); if(t) loginTab(t); };
+  applyUrlTab();
+  // drawSignup lives in signup.js, which loads AFTER prices.js: at this point the
+  // pane toggles open but stays empty. Re-apply once parsing is done so the signup
+  // form actually renders on ?join=1 links (loginTab is idempotent).
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",applyUrlTab);
 })();
 
 /* ---------- client: renewal + contact coach ---------- */
@@ -138,6 +148,7 @@ async function nudgeClient(c,a,btn){
   if(error) return toast("تعذر الإرسال، جرّب تاني");
   btn&&btn.classList.add("sent"); toast("✓ اتبعتت في الشات");
 }
+
 
 
 
