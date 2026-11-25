@@ -375,10 +375,10 @@ async function viewHabits(el){
   const p=S.client;
   const { data:all } = await sb.from("habits").select("*").eq("client_id",p.id).order("log_date");
   const H=all||[], cur=H.find(h=>h.log_date===S.date)||{}, rec={...cur}, w=weekOfDate(p,S.date);
-  const scoreRow=(k,l)=>`<div style="margin-bottom:12px"><div class="muted" style="font-weight:700;margin-bottom:6px">${l}</div><div class="row" style="gap:6px" data-score="${k}">${SCORE.map(([v,e,t])=>`<button class="chip ${cur[k]!==null&&cur[k]!==undefined&&+cur[k]===v?"on":""}" data-v="${v}">${e} ${t}</button>`).join("")}</div></div>`;
+  const scoreRow=(k,l)=>`<div style="margin-bottom:12px"><div class="muted" style="font-weight:700;margin-bottom:6px">${l}</div><div class="scorerow" data-score="${k}">${SCORE.map(([v,e,t])=>`<button class="chip ${cur[k]!==null&&cur[k]!==undefined&&+cur[k]===v?"on":""}" data-v="${v}">${e} ${t}</button>`).join("")}</div></div>`;
   el.innerHTML=`<div class="card"><div class="between"><button class="btn sm" id="dPrev">→</button><div style="text-align:center"><b>${niceDate(S.date)}</b><div class="muted">${w?"الأسبوع "+w:""}</div></div><button class="btn sm" id="dNext">←</button></div></div>
     <div class="card"><div class="card-h"><div class="ic acc">⭐</div><h2>يومك<small>اختار درجة التزامك</small></h2><div id="dayScore">${ring(dayScore(cur)||0,1,{size:56,stroke:6,label:pct(dayScore(cur))})}</div></div>
-      ${scoreRow("diet","🥗 الدايت")}${scoreRow("training","💪 التمرين")}${scoreRow("cardio","🏃 الكارديو")}${scoreRow("sleep_quality","😴 جودة النوم")}
+      <style>.scorerow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.scorerow .chip{padding:6px 2px;font-size:.74rem;min-height:40px;text-align:center;white-space:nowrap}</style>${scoreRow("diet","🥗 الدايت")}${scoreRow("training","💪 التمرين")}${scoreRow("cardio","🏃 الكارديو")}${scoreRow("sleep_quality","😴 جودة النوم")}
       <div class="grid2"><label class="f">🤯 التوتر<select data-k="stress"><option value=""></option>${STRESS.map(s=>`<option ${cur.stress===s?"selected":""}>${s}</option>`).join("")}</select></label>
        <label class="f">💤 ساعات النوم<input inputmode="decimal" data-k="sleep_hours" value="${esc(cur.sleep_hours??"")}"></label>
        <label class="f">💧 المياه (لتر)<input inputmode="decimal" data-k="water_l" value="${esc(cur.water_l??"")}"></label>
