@@ -31,7 +31,7 @@ viewHome = async function(el){
   const t=document.createElement("div"); t.className="card"; t.id="refTeaser";
   t.innerHTML=`<div class="card-h"><div class="ic acc">🎁</div><h2>ادعُ صاحبك<small>كل صاحب يتفعّل = أسبوع هدية ليك</small></h2></div>
     <button class="btn primary block" id="refOpen">🎁 افتح صفحة الدعوة</button>`;
-  const hero=el.querySelector(".card.hero"); if(hero&&hero.parentNode===el) hero.after(t); else el.prepend(t);
+  const tip=el.querySelector(".card.tip"), hero=el.querySelector(".card.hero"); if(tip&&tip.parentNode===el) tip.before(t); else if(hero&&hero.parentNode===el) hero.after(t); else el.prepend(t);
   t.querySelector("#refOpen").onclick=()=>{ renderReferral(el); window.scrollTo(0,0); };
 };
 async function renderReferral(el){
