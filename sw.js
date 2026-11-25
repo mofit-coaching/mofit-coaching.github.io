@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-d4b8e216";
-const SHELL=["./","index.html","styles.css?v=d4b8e216","design.css?v=d4b8e216","design.js?v=d4b8e216","core.js?v=d4b8e216","data.js?v=d4b8e216","pro.js?v=d4b8e216","lab.js?v=d4b8e216","anatomy.js?v=d4b8e216","health.js?v=d4b8e216","posing.js?v=d4b8e216","minerals.js?v=d4b8e216","icons.js?v=d4b8e216","supps.js?v=d4b8e216","views.js?v=d4b8e216","coach.js?v=d4b8e216","signup.js?v=d4b8e216","qrcode.js?v=d4b8e216","invite.js?v=d4b8e216","chat.js?v=d4b8e216","inbox.js?v=d4b8e216","screens.js?v=d4b8e216","flame.js?v=d4b8e216","prices.js?v=d4b8e216","training.js?v=d4b8e216","sharecard.js?v=d4b8e216","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-e7f2a91c";
+const SHELL=["./","index.html","styles.css?v=e7f2a91c","design.css?v=e7f2a91c","design.js?v=e7f2a91c","core.js?v=e7f2a91c","data.js?v=e7f2a91c","pro.js?v=e7f2a91c","lab.js?v=e7f2a91c","anatomy.js?v=e7f2a91c","health.js?v=e7f2a91c","posing.js?v=e7f2a91c","minerals.js?v=e7f2a91c","icons.js?v=e7f2a91c","supps.js?v=e7f2a91c","views.js?v=e7f2a91c","coach.js?v=e7f2a91c","signup.js?v=e7f2a91c","chat.js?v=e7f2a91c","inbox.js?v=e7f2a91c","screens.js?v=e7f2a91c","flame.js?v=e7f2a91c","firstweek.js?v=e7f2a91c","prices.js?v=e7f2a91c","training.js?v=e7f2a91c","sharecard.js?v=e7f2a91c","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -12,7 +12,6 @@ self.addEventListener("fetch",e=>{
     e.respondWith(caches.match(e.request).then(hit=>{ const net=fetch(e.request).then(r=>{ if(r.ok||r.type==="opaque"){ const cp=r.clone(); caches.open(C).then(c=>c.put(e.request,cp)); } return r; }).catch(()=>hit); return hit||net; }));
   }
 });
-
 
 
 
