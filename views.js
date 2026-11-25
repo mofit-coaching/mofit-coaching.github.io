@@ -1,516 +1,303 @@
 /* ======================================================================
-   AUTH / BOOT / NAV
+   Mofit v5 — "the coach's lab": NASM assessment → corrective routine,
+   body composition, safe rate of change, HR zones, strength standards,
+   daily focus, education, onboarding, install, muscle map.
    ====================================================================== */
-$("#loginForm").addEventListener("submit", async e=>{
-  e.preventDefault(); $("#loginErr").textContent="";
-  const { error } = await sb.auth.signInWithPassword({ email:$("#loginEmail").value.trim(), password:$("#loginPass").value });
-  if(error){ $("#loginErr").textContent="الإيميل أو كلمة السر غير صحيحة"; return; }
-  boot();
-});
-async function logout(){ await sb.auth.signOut(); location.reload(); }
 
-async function boot(){
-  const { data:{ session } } = await sb.auth.getSession();
-  if(!session){ $("#loginView").classList.remove("hidden"); $("#appView").classList.add("hidden"); return; }
-  let { data:me } = await sb.from("profiles").select("*").eq("id",session.user.id).single();
-  if(me) cacheSet("me",me); else { me=cacheGet("me"); if(!me||me.id!==session.user.id){ toast("تعذر تحميل الحساب"); return; } }
-  if(!me.active){ await sb.auth.signOut(); $("#loginView").classList.remove("hidden"); $("#loginErr").textContent=me.signup_days?"طلبك قيد المراجعة – الكوتش هيفعّل حسابك بعد تأكيد الاشتراك":"الحساب غير مفعّل – تواصل مع الكوتش"; return; }
-  S.me=me; $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
-  await loadVideos(); flushQueue();
-  if(me.role==="coach"){ S.tab="clients"; await Promise.all([loadClients(),loadCoachTemplates(),loadDietTemplates()]); }
-  else { await openClient(me); const qt=new URLSearchParams(location.search).get("tab"); if(qt==="supps"&&S.supps?.length){ S.tab="supps"; } else if(qt==="train"||qt==="food"){ S.tab=qt; if(qt==="food") S.date=today(); } }
-  render();
-  (async()=>{ if(me.role==="client"){ try{ await ensureHealth(); }catch(e){} } setTimeout(maybeOnboard,400); })();
+/* ---------- 1) NASM Overhead Squat Assessment → CES routine ---------- */
+const OHSA=[
+  {k:"feet_out", view:"أمامي", t:"القدم بتلف لبرّه",
+    over:"السمانة (سوليس + الجاستروك الخارجية)، رأس الخلفية الخارجي", under:"الجاستروك الداخلية، الخلفية الداخلية، الجراسيليس",
+    inhibit:["فوم رولر: السمانة","فوم رولر: الخلفية من برّه"], lengthen:["إطالة السمانة على الحيطة"], activate:["توازن على رجل واحدة مع مد الإيد","رفع مشط القدم بالباند"], integrate:["سكوات → رو بالكابل"]},
+  {k:"knees_in", view:"أمامي", t:"الركبة بتدخل لجوّه",
+    over:"الضامّة، TFL، الفاستس لاترالس", under:"الجلوت ميديوس وماكسيموس، VMO",
+    inhibit:["فوم رولر: الضامّة (جوّه الفخد)","فوم رولر: TFL (جنب الفخد)"], lengthen:["إطالة الضامّة (Side lunge)","إطالة الحوض على الركبة"], activate:["Monster walk بالباند","Glute bridge بباند فوق الركبة"], integrate:["سكوات على الحيطة بباند فوق الركبة"]},
+  {k:"lean", view:"جانبي", t:"ميل زيادة لقدّام",
+    over:"السمانة، الهيب فليكسور، عضلات البطن", under:"التيبياليس الأمامية، الجلوت ماكسيموس، أسفل الضهر",
+    inhibit:["فوم رولر: السمانة","فوم رولر: الفخد الأمامية"], lengthen:["إطالة السمانة على الحيطة","إطالة الحوض على الركبة"], activate:["Glute bridge","Prone cobra"], integrate:["سكوات → أوفرهيد بريس بدمبل خفيف"]},
+  {k:"low_back", view:"جانبي", t:"أسفل الضهر بيتقوّس",
+    over:"الهيب فليكسور، عضلات أسفل الضهر، اللاتس", under:"الجلوت، الخلفية، الكور العميق",
+    inhibit:["فوم رولر: الفخد الأمامية","فوم رولر: اللاتس"], lengthen:["إطالة الحوض على الركبة","إطالة اللاتس على البنش"], activate:["Glute bridge","Bird dog","Plank"], integrate:["سكوات → رو بالكابل"]},
+  {k:"arms", view:"جانبي", t:"الدراعات بتقع لقدّام",
+    over:"اللاتس، التيريس ميجور، عضلات الصدر", under:"الترابيس الوسطى والسفلى، الرومبويد، الروتيتور كاف",
+    inhibit:["فوم رولر: اللاتس","فوم رولر: منتصف الضهر"], lengthen:["إطالة اللاتس على البنش","إطالة الصدر على الباب"], activate:["Prone Y-T-W","Wall slides"], integrate:["سكوات → رو بالكابل","سكوات → أوفرهيد بريس بدمبل خفيف"]},
+  {k:"heels", view:"جانبي", t:"الكعب بيترفع",
+    over:"السوليس", under:"التيبياليس الأمامية",
+    inhibit:["فوم رولر: السمانة"], lengthen:["إطالة السمانة والركبة مثنية"], activate:["رفع مشط القدم (Tibialis raise)"], integrate:["Goblet squat بكعب ثابت لعمق مريح"]},
+  {k:"shift", view:"خلفي", t:"الوزن بيميل لناحية",
+    over:"الضامّة وTFL في ناحية", under:"الجلوت ميديوس في الناحية التانية",
+    inhibit:["فوم رولر: الضامّة","فوم رولر: TFL (جنب الفخد)"], lengthen:["إطالة الضامّة (Side lunge)","إطالة الحوض على الركبة"], activate:["Side plank","Single-leg glute bridge"], integrate:["Split squat بتحكم"]},
+  {k:"head", view:"جانبي", t:"الراس بتتقدّم لقدّام",
+    over:"الترابيس العليا، SCM", under:"عضلات الرقبة الأمامية العميقة",
+    inhibit:["مساج بالبولة للترابيس العليا"], lengthen:["إطالة الترابيس العليا"], activate:["Chin tucks"], integrate:["كل تمارين الضهر والراس محايدة"]},
+];
+const N=x=>`<span class="num">${x}</span>`;
+const CES_PHASES=[
+  ["inhibit","1️⃣ فك (فوم رولر)",`${N("30-60")} ثانية لكل منطقة · اقف على النقطة الحساسة ${N("30")} ثانية`],
+  ["lengthen","2️⃣ إطالة",`ثابتة ${N("30")} ثانية × ${N("1-2")} · بدون ألم`],
+  ["activate","3️⃣ تنشيط",`${N("1-2")} مجموعة × ${N("10-15")} عدة · تمبو بطيء ${N("4-2-1")}`],
+  ["integrate","4️⃣ دمج",`${N("1-2")} مجموعة × ${N("10-15")} عدة بتحكم كامل`],
+];
+function correctiveRoutine(a){
+  const items=OHSA.filter(o=>a?.items?.includes(o.k));
+  if(!items.length) return null;
+  return CES_PHASES.map(([k,l,d])=>[l,d,[...new Set(items.flatMap(o=>o[k]))]]);
 }
-async function openClient(p){
-  S.client=p; S.week=currentWeek(p); S.date=today(); S.bodyWeek=null;
-  const { data, error } = await sb.from("program_exercises").select("*").eq("client_id",p.id).order("day_no").order("position");
-  S.program=error? (cacheGet("prog_"+p.id)||[]) : (data||[]); if(!error) cacheSet("prog_"+p.id,S.program);
-  const days=[...new Set(S.program.map(e=>e.day_no))];
-  S.day = todayDayNo() || days[0] || 1;
-  S.supps=[]; if(S.me?.role!=="coach") await loadSupps(p);
+function assessmentCardHTML(p){
+  const a=p.assessment||{}, on=k=>(a.items||[]).includes(k);
+  return `<div class="card" id="ohsa"><div class="card-h"><div class="ic acc">🧍</div><h2>تقييم السكوات فوق الراس (NASM OHSA)<small>${a.date?"آخر تقييم "+niceDate(a.date):"العميل يعمل 5 سكوات بدراعات مرفوعة – صوّره من قدّام ومن الجنب"}</small></h2></div>
+    <div class="ohsa">${OHSA.map(o=>`<label class="ohsa-i ${on(o.k)?"on":""}"><input type="checkbox" value="${o.k}" ${on(o.k)?"checked":""}><span><b>${o.t}</b><small>منظر ${o.view} · مشدودة: ${o.over} · ضعيفة: ${o.under}</small></span></label>`).join("")}</div>
+    <label class="f">ملاحظات التقييم<textarea id="ohN" rows="2">${esc(a.notes||"")}</textarea></label>
+    <div id="ohPv"></div><button class="btn primary block" id="ohSave">حفظ التقييم وبناء الروتين التصحيحي</button></div>`;
 }
-async function refreshClient(){ const { data } = await sb.from("profiles").select("*").eq("id",S.client.id).single(); const tab=S.tab, day=S.day, wk=S.week; await openClient(data); S.tab=tab; S.day=day; S.week=wk; }
-function tabs(){
-  if(S.me.role==="coach" && !S.client) return [["clients","العملاء"],["videos","التمارين"],["foods","الأطعمة"]];
-  const t=[["home","الرئيسية"],["train","التمرين"],["food","التغذية"],["habits","العادات"],["body","التقدم"]];
-  if(S.me.role!=="coach" && S.supps?.length) t.push(["supps","المكملات"]);
-  if(S.me.role==="coach") t.push(["setup","التحكم"]);
-  if(S.me.role!=="coach" && S.aiOn) t.push(["ai","المساعد"]);
-  return t;
-}
-function renderTop(){
-  const c=S.client, coachHome=S.me.role==="coach"&&!c;
-  if(coachHome){
-    $("#top").innerHTML=`<div class="top-row"><div class="logo">MO<b>FIT</b></div><span class="pill glass">لوحة الكوتش</span><div class="sp"></div><button class="ibtn" onclick="logout()">خروج</button></div>
-      <div class="hello"><div class="av">${initials(S.me)}</div><div><h1>أهلاً كوتش ${esc((S.me.full_name||"").split(" ")[0])} 👋</h1><p>${S.coachClients.length} عميل · ${S.coachClients.filter(x=>x.active).length} مفعّل</p></div></div>`;
-    return;
-  }
-  const wk=currentWeek(c), t=targets(c);
-  $("#top").innerHTML=`<div class="top-row"><div class="logo">MO<b>FIT</b></div><div class="sp"></div>${S.me.role==="coach"?"":`<button class="ibtn" onclick="contactCoach()" title="كلّم الكوتش">💬 الكوتش</button><button class="ibtn" onclick="logout()">خروج</button>`}</div>
-    <div class="hello"><div class="av">${initials(c)}</div><div><h1>${S.me.role==="coach"?esc(c.full_name||c.email):"أهلاً، "+esc((c.full_name||"").split(" ")[0])+" 👋"}</h1>
-      <p>${esc(c.goal||"")}${c.level?" · "+LEVELS[c.level]?.icon+" "+esc(c.level):""}${t.kcal?" · "+fmt(t.kcal)+" kcal":""}</p></div>
-      <div class="ringwrap">${ring(wInBlock(wk),BLOCK,{size:64,stroke:7,color:"#F97316",track:"rgba(255,255,255,.15)",label:wInBlock(wk),sub:wk>BLOCK?"بلوك "+blockOf(wk):"من 12",textColor:"#fff"})}</div></div>`;
-}
-function render(){
-  renderTop();
-  $("#nav").innerHTML=tabs().map(([k,l])=>`<button data-tab="${k}" class="${S.tab===k?"on":""}">${ICON[k]}<span>${l}</span></button>`).join("");
-  $("#nav").querySelectorAll("button").forEach(b=>b.onclick=()=>{ S.tab=b.dataset.tab; render(); window.scrollTo(0,0); });
-  const m=$("#main"); m.innerHTML="";
-  if(S.me.role==="coach" && S.client){
-    const bar=document.createElement("div"); bar.className="coachbar";
-    bar.innerHTML=`<div class="av">${initials(S.client)}</div><b>وضع الكوتش<small>أي تعديل هنا بيتحفظ في بيانات ${esc(S.client.full_name||"العميل")}</small></b><button class="btn sm navy">← العملاء</button>`;
-    bar.querySelector("button").onclick=async()=>{ S.client=null; S.tab="clients"; stopRest(); await loadClients(); render(); };
-    m.appendChild(bar);
-  }
-  const host=document.createElement("div"); m.appendChild(host);
-  ({home:viewHome,train:viewTrain,food:viewFood,habits:viewHabits,body:viewBody,setup:viewSetup,supps:viewSupps,clients:viewClients,videos:viewVideos,foods:viewFoods,ai:window.viewAiChat}[S.tab]||viewHome)(host);
-}
-
-/* ======================================================================
-   HOME
-   ====================================================================== */
-async function viewHome(el){
-  const p=S.client, t=targets(p), wk=currentWeek(p), dn=todayDayNo();
-  const todayEx=S.program.filter(e=>e.day_no===dn);
-  el.innerHTML=`<div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
-      ${dn?`<div class="hero-body">${anatomySVG(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<div>${muscleLegend(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<small class="hero-sub">${todayEx.length} تمارين · ${todayEx.reduce((a,e)=>a+(+e.sets||0),0)} مجموعة</small></div></div><button class="btn primary block" style="margin-top:10px" id="goTrain">ابدأ التمرين ←</button>`
-          :`<p class="hint">😴 الراحة جزء من التطور. سجّل نومك ومياهك وخطواتك في العادات.</p>`}</div>
-    <div id="hToday"></div><div id="hMiss"></div>
-    <div class="card" id="hN"><div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2></div><p class="muted">جارٍ التحميل…</p></div>
-    <div id="hSteps"></div><div id="hCI"></div><div id="hCardio"></div>
-    <div id="hFlame"></div><div id="hStreak"></div><div id="hFirst"></div>
-    <div id="ghHome"></div>${S.me.role==="client"?installCardHTML():""}
-    ${tipCardHTML()}
-    <div class="card" id="hF"></div>
-    <div class="card" id="hH"></div>
-    <div class="card" id="hB"></div><div id="hLoad"></div><div id="hGoal"></div><div id="hComp"></div><div id="hStr"></div><div id="hHr"></div><div id="hHealth"></div>`;
-  wireInstall();
-  window.ghRenderHomeCard&&S.me.role==="client"&&window.ghRenderHomeCard($("#ghHome"),p,()=>viewHome(el));
-  window.stepsClientCard&&window.stepsClientCard($("#hSteps"),p);
-  $("#goTrain")&&($("#goTrain").onclick=()=>{ S.tab="train"; S.day=dn; S.week=wk; render(); });
-  homeCheckinCard(p,wk);
-  const id=p.id;
-  const [meals,hab,body,sets]=await Promise.all([
-    sb.from("meal_items").select("kcal,protein,carbs,fat").eq("client_id",id).eq("log_date",today()),
-    sb.from("habits").select("*").eq("client_id",id).order("log_date"),
-    sb.from("body_logs").select("*").eq("client_id",id).order("week"),
-    sb.from("set_logs").select("exercise_id,week,set_no,reps,weight,rir,failure").eq("client_id",id),
-  ]);
-  const mc=$("#hMiss"); if(mc){ mc.innerHTML=missedCard(p, sets.data); const b=$("#doMissed"); if(b) b.onclick=()=>{ S.tab="train"; S.day=+b.dataset.d; S.week=+b.dataset.w; render(); }; }
-  const tot=sumMacros(meals.data||[]);
-  $("#hN").innerHTML=`<div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2><button class="btn sm" id="goFood">سجّل أكلك</button></div>
-    <div style="display:flex;gap:16px;align-items:center">${ring(tot.kcal,t.kcal||1,{size:118,label:fmt(tot.kcal),sub:"من "+fmt(t.kcal)+" kcal"})}
-    <div style="flex:1">${macroRow("بروتين",tot.P,t.P,"جم")}${macroRow("كارب",tot.C,t.C,"جم","navy")}${macroRow("دهون",tot.F,t.F,"جم","navy")}</div></div>`;
-  $("#goFood").onclick=()=>{ S.tab="food"; S.date=today(); render(); };
-  $("#hF").innerHTML=`<div class="card-h"><div class="ic acc">🔥</div><h2>الفشل العضلي<small>الأسبوع ${wk}</small></h2></div>`+failureSummary((sets.data||[]).filter(s=>s.week===wk));
-  const H=hab.data||[];
-  $("#hCardio").innerHTML=cardioCardHTML(p,H,wk); wireCardioCard();
-  loadCardHTML(p).then(h=>{ const x=$("#hLoad"); if(x) x.innerHTML=h; });
-  if(typeof flameHeroHTML==="function") flameHeroHTML(p).then(h=>{ const x=$("#hFlame"); if(x){ x.innerHTML=h; if(window.flameAfter) flameAfter(x,p); } }).catch(()=>{});
-  if(typeof firstWeekHTML==="function"&&S.me.role==="client") firstWeekHTML(p).then(h=>{ const x=$("#hFirst"); if(x){ x.innerHTML=h; if(window.firstWeekAfter) firstWeekAfter(x,p); } }).catch(()=>{});
-  if(typeof streakCardHTML==="function") streakCardHTML(p).then(h=>{ const x=$("#hStreak"); if(x){ x.innerHTML=h; if(window.streakAfter&&S.me.role==="client") streakAfter(p); } }).catch(()=>{});
-  $("#hH").innerHTML=`<div class="card-h"><div class="ic">✅</div><h2>الالتزام<small>${H.length} يوم مسجّل</small></h2></div>
-    <div class="grid4"><div class="stat"><div class="l">🥗 الدايت</div><div class="v">${pct(avg(H.map(h=>h.diet)))}</div></div>
-    <div class="stat"><div class="l">💪 التمرين</div><div class="v">${pct(avg(H.map(h=>h.training)))}</div></div>
-    <div class="stat"><div class="l">🏃 الكارديو</div><div class="v">${pct(avg(H.map(h=>h.cardio)))}</div></div>
-    <div class="stat"><div class="l">💤 النوم</div><div class="v num">${fmt(avg(H.map(h=>h.sleep_hours)),1)}</div><div class="s">ساعة</div></div></div>
-    <div style="margin-top:12px">${heatmap(p,H)}</div>`;
-  const B=(body.data||[]).filter(b=>b.weight), startW=(body.data||[]).find(b=>b.week===0)?.weight ?? p.start_weight, cur=B.length?+B[B.length-1].weight:null;
-  const bmi=cur&&p.height_cm?cur/((p.height_cm/100)**2):null, ch=cur&&startW?cur-startW:null;
-  $("#hB").innerHTML=`<div class="card-h"><div class="ic">⚖</div><h2>الجسم<small>الوزن والقياسات</small></h2></div>
-    <div class="grid3"><div class="stat dark"><div class="l">الوزن الحالي</div><div class="v num">${fmt(cur,1)}</div><div class="s">كجم</div></div>
-    <div class="stat ${ch!==null&&ch<0?"acc":""}"><div class="l">التغيّر</div><div class="v num">${ch===null?"—":(ch>0?"+":"")+fmt(ch,1)}</div><div class="s">كجم منذ البداية</div></div>
-    <div class="stat"><div class="l">BMI</div><div class="v num">${fmt(bmi,1)}</div></div></div>${lineChart(B.map(b=>({x:b.week,y:+b.weight})),"الوزن (كجم)")}`;
-  // v5: today's focus + science cards
-  const exIds=new Set(todayEx.map(e=>e.id)), sDay=(sets.data||[]).filter(s=>s.week===wk&&exIds.has(s.exercise_id)).length;
-  const ht=$("#hToday"); if(ht&&S.me.role==="client"){ ht.innerHTML=todayCardHTML(p,{dn,setsThisDay:sDay,meals:(meals.data||[]).length,habitToday:H.find(h=>h.log_date===today()),ready:readinessToday()}); wireToday(dn,wk); }
-  const lastM=[...(body.data||[])].reverse().find(b=>b.waist||b.bodyfat)||{}, mW={...lastM, weight:lastM.weight||cur};
-  $("#hGoal").innerHTML=goalCardHTML(p,body.data||[]);
-  $("#hComp").innerHTML=cur?bodyCompCard(p,mW):"";
-  $("#hStr").innerHTML=strengthCardHTML(p,sets.data||[],cur||p.start_weight);
-  const drawHr=()=>{ $("#hHr").innerHTML=hrCardHTML(p); wireHr(p,drawHr); }; drawHr();
-  drawHealth(p);
-}
-function heatmap(p,H){
-  const by=Object.fromEntries(H.map(h=>[h.log_date,dayScore(h)]));
-  const start=p.start_date||today(), wk=currentWeek(p);
-  let html=`<div class="heat"><span></span>${["1","2","3","4","5","6","7"].map(d=>`<span style="text-align:center">${d}</span>`).join("")}`;
-  const b0=(blockOf(wk)-1)*BLOCK;
-  for(let w=b0+1;w<=Math.max(wk,b0+4)&&w<=b0+BLOCK;w++){
-    html+=`<span>أ${w}</span>`;
-    for(let d=0;d<7;d++){ const iso=addDays(start,(w-1)*7+d), s=by[iso]; const lv=s===undefined||s===null?"":s>=.9?"l4":s>=.7?"l3":s>=.45?"l2":"l1"; html+=`<i class="${lv} ${iso===today()?"today":""}" style="--k:${(w-b0-1)+d}" title="${iso}"></i>`; }
-  }
-  return html+`</div><div class="legend"><span><i style="background:#FED7AA"></i>ضعيف</span><span><i style="background:#FB923C"></i>كويس</span><span><i style="background:#F97316"></i>ممتاز</span></div>`;
-}
-function failureSummary(sets){
-  const done=sets.filter(logged);
-  if(!done.length) return emptyBox("🏋️","لسه مفيش مجموعات الأسبوع ده","سجّل أول مجموعة في تمرينك وهتلاقي ملخص الفشل والـRIR هنا.","","es-sm");
-  const fail=done.filter(isFailure).length, near=done.filter(s=>!isFailure(s)&&s.rir!==null&&+s.rir<=2).length, far=done.length-fail-near;
-  const w=v=>(v/done.length*100).toFixed(1)+"%";
-  return `<div class="grid4"><div class="stat"><div class="l">مجموعات</div><div class="v">${done.length}</div></div>
-    <div class="stat acc"><div class="l">🔥 للفشل</div><div class="v">${fail}</div></div>
-    <div class="stat"><div class="l">RIR 1-2</div><div class="v">${near}</div></div>
-    <div class="stat"><div class="l">متوسط RIR</div><div class="v num">${fmt(avg(done.map(s=>s.rir)),1)}</div></div></div>
-    <div class="stack"><i style="width:${w(fail)};background:#F97316"></i><i style="width:${w(near)};background:#0F172A"></i><i style="width:${w(far)};background:#CBD5E1"></i></div>
-    <div class="legend"><span><i style="background:#F97316"></i>فشل (RIR 0)</span><span><i style="background:#0F172A"></i>قريبة RIR 1-2</span><span><i style="background:#CBD5E1"></i>RIR 3+</span></div>`;
-}
-
-/* ======================================================================
-   TRAINING
-   ====================================================================== */
-async function viewTrain(el){
-  const p=S.client, wkNow=currentWeek(p), tdn=todayDayNo();
-  const days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
-  if(!days.length){ el.innerHTML=`<div class="card">${S.me.role==="coach"?emptyBox("📋","العميل ده لسه مالوش برنامج","حط برنامج التمرين من تبويب التحكم وهيظهرله هنا.",{label:"⚙️ روح للتحكم",go:"setup"}):emptyBox("📋","برنامجك بيتجهّز","الكوتش لسه ما حطش برنامج التمرين – هيظهر هنا أول ما يخلص.")}</div>`; return; }
-  const maxD=Math.max(...days);
-  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📅</div><h2>${esc(p.split_name||"برنامج التمرين")}<small>${p.level?LEVELS[p.level]?.icon+" "+esc(p.level)+" · ":""}${days.length} أيام في الأسبوع</small></h2></div>
-      <div class="scroller" id="dayCards">${[...Array(7)].map((_,i)=>{ const d=i+1, has=days.includes(d); return `<button class="daycard ${S.day===d?"on":""} ${has?"":"rest"}" data-d="${d}">${d===tdn?'<span class="dot"></span>':""}<b>${has?"يوم "+d:"راحة"}</b><small>${has?esc(dayLabel(d)||S.program.filter(e=>e.day_no===d).length+" تمارين"):"😴 استشفاء"}</small>${has?`<span class="dmus">${Object.entries(muscleVol(S.program.filter(e=>e.day_no===d).map(e=>[e.name,e.sets]))).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([m])=>`<i style="background:${mColor(m)}" title="${m}"></i>`).join("")}</span>`:""}</button>`; }).join("")}</div>
-      <div class="muted" style="margin:8px 0 6px;font-weight:700">الأسبوع</div>
-      ${blockNavHTML(S.week,p)}<div class="scroller" id="wkChips">${blockWeeks(S.week).map(w=>`<button class="chip ${S.week===w?"on":""} ${wkNow===w?"cur":""}" data-w="${w}">${w}${isDeload(p,w)?" 🔄":""}</button>`).join("")}</div></div>
-    <div class="card tools hidden" id="tTools"></div><div id="tPrep"></div><div id="exList"></div><div class="card" id="failCard"></div>`;
-  { const dc=$("#dayCards"), wc=$("#wkChips"), sel=dc&&dc.querySelector(".daycard.on");
-    [dc,wc].forEach(r=>{ if(!r) return; let x0=0; r.addEventListener("pointerdown",e=>{x0=e.clientX;r._drag=false;},{passive:true}); r.addEventListener("pointermove",e=>{ if(Math.abs(e.clientX-x0)>8) r._drag=true; },{passive:true}); const end=()=>setTimeout(()=>{r._drag=false;},140); r.addEventListener("pointerup",end,{passive:true}); r.addEventListener("pointercancel",()=>{r._drag=true;end();},{passive:true}); r.addEventListener("click",e=>{ if(r._drag){ e.stopPropagation(); e.preventDefault(); } },true); });
-    if(dc){ if(window._dcX!=null) dc.scrollLeft=window._dcX; else if(sel){ const dr=dc.getBoundingClientRect(), sr=sel.getBoundingClientRect(), t=dc.scrollLeft+(sr.left-dr.left)-(dc.clientWidth-sr.width)/2; if(sr.left<dr.left||sr.right>dr.right) dc.scrollLeft=t; } }
-    if(wc){ if(window._wcX!=null) wc.scrollLeft=window._wcX; }
-    window._dcX=null; window._wcX=null; }
-  el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{ window._dcX=$("#dayCards")?.scrollLeft; S.day=+b.dataset.d; viewTrain(el);});
-  el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ window._wcX=$("#wkChips")?.scrollLeft; S.week=+b.dataset.w; viewTrain(el);});
-  const allEx=S.program.filter(e=>e.day_no===S.day), exs=trainMode()==="quick"?allEx.slice(0,4):allEx, list=$("#exList");
-  const tt=$("#tTools"); if(allEx.length&&S.me.role!=="coach"&&S.week===wkNow){ tt.classList.remove("hidden"); tt.innerHTML=trainToolsHTML();
-    tt.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ setTrainMode(trainMode()===b.dataset.mode?"":b.dataset.mode); viewTrain(el); });
-    $("#rdyBtn").onclick=()=>openReadiness(()=>viewTrain(el)); }
-  if(!exs.length){ list.innerHTML=`<div class="card">${emptyBox("😴","يوم راحة واستشفاء","الراحة جزء من التطور – سجّل نومك ومياهك وخطواتك النهارده.",{label:"✅ سجّل عاداتك",go:"habits"})}</div>`; $("#failCard").remove(); return; }
-  const ids=exs.map(e=>e.id);
-  const { data, error:le } = await sb.from("set_logs").select("*").in("exercise_id",ids).in("week",[S.week,S.week-1].filter(w=>w>=1));
-  const ck="logs_"+p.id+"_"+S.day+"_"+S.week, logs=le? (cacheGet(ck)||[]) : (data||[]); if(!le) cacheSet(ck,logs);
-  const lastBy={}, bestPrev={}; try{ const { data:hist } = await sb.from("set_logs").select("exercise_id,week,set_no,reps,weight,rir,failure").in("exercise_id",ids).lt("week",S.week); (hist||[]).forEach(h=>{ if(logged(h)){ const k=h.exercise_id+"_"+h.set_no; if(!lastBy[k]||h.week>lastBy[k].week) lastBy[k]=h; } const x=e1rm(h)||0; if(x>(bestPrev[h.exercise_id]||0)) bestPrev[h.exercise_id]=x; }); }catch(e){}
-  const firstC=exs.findIndex(e=>isCompound(e.name));
-  const seenM=new Set(), firstOfM=exs.map(e=>{ const m=muscleOf(e.name); if(m==="أخرى"||seenM.has(m)) return false; seenM.add(m); return true; });
-  const prevW=ex=>Math.max(0,...[...Array(ex.sets)].map((_,i)=>+(get(ex.id,S.week-1,i+1)?.weight)||0));
-  const deload=isDeload(p,S.week);
-  const tp=$("#tPrep"); if(tp&&!deload){ tp.innerHTML=warmupCardHTML(p,exs,S.day); wireWarmup(tp); }
-  if(deload) list.insertAdjacentHTML("beforeend",`<div class="card dark"><div class="card-h"><div class="ic">🔄</div><h2>أسبوع ديلود (تخفيف)<small>مجموعات أقل بحوالي 40% · أوزان أخف ~10% · RIR 3-4 · الهدف استشفاء مش أرقام</small></h2></div></div>`);
-  const get=(ex,w,n)=>logs.find(l=>l.exercise_id===ex&&l.week===w&&l.set_no===n);
-  exs.forEach((ex,idx)=>{
-    const box=document.createElement("div"); box.className="ex"; const vid=videoFor(ex);
-    const nSets=modeSets(weekSets(ex,p,S.week)), restS=modeRest(ex.rest_sec||90), alt=altChoice(ex.id), hint=progressionHint(ex,[...Array(ex.sets)].map((_,i)=>get(ex.id,S.week-1,i+1)).filter(Boolean),deload);
-    const mus=muscleOf(ex.name); box.style.setProperty("--mc",mColor(mus));
-    box.innerHTML=`<div class="ex-h"><div class="ex-n">${idx+1}</div><div class="ex-t">${mus!=="أخرى"?mChip(mus):""}<b data-vid>${esc(alt||ex.name)}</b>${alt?`<small style="display:block;color:#FDBA74;font-size:.7rem">بديل لـ ${esc(ex.name)}</small>`:""}
-        <div class="ex-tags"><span class="pill glass">🎯 ${nSets}×${esc(ex.target_reps||"—")}</span>${deload?`<span class="pill glass">RIR 3-4</span>`:ex.target_rir?`<span class="pill glass">RIR ${esc(modeRir(ex.target_rir))}</span>`:""}<button class="pill glass" data-alt style="border:0;cursor:pointer">⇄ بديل</button><button class="pill glass" data-hist style="border:0;cursor:pointer">📈 السجل</button><button class="pill glass" data-pain style="border:0;cursor:pointer" title="حاسس بألم؟">🤕</button>${ex.rest_sec?`<span class="pill glass">⏱ ${restS}ث</span>`:""}${ex.tempo?`<span class="pill glass">🕒 ${esc(ex.tempo)}</span>`:""}<span class="pill acc" data-best></span></div></div>
-        ${vid?`<button class="play" data-vid title="شاهد الأداء الصحيح">${ICON.play}</button>`:""}</div>
-      <div class="ex-b">${hint?`<div class="prog ${hint.kind}">${hint.text}</div>`:""}${ex.tempo?tempoBlocks(ex.tempo):""}${ex.notes?`<p class="hint" style="margin:0 0 8px">📝 ${esc(ex.notes)}</p>`:""}${deload?"":idx===firstC?warmupHTML(hint?.w||prevW(ex)):firstOfM[idx]?feederHTML(hint?.w||prevW(ex),mus):""}
-        <div class="set-head"><span>#</span><span>العدات</span><span>الوزن كجم</span><span>RIR</span><span>فشل</span><span></span></div><div data-sets></div>
-        <button class="btn sm restbtn" data-rest>⏱ ابدأ الراحة (${restS} ث)</button></div>`;
-    box.querySelectorAll("[data-vid]").forEach(b=>b.onclick=()=>openVideo(alt?{...ex,name:alt,video_url:null}:ex));
-    box.querySelector("[data-alt]").onclick=()=>openAlts(ex,()=>viewTrain(el));
-    box.querySelector("[data-hist]").onclick=()=>openExHistory(ex);
-    box.querySelector("[data-rest]").onclick=()=>startRest(restS, ex.name);
-    box.querySelector("[data-pain]").onclick=()=>openPain(ex,()=>openAlts(ex,()=>viewTrain(el)));
-    const setsEl=box.querySelector("[data-sets]");
-    const updBest=()=>{ const best=Math.max(0,...[...Array(nSets)].map((_,i)=>e1rm(get(ex.id,S.week,i+1)||{})||0)); box.querySelector("[data-best]").textContent=best?"1RM≈"+fmt(best,1):""; };
-    for(let n=1;n<=nSets;n++){
-      const cur=get(ex.id,S.week,n)||{}, prev0=get(ex.id,S.week-1,n), prev=(prev0&&logged(prev0))?prev0:(lastBy[ex.id+"_"+n]||prev0), prevOld=prev&&prev.week!==S.week-1;
-      const row=document.createElement("div"); row.className="set"+(logged(cur)?" done":"");
-      row.innerHTML=`<div class="no">${n}</div>
-        <input inputmode="numeric" placeholder="${esc(ex.target_reps||"عدات")}" value="${esc(cur.reps??"")}" data-k="reps">
-        <input inputmode="decimal" placeholder="${hint?.w?fmt(hint.w,2):(prev?.weight??"كجم")}" value="${esc(cur.weight??"")}" data-k="weight">
-        <select data-k="rir"><option value="">—</option>${[0,1,2,3,4,5].map(v=>`<option value="${v}" ${cur.rir!==null&&cur.rir!==undefined&&+cur.rir===v?"selected":""}>${v}</option>`).join("")}</select>
-        <button class="fail ${cur.failure?"on":""}" data-k="failure" title="وصلت للفشل">🔥</button>
-        <button class="more" title="تمبو / راحة / ملاحظات">⋯</button>
-        ${prev&&logged(prev)?`<div class="prev">${prevOld?"آخر مرة (أسبوع "+prev.week+")":"الأسبوع اللي فات"}: <b class="num">${fmt(prev.reps)}×${fmt(prev.weight,1)}</b>${prev.rir!==null?" · RIR "+prev.rir:""}${isFailure(prev)?" · 🔥":""}</div>`:""}
-        <div class="set-x hidden"><input placeholder="تمبو ${esc(ex.tempo||"")}" value="${esc(cur.tempo??"")}" data-k="tempo"><input inputmode="numeric" placeholder="راحة ث" value="${esc(cur.rest_sec??"")}" data-k="rest_sec"><input placeholder="ملاحظات" value="${esc(cur.notes??"")}" data-k="notes"></div>`;
-      row.querySelector(".more").onclick=()=>row.querySelector(".set-x").classList.toggle("hidden");
-      const save=async(startTimer)=>{
-        const v=k=>row.querySelector(`[data-k="${k}"]`);
-        const rec={ client_id:p.id, exercise_id:ex.id, week:S.week, set_no:n, reps:num(v("reps").value), weight:num(v("weight").value), rir:num(v("rir").value),
-          failure:v("failure").classList.contains("on"), tempo:v("tempo").value.trim()||null, rest_sec:num(v("rest_sec").value), notes:[alt?"بديل: "+alt:null, v("notes").value.trim()||null].filter(Boolean).join(" · ")||null };
-        if(rec.rir===0){ rec.failure=true; v("failure").classList.add("on"); }
-        const wasDone=row.classList.contains("done");
-        const { data:saved, error, queued } = await dbWrite({op:"upsert",table:"set_logs",row:rec,onConflict:"exercise_id,week,set_no"});
-        if(error){ toast("خطأ في الحفظ: "+error.message); return; }
-        if(queued) toast("📴 اتحفظت على الموبايل");
-        if(S.me.role!=="coach"&&S.week===wkNow) markWorkoutStart(p.id,S.day);
-        const i=logs.findIndex(l=>l.exercise_id===ex.id&&l.week===S.week&&l.set_no===n); if(i>=0) logs[i]=saved; else logs.push(saved);
-        row.classList.toggle("done",logged(saved)); updBest(); renderFailCard();
-        try{ navigator.vibrate&&navigator.vibrate(25); }catch(e){}
-        const pr=e1rm(saved)||0; if(bestPrev[ex.id]>0&&pr>bestPrev[ex.id]*1.005){ celebratePR(alt||ex.name,pr,bestPrev[ex.id]); bestPrev[ex.id]=pr; }
-        cacheSet(ck,logs); if(startTimer && !wasDone && rec.reps!==null && n<nSets) startRest(rec.rest_sec||restS, `${ex.name} · بعد مجموعة ${n}`);
-      };
-      row.querySelectorAll("input,select").forEach(i=>i.addEventListener("change",()=>save(i.dataset.k==="reps"||i.dataset.k==="weight")));
-      row.querySelector(".fail").onclick=e=>{ e.currentTarget.classList.toggle("on"); save(false); };
-      setsEl.appendChild(row);
-    }
-    updBest(); list.appendChild(box);
-  });
-  if(S.week===wkNow){ const fin=document.createElement("div"); list.appendChild(fin);
-    const drawFin=async()=>{ fin.innerHTML=await finishCardHTML(p,S.day,S.week); const b=fin.querySelector("#finBtn"); if(b) b.onclick=()=>openFinish(p,S.day,S.week,exs,logs,drawFin); };
-    drawFin(); }
-  const renderFailCard=async()=>{
-    const fc=$("#failCard"); if(!fc) return;
-    const { data:all } = await sb.from("set_logs").select("exercise_id,week,reps,weight,rir,failure").eq("client_id",p.id);
-    const A=(all||[]).filter(s=>ids.includes(s.exercise_id));
-    let html=`<div class="card-h"><div class="ic acc">🔥</div><h2>متتبع الفشل العضلي<small>يوم ${S.day} · الأسبوع ${S.week}</small></h2></div>`+failureSummary(A.filter(s=>s.week===S.week));
-    html+=`<div class="scrollx" style="margin-top:12px"><table><tr><th style="text-align:start">التمرين</th><th>🔥</th><th>أفضل 1RM</th><th>التطور</th></tr>`;
-    exs.forEach(ex=>{
-      const mine=A.filter(s=>s.exercise_id===ex.id), wk=mine.filter(s=>s.week===S.week);
-      const best=w=>Math.max(0,...mine.filter(s=>s.week===w).map(s=>e1rm(s)||0));
-      const nowB=best(S.week), prevW=[...Array(S.week-1)].map((_,i)=>S.week-1-i).find(w=>best(w)>0), prevB=prevW?best(prevW):0, diff=nowB&&prevB?(nowB-prevB)/prevB:null;
-      html+=`<tr><td style="text-align:start;font-size:.74rem">${esc(ex.name)}</td><td>${wk.filter(isFailure).length}/${wk.filter(logged).length}</td><td class="num">${nowB?fmt(nowB,1):"—"}</td>
-        <td>${diff===null?"—":`<span class="pill ${diff>=0?"good":"navy"}">${diff>=0?"▲":"▼"} ${Math.abs(diff*100).toFixed(1)}%</span>`}</td></tr>`;
-    });
-    fc.innerHTML=html+`</table></div><p class="hint">1RM تقديري = الوزن × (1 + (العدات + RIR) ÷ 30) · التطور مقارنة بآخر أسبوع مسجّل.</p>`;
-  };
-  renderFailCard();
-}
-
-/* ======================================================================
-   NUTRITION (day log + coach plan) — also used as the plan editor
-   ====================================================================== */
-function openFoodPicker(title, onPick, opts={}){
-  const body=openSheet(`<div class="between"><b>${esc(title)}</b><button class="btn sm ghost" data-close>✕</button></div>
-    <input id="fpQ" placeholder="🔍 اكتب اسم الصنف (حرفين على الأقل)…" style="margin-top:10px" autocomplete="off"><div id="fpRes" style="margin-top:8px"></div>`);
-  body.querySelector("[data-close]").onclick=closeSheet;
-  const q=$("#fpQ"), res=$("#fpRes"); let timer; setTimeout(()=>q.focus(),100);
-  q.oninput=()=>{ clearTimeout(timer); timer=setTimeout(async()=>{
-    const term=q.value.trim(); if(term.length<2){ res.innerHTML=""; return; }
-    const { data:f } = await sb.rpc("search_foods",{q:term});
-    res.innerHTML=(f||[]).length?f.map(x=>{ const u=unitInfo(x); return `<div class="food-r" data-id="${x.id}"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(x.name)}<small>${u.base}: <b>${fmt(u.per.kcal)} kcal</b> · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}</small></div><span class="pill">${esc(x.unit)}</span></div>`; }).join("")
-      :emptyBox("🔎","مفيش نتائج","اكتب اسم الصنف بشكل تاني"+(S.me.role==="coach"?"، أو ضيفه من تبويب الأطعمة":"")+".","","es-sm");
-    res.querySelectorAll("[data-id]").forEach(d=>d.onclick=()=>pickQty(f.find(x=>x.id==d.dataset.id)));
-  },250); };
-  if(opts.match) body.querySelector("#fpQ").insertAdjacentHTML("beforebegin",`<div class="prog reps" style="margin-top:8px">⇄ تبديل ${esc(opts.match.food_name)} (${fmt(opts.match.kcal)} kcal) – الكمية هتتحسب تلقائياً بنفس السعرات</div>`);
-  function pickQty(food){
-    const u=unitInfo(food);
-    body.innerHTML=`<div class="between"><button class="btn sm ghost" data-back>→ رجوع</button><button class="btn sm ghost" data-close>✕</button></div>
-      <b style="font-size:1.05rem">${esc(food.name)}</b>
-      <div class="unitbox"><span class="u">${u.base}</span> <span style="color:#CBD5E1;font-size:.8rem">${u.cnt?"القيم لكل "+esc(food.unit)+" واحد":"القيم لكل 100 "+esc(food.unit)}</span>
-        <div class="g4"><div><b class="num">${fmt(u.per.kcal)}</b><small>سعرات</small></div><div><b class="num">${fmt(u.per.P,1)}</b><small>بروتين</small></div><div><b class="num">${fmt(u.per.C,1)}</b><small>كارب</small></div><div><b class="num">${fmt(u.per.F,1)}</b><small>دهون</small></div></div></div>
-      <label class="f">${u.qtyLabel}</label>
-      <div class="stepper"><button data-s="-1">−</button><input id="fpQty" inputmode="decimal" value="${u.def}"><button data-s="1">+</button></div>
-      <div class="scroller" style="margin-top:8px">${u.quick.map(v=>`<button class="chip" data-q="${v}">${v} ${esc(food.unit)}</button>`).join("")}</div>
-      <div class="card" style="background:var(--acc-soft);box-shadow:none;margin:10px 0" id="fpPrev"></div>
-      <button class="btn primary block" id="fpAdd">إضافة</button>`;
-    const qi=$("#fpQty"), step=u.cnt?1:10;
-    if(opts.match&&food.kcal>0) qi.value=roundQty(opts.match.kcal/(food.kcal/100),food.unit);
-    const prev=()=>{ const qv=num(qi.value)||0, c=foodCalc(food, qv); $("#fpPrev").innerHTML=`<div class="between"><b>${fmt(qv,1)} ${esc(food.unit)}</b><b style="color:var(--acc)" class="num">${fmt(c.kcal)} kcal</b></div><div class="muted">بروتين ${fmt(c.protein,1)} · كارب ${fmt(c.carbs,1)} · دهون ${fmt(c.fat,1)} جم</div>${mineralLine(food,qv)}`; };
-    qi.oninput=prev; prev();
-    body.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{ qi.value=Math.max(0,(num(qi.value)||0)+(+b.dataset.s)*step); prev(); });
-    body.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{ qi.value=b.dataset.q; prev(); });
-    body.querySelector("[data-close]").onclick=closeSheet;
-    body.querySelector("[data-back]").onclick=()=>openFoodPicker(title,onPick);
-    if(opts.match){ const m=opts.match; const cmp=()=>{ const c=foodCalc(food,num(qi.value)||0); $("#fpPrev").insertAdjacentHTML("beforeend",`<div class="muted" style="margin-top:4px">مقارنة بالأصلي: ب ${c.protein-m.protein>=0?"+":""}${fmt(c.protein-m.protein,1)} · ك ${c.carbs-m.carbs>=0?"+":""}${fmt(c.carbs-m.carbs,1)} · د ${c.fat-m.fat>=0?"+":""}${fmt(c.fat-m.fat,1)} جم</div>`); }; const op=qi.oninput; qi.oninput=()=>{op();cmp();}; cmp(); }
-    $("#fpAdd").textContent=opts.match?"تبديل":"إضافة";
-    $("#fpAdd").onclick=async()=>{ const qv=num(qi.value); if(!qv||qv<=0) return toast("اكتب الكمية"); await onPick(food,qv); closeSheet(); };
-  }
-}
-function qtyText(i){ return `${fmt(i.qty,COUNT_UNITS(i.unit)?2:0)} ${esc(i.unit||"جم")}`; }
-
-async function viewFood(el){ return renderMeals(el,{mode:"day"}); }
-async function renderMeals(el,{mode}){
-  const p=S.client, t=targets(p), meals=Math.max(1,Math.min(+p.meals_per_day||3,8)), planMode=mode==="plan";
-  el.innerHTML=(planMode?"":`<div class="card"><div class="between"><button class="btn sm" id="dPrev">→</button><div style="text-align:center"><b>${niceDate(S.date)}</b><div class="muted num">${S.date}</div></div><button class="btn sm" id="dNext">←</button></div>
-      <input type="date" id="fDate" value="${S.date}" style="margin-top:8px"></div>`)+`<div class="card dark" id="fTot"></div><div id="meals"></div>`;
-  if(!planMode){
-    $("#fDate").onchange=e=>{S.date=e.target.value; renderMeals(el,{mode});};
-    $("#dPrev").onclick=()=>{S.date=addDays(S.date,-1); renderMeals(el,{mode});};
-    $("#dNext").onclick=()=>{S.date=addDays(S.date,1); renderMeals(el,{mode});};
-  }
-  const [pl,lg]=await Promise.all([
-    sb.from("diet_plan_items").select("*").eq("client_id",p.id).order("meal_no").order("position"),
-    planMode?{data:[]}:sb.from("meal_items").select("*").eq("client_id",p.id).eq("log_date",S.date).order("created_at")]);
-  if(!el.isConnected) return; /* user switched tab while loading */
-  const plan=pl.data||[], items=lg.data||[];
-  const drawTot=()=>{ const tot=sumMacros(planMode?plan:items);
-    $("#fTot").innerHTML=`<div class="card-h"><div class="ic">${planMode?"📋":"🔥"}</div><h2>${planMode?"إجمالي الخطة":"ملخص اليوم"}<small>${planMode?"مقارنة بأهداف العميل":"المتبقي: "+(t.kcal?fmt(t.kcal-tot.kcal):"—")+" kcal"}</small></h2></div>
-      <div style="display:flex;gap:16px;align-items:center">${ring(tot.kcal,t.kcal||1,{size:112,track:"rgba(255,255,255,.15)",label:fmt(tot.kcal),sub:"من "+fmt(t.kcal),textColor:"#fff"})}
-      <div style="flex:1;color:#fff">${macroRow("بروتين",tot.P,t.P,"جم")}${macroRow("كارب",tot.C,t.C,"جم")}${macroRow("دهون",tot.F,t.F,"جم")}</div></div>${planMode?mineralTotHTML(plan):mineralTotHTML(items,"اللي اتاكل النهارده")}`; };
-  drawTot();
-  const wrap=$("#meals");
-  for(let m=1;m<=meals;m++){
-    const box=document.createElement("div"); box.className="meal"; let edit=planMode;
-    const draw=()=>{
-      const mp=plan.filter(i=>i.meal_no===m), ml=items.filter(i=>i.meal_no===m);
-      const used=new Set(); const match=pi=>{ const x=ml.find(l=>!used.has(l.id)&&l.food_id===pi.food_id&&+l.qty===+pi.qty); if(x){used.add(x.id);} return x; };
-      const planRows=mp.map(pi=>({pi, hit:planMode?null:match(pi)}));
-      const extras=ml.filter(l=>!used.has(l.id));
-      const sPlan=sumMacros(mp), sEat=sumMacros(ml);
-      box.innerHTML=`<div class="meal-h"><div class="ic">${MEAL_ICONS[m-1]}</div><b>${esc(mealName(p,m))}<small>${planMode?`${fmt(sPlan.kcal)} kcal · ب ${fmt(sPlan.P)} · ك ${fmt(sPlan.C)} · د ${fmt(sPlan.F)}`:`أكلت ${fmt(sEat.kcal)} من ${fmt(sPlan.kcal)} kcal في الخطة`}</small></b>
-          ${planMode?"":`<button class="btn sm ${edit?"navy":""}" data-edit>${edit?"تم":"✎ الخطة"}</button>`}</div>
-        ${mp.length||edit?`<div class="sub">📋 خطة الكوتش</div>`:""}
-        ${planRows.map(({pi,hit})=>`<div class="item plan">${planMode||edit?"":`<button class="tick ${hit?"on":""}" data-tick="${pi.id}" title="أكلتها">✓</button>`}
-          <div class="nm">${esc(pi.food_name)}<small>${qtyText(pi)}${pi.notes?" · "+esc(pi.notes):""}</small></div><span class="kc num">${fmt(pi.kcal)}</span>${hit?"":`<button class="x" data-swap="${pi.id}" title="تبديل بصنف تاني">⇄</button>`}${edit?`<button class="x" data-pdel="${pi.id}">✕</button>`:""}</div>`).join("")}
-        ${!planMode&&extras.length?`<div class="sub">🍽 أكلت كمان</div>`+extras.map(i=>`<div class="item"><div class="nm">${esc(i.food_name)}<small>${qtyText(i)} · ب ${fmt(i.protein,1)} · ك ${fmt(i.carbs,1)} · د ${fmt(i.fat,1)}</small></div><span class="kc num">${fmt(i.kcal)}</span><button class="x" data-ldel="${i.id}">✕</button></div>`).join(""):""}
-        ${!mp.length&&!ml.length&&!edit?`<div class="item"><span class="muted">مفيش أصناف لسه</span></div>`:""}
-        <div class="meal-f">${edit?`<button class="btn sm navy grow" data-padd>+ صنف للخطة</button>`:`${mp.length?`<button class="btn sm grow" data-all>✓ أكلت الوجبة كلها</button>`:""}<button class="btn sm primary grow" data-ladd>+ سجّل صنف</button>`}</div>`;
-      box.querySelector("[data-edit]")&&(box.querySelector("[data-edit]").onclick=()=>{edit=!edit; draw();});
-      const logOne=async pi=>{ const rec={id:crypto.randomUUID(),client_id:p.id,log_date:S.date,meal_no:m,food_id:pi.food_id,food_name:pi.food_name,unit:pi.unit,qty:pi.qty,kcal:pi.kcal,protein:pi.protein,carbs:pi.carbs,fat:pi.fat}; MIN_KEYS.forEach(([k])=>{ if(pi[k]!==undefined) rec[k]=pi[k]; });
-        const { data:ins, error } = await dbWrite({op:"insert",table:"meal_items",row:rec}); if(error){ toast(error.message); return; } items.push(ins); };
-      box.querySelectorAll("[data-swap]").forEach(b=>b.onclick=()=>{ const pi=plan.find(i=>i.id===b.dataset.swap);
-        openFoodPicker("تبديل "+pi.food_name, async(food,qty)=>{ const upd={food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)};
-          const { error } = await sb.from("diet_plan_items").update(upd).eq("id",pi.id); if(error) return toast(error.message); Object.assign(pi,upd); draw(); drawTot(); toast("✓ اتبدّل"); }, {match:pi}); });
-      box.querySelectorAll("[data-tick]").forEach(b=>b.onclick=async()=>{
-        const pr=planRows.find(r=>r.pi.id===b.dataset.tick);
-        if(pr.hit){ const { error } = await dbWrite({op:"delete",table:"meal_items",match:{id:pr.hit.id}}); if(error) return toast(error.message); items.splice(items.findIndex(i=>i.id===pr.hit.id),1); }
-        else await logOne(pr.pi);
-        draw(); drawTot(); });
-      box.querySelector("[data-all]")&&(box.querySelector("[data-all]").onclick=async()=>{ for(const r of planRows) if(!r.hit) await logOne(r.pi); draw(); drawTot(); toast("✓ اتسجلت الوجبة"); });
-      box.querySelectorAll("[data-ldel]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("meal_items").delete().eq("id",b.dataset.ldel); if(error) return toast(error.message); items.splice(items.findIndex(i=>i.id===b.dataset.ldel),1); draw(); drawTot(); });
-      box.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("diet_plan_items").delete().eq("id",b.dataset.pdel); if(error) return toast(error.message); plan.splice(plan.findIndex(i=>i.id===b.dataset.pdel),1); draw(); drawTot(); });
-      box.querySelector("[data-ladd]")&&(box.querySelector("[data-ladd]").onclick=()=>openFoodPicker("سجّل في "+mealName(p,m), async(food,qty)=>{
-        const { data:ins, error } = await sb.from("meal_items").insert({client_id:p.id,log_date:S.date,meal_no:m,food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)}).select().single();
-        if(error) return toast(error.message); items.push(ins); draw(); drawTot(); toast("✓ اتسجل"); }));
-      box.querySelector("[data-padd]")&&(box.querySelector("[data-padd]").onclick=()=>openFoodPicker("أضف لخطة "+mealName(p,m), async(food,qty)=>{
-        const { data:ins, error } = await sb.from("diet_plan_items").insert({client_id:p.id,meal_no:m,position:mp.length,food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)}).select().single();
-        if(error) return toast(error.message); plan.push(ins); draw(); drawTot(); toast("✓ اتضاف للخطة"); }));
-    };
-    draw(); wrap.appendChild(box);
-  }
-}
-
-/* ======================================================================
-   HABITS
-   ====================================================================== */
-function dayScore(h){ return avg([h.diet,h.training,h.cardio,h.sleep_quality].map(v=>v===undefined?null:v)); }
-
-/* ======================================================================
-   CYCLE (private: only the client + coach; never in league or shared views)
-   ====================================================================== */
-function cycleStarts(rows){ const per=new Set(rows.filter(r=>r.kind==="period").map(r=>r.log_date)); return [...per].filter(d=>!per.has(addDays(d,-1))).sort(); }
-function cycleInfo(rows,date){
-  const all=cycleStarts(rows), st=all.filter(d=>d<=date); if(!st.length) return null;
-  const last=st[st.length-1], day=Math.round((new Date(date)-new Date(last))/864e5)+1;
-  const gaps=all.slice(1).map((d,i)=>(new Date(d)-new Date(all[i]))/864e5).filter(g=>g>=18&&g<=45);
-  const len=gaps.length?Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length):28, mid=Math.round(len/2);
-  if(day>len+10) return {stale:true,last};
-  return {day,len,last,phase:day<=5?"فترة الدورة":day<=mid-2?"بعد الدورة":day<=mid+1?"منتصف الدورة":"قبل الدورة"};
-}
-async function cycleCard(host,p,rerender){
-  if(!host||!p) return;
-  const coach=S.me&&S.me.role==="coach";
-  if(p.sex!=="أنثى"){ host.innerHTML=""; return; }
-  if(!coach&&localStorage.getItem("cyc_hide")==="1"){
-    host.innerHTML=`<div class="muted" style="text-align:center;margin:4px 0 12px;font-size:.8rem">🌸 كارد الدورة مخفي · <a href="#" id="cycShow" style="color:var(--acc,#ff6a13);font-weight:700">إظهار</a></div>`;
-    $("#cycShow").onclick=e=>{ e.preventDefault(); localStorage.removeItem("cyc_hide"); rerender&&rerender(); }; return;
-  }
-  const { data }=await sb.from("cycle_logs").select("log_date,kind").eq("client_id",p.id).gte("log_date",addDays(S.date,-120)).order("log_date");
-  const rows=data||[], by={}; rows.forEach(r=>by[r.log_date]=r.kind);
-  const info=cycleInfo(rows,S.date), cur=by[S.date];
-  const K=[["period","🩸","فترة الدورة"],["pms","🌙","قبل الدورة"]];
-  const strip=Array.from({length:28},(_,i)=>{ const d=addDays(S.date,i-27), k=by[d]; return `<i title="${d}" style="aspect-ratio:1/1;border-radius:6px;display:block;background:${k==="period"?"#e0507a":"rgba(128,128,150,.2)"};${k==="pms"?"box-shadow:inset 0 0 0 2px #f0a24b;":""}${d===S.date?"outline:2px solid var(--acc,#ff8a2b);outline-offset:1px;":""}"></i>`; }).join("");
-  const line=info?(info.stale?`آخر دورة سجلتيها كانت ${niceDate(info.last)}`:`النهارده يوم ${info.day} من دورتك تقريباً · ${info.phase}`):(coach?"مفيش دورة متسجلة لسه":"سجّلي أول يوم دورة وهنحسبلك باقي الأيام");
-  host.innerHTML=`<div class="card"><div class="card-h"><div class="ic" style="background:rgba(224,80,122,.18)">🌸</div><h2>دورتك<small>اختياري · ${coach?"للقراءة فقط":"خاص بيكي وبالكوتش بس"}</small></h2></div>
-    ${coach?"":`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">${K.map(([k,e,t])=>`<button class="chip ${cur===k?"on":""}" data-ck="${k}" style="min-height:44px">${e} ${t}</button>`).join("")}</div>`}
-    <div style="font-weight:700;margin-bottom:8px">${line}</div>
-    <div style="display:grid;grid-template-columns:repeat(14,1fr);gap:4px;margin-bottom:10px" dir="ltr">${strip}</div>
-    <div class="muted" style="font-size:.78rem;line-height:1.7">${coach?"تقدير تقريبي من الأيام المسجلة، بيساعدك تفسّر تغيّر الوزن وتظبط البرنامج بنفسك.":"الكوتش بيشوفها عشان يفهم تغيّر وزنك ويظبط برنامجك بنفسه. التطبيق مش بيغيّر حاجة لوحده ومش بيدّي نصايح طبية. مش هتظهر لأي حد تاني، ولا في الدوري."}${coach?"":` <a href="#" id="cycHide" style="color:var(--acc,#ff6a13);font-weight:700">إخفاء الكارد</a>`}</div></div>`;
-  if(coach) return;
-  host.querySelectorAll("[data-ck]").forEach(b=>b.onclick=async()=>{
-    const k=b.dataset.ck; let r;
-    if(cur===k) r=await sb.from("cycle_logs").delete().eq("client_id",p.id).eq("log_date",S.date);
-    else r=await sb.from("cycle_logs").upsert({client_id:p.id,log_date:S.date,kind:k},{onConflict:"client_id,log_date"});
-    if(r.error) return toast("مقدرتش أحفظ، جرّب تاني"); toast("✓ اتحفظ"); cycleCard(host,p,rerender);
-  });
-  const h=$("#cycHide"); if(h) h.onclick=e=>{ e.preventDefault(); localStorage.setItem("cyc_hide","1"); rerender&&rerender(); };
-}
-async function viewHabits(el){
-  const p=S.client;
-  const { data:all } = await sb.from("habits").select("*").eq("client_id",p.id).order("log_date");
-  const H=all||[], cur=H.find(h=>h.log_date===S.date)||{}, rec={...cur}, w=weekOfDate(p,S.date);
-  const scoreRow=(k,l)=>`<div style="margin-bottom:12px"><div class="muted" style="font-weight:700;margin-bottom:6px">${l}</div><div class="scorerow" data-score="${k}">${SCORE.map(([v,e,t])=>`<button class="chip ${cur[k]!==null&&cur[k]!==undefined&&+cur[k]===v?"on":""}" data-v="${v}">${e} ${t}</button>`).join("")}</div></div>`;
-  el.innerHTML=`<div class="card"><div class="between"><button class="btn sm" id="dPrev">→</button><div style="text-align:center"><b>${niceDate(S.date)}</b><div class="muted">${w?"الأسبوع "+w:""}</div></div><button class="btn sm" id="dNext">←</button></div></div>
-    <div class="card"><div class="card-h"><div class="ic acc">⭐</div><h2>يومك<small>اختار درجة التزامك</small></h2><div id="dayScore">${ring(dayScore(cur)||0,1,{size:56,stroke:6,label:pct(dayScore(cur))})}</div></div>
-      <style>.scorerow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.scorerow .chip{padding:6px 2px;font-size:.74rem;min-height:40px;text-align:center;white-space:nowrap}</style>${scoreRow("diet","🥗 الدايت")}${scoreRow("training","💪 التمرين")}${scoreRow("cardio","🏃 الكارديو")}${scoreRow("sleep_quality","😴 جودة النوم")}
-      <div class="grid2"><label class="f">🤯 التوتر<select data-k="stress"><option value=""></option>${STRESS.map(s=>`<option ${cur.stress===s?"selected":""}>${s}</option>`).join("")}</select></label>
-       <label class="f">💤 ساعات النوم<input inputmode="decimal" data-k="sleep_hours" value="${esc(cur.sleep_hours??"")}"></label>
-       <label class="f">💧 المياه (لتر)<input inputmode="decimal" data-k="water_l" value="${esc(cur.water_l??"")}"></label>
-       <label class="f">👣 الخطوات${p.steps_goal?` <small>(الهدف ${fmt(p.steps_goal)})</small>`:""}<input inputmode="numeric" data-k="steps" value="${esc(cur.steps??"")}"></label>
-       <label class="f">🏃 دقايق الكارديو${p.cardio_plan?.minutes?` <small>(المطلوب ${fmt(p.cardio_plan.minutes)})</small>`:""}<input inputmode="numeric" data-k="cardio_min" value="${esc(cur.cardio_min??"")}"></label>
-</div>
-      <div id="ghSlot"></div>
-      <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
-      <button class="btn primary block" id="hSave">حفظ اليوم</button></div>
-    <div id="cycSlot"></div>
-    <div class="card"><div class="card-h"><div class="ic">🗓</div><h2>خريطة الالتزام<small>كل مربع = يوم</small></h2></div>${heatmap(p,H)}</div>
-    <div class="card" id="hWeeks"></div>`;
-  $("#dPrev").onclick=()=>{S.date=addDays(S.date,-1); viewHabits(el);};
-  $("#dNext").onclick=()=>{S.date=addDays(S.date,1); viewHabits(el);};
-  window.ghRenderStepsSlot&&window.ghRenderStepsSlot($("#ghSlot"),p,()=>viewHabits(el));
-  cycleCard($("#cycSlot"),p,()=>viewHabits(el));
-  el.querySelectorAll("[data-score]").forEach(g=>g.querySelectorAll("button").forEach(b=>b.onclick=()=>{
-    g.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); rec[g.dataset.score]=+b.dataset.v;
-    $("#dayScore").innerHTML=ring(dayScore(rec)||0,1,{size:56,stroke:6,label:pct(dayScore(rec))}); }));
-  $("#hSave").onclick=async()=>{
-    const v=k=>el.querySelector(`[data-k="${k}"]`);
-    const out={client_id:p.id,log_date:S.date,diet:rec.diet??null,training:rec.training??null,cardio:rec.cardio??null,sleep_quality:rec.sleep_quality??null,
-      stress:v("stress").value||null,sleep_hours:num(v("sleep_hours").value),water_l:num(v("water_l").value),steps:num(v("steps").value),cardio_min:num(v("cardio_min").value),notes:v("notes").value.trim()||null,updated_at:new Date().toISOString()};
-    const { error, queued } = await dbWrite({op:"upsert",table:"habits",row:out,onConflict:"client_id,log_date"}); if(error) return toast(error.message); toast(queued?"📴 اتحفظ على الموبايل":"✓ اتحفظ"); if(!queued) viewHabits(el);
-  };
-  const wk=currentWeek(p), by={}; H.forEach(h=>{ const x=weekOfDate(p,h.log_date); if(x) (by[x]=by[x]||[]).push(h); });
-  $("#hWeeks").innerHTML=`<div class="card-h"><div class="ic">📊</div><h2>المتوسط الأسبوعي</h2></div><div class="scrollx"><table><tr><th>أسبوع</th><th>دايت</th><th>تمرين</th><th>كارديو</th><th>نوم</th><th>ساعات</th><th>خطوات</th><th>أيام</th></tr>
-    ${blockWeeks(wk).filter(w=>w<=Math.max(wk,BLOCK)).map(w=>{ const a=by[w]||[], c=w===wk?"cur":""; return `<tr><td class="${c}"><b>${w}</b></td><td class="${c}">${pct(avg(a.map(h=>h.diet)))}</td><td class="${c}">${pct(avg(a.map(h=>h.training)))}</td><td class="${c}">${pct(avg(a.map(h=>h.cardio)))}</td><td class="${c}">${pct(avg(a.map(h=>h.sleep_quality)))}</td><td class="${c} num">${fmt(avg(a.map(h=>h.sleep_hours)),1)}</td><td class="${c} num">${fmt(avg(a.map(h=>h.steps)))}</td><td class="${c}">${a.length||""}</td></tr>`; }).join("")}</table></div>`;
-}
-
-/* ======================================================================
-   BODY
-   ====================================================================== */
-async function viewBody(el){
-  S.bodySeg=S.bodySeg||"m";
-  el.innerHTML=`<div class="seg" style="margin-bottom:14px"><button data-bs="m" class="${S.bodySeg==="m"?"on":""}">📏 القياسات</button><button data-bs="c" class="${S.bodySeg==="c"?"on":""}">📸 المتابعة الأسبوعية</button><button data-bs="p" class="${S.bodySeg==="p"?"on":""}">🎬 بوزينج</button><button data-bs="k" class="${S.bodySeg==="k"?"on":""}">🏁 بيك ويك</button></div><div id="bodyHost"></div>`;
-  el.querySelectorAll("[data-bs]").forEach(b=>b.onclick=()=>{ S.bodySeg=b.dataset.bs; viewBody(el); });
-  if(S.bodySeg==="p") return viewPosing($("#bodyHost"));
-  if(S.bodySeg==="k") return viewPeak($("#bodyHost"));
-  return S.bodySeg==="c" ? viewCheckin($("#bodyHost")) : viewMeasures($("#bodyHost"));
-}
-function weightTrend(B,p){
-  const W=B.filter(b=>b.weight&&b.week>=0).map(b=>({x:b.week,y:+b.weight})).sort((a,b)=>a.x-b.x);
-  if(W.length<3) return null;
-  const MA=W.map((pt,i)=>{ const w=W.slice(Math.max(0,i-2),i+1); return {x:pt.x,y:w.reduce((a,q)=>a+q.y,0)/w.length}; });
-  const R=W.slice(-4), n=R.length, mx=R.reduce((a,q)=>a+q.x,0)/n, my=R.reduce((a,q)=>a+q.y,0)/n;
-  const den=R.reduce((a,q)=>a+(q.x-mx)**2,0), rate=den?R.reduce((a,q)=>a+(q.x-mx)*(q.y-my),0)/den:0;
-  const last=MA[MA.length-1].y, pctWk=rate/last*100, g=p.goal||"";
-  let kind="ok", text="الاتجاه ماشي كويس";
-  if(/تنشيف|خسارة|تخسيس/.test(g)){ if(rate>-0.1){ kind="warn"; text="الوزن واقف – وقت تعدّل السعرات أو الكارديو"; } else if(pctWk<-1){ kind="warn"; text="النزول سريع – خلي بالك على العضلات"; } else text="نزول مضبوط 👌"; }
-  else if(/زيادة|تضخيم|بناء/.test(g)){ if(rate<0.05){ kind="warn"; text="الوزن مش بيزيد – وقت تزوّد السعرات"; } else if(pctWk>0.5){ kind="warn"; text="الزيادة سريعة – ممكن تبقى دهون زيادة"; } else text="زيادة مضبوطة 👌"; }
-  else text=Math.abs(rate)<0.15?"الوزن ثابت":"الوزن بيتغير";
-  return {MA,rate,kind,text,last};
-}
-function weightTrendCard(B,p){
-  const t=weightTrend(B,p); if(!t) return `<div class="card"><div class="card-h"><div class="ic acc">📉</div><h2>اتجاه الوزن<small>بيظهر بعد 3 قياسات</small></h2></div></div>`;
-  return `<div class="card wtrend ${t.kind}"><div class="card-h"><div class="ic acc">📉</div><h2>اتجاه الوزن<small>متوسط متحرك – مش وزن يوم واحد</small></h2></div>
-    <div class="wt-row"><b class="num">${fmt(t.last,1)}</b><span>كجم (متوسط)</span><span class="pill ${t.kind==="warn"?"acc":"acc-soft"}">${t.rate>0?"▲":"▼"} ${fmt(Math.abs(t.rate),2)} كجم/أسبوع</span></div>
-    <p class="wt-v">${t.kind==="warn"?"⚠ ":"✅ "}${t.text}</p>${lineChart(t.MA,"كجم","#F97316")}</div>`;
-}
-async function viewMeasures(el){
-  const p=S.client, { data } = await sb.from("body_logs").select("*").eq("client_id",p.id).order("week");
-  const B=data||[], wk=currentWeek(p), sel=S.bodyWeek ?? (B.find(b=>b.week===0)?wk:0);
-  const cur=B.find(b=>b.week===sel)||{}, start=B.find(b=>b.week===0)||{};
-  const F=[["weight","⚖ الوزن","كجم"],["waist","الوسط","سم"],["neck","الرقبة","سم"],["chest","الصدر","سم"],["arm","الذراع","سم"],["thigh","الفخذ","سم"],["hips","الأرداف","سم"],["bodyfat","الدهون","%"]];
-  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📏</div><h2>القياسات الأسبوعية<small>مرة في الأسبوع – نفس اليوم والتوقيت</small></h2></div>
-      ${blockNavHTML(sel||1,p)}<div class="scroller">${[0,...blockWeeks(sel||wk||1)].map(i=>`<button class="chip ${sel===i?"on":""} ${wk===i&&i?"cur":""}" data-w="${i}">${i?"أسبوع "+i:"البداية"}${B.find(b=>b.week===i&&b.weight)?" ✓":""}</button>`).join("")}</div>
-      <div class="grid2" style="margin-top:12px"><label class="f">📅 التاريخ<input type="date" data-k="log_date" value="${esc(cur.log_date??today())}"></label>
-      ${F.map(([k,l,u])=>{ const d=sel&&start[k]&&cur[k]?cur[k]-start[k]:null; return `<label class="f">${l} (${u})<input inputmode="decimal" data-k="${k}" value="${esc(cur[k]??"")}">${d!==null?`<span class="pill ${d<0?"acc-soft":""}" style="margin-top:4px">${d>0?"▲":"▼"} ${fmt(Math.abs(d),1)} منذ البداية</span>`:""}</label>`; }).join("")}</div>
-      <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
-      <button class="btn primary block" id="bSave">حفظ ${sel?"الأسبوع "+sel:"قياسات البداية"}</button></div>
-    ${weightTrendCard(B,p)}
-    <div class="card"><div class="card-h"><div class="ic acc">⚖</div><h2>منحنى الوزن</h2></div>${lineChart(B.filter(b=>b.weight).map(b=>({x:b.week,y:+b.weight})),"كجم")}</div>
-    <div class="card"><div class="card-h"><div class="ic">📐</div><h2>منحنى الوسط</h2></div>${lineChart(B.filter(b=>b.waist).map(b=>({x:b.week,y:+b.waist})),"سم")}</div>`;
-  el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{S.bodyWeek=+b.dataset.w; viewMeasures(el);});
-  $("#bSave").onclick=async()=>{
-    const v=k=>el.querySelector(`[data-k="${k}"]`).value;
-    const rec={client_id:p.id,week:sel,log_date:v("log_date")||null,notes:v("notes").trim()||null,updated_at:new Date().toISOString()};
-    F.forEach(([k])=>rec[k]=num(v(k)));
-    const { error, queued } = await dbWrite({op:"upsert",table:"body_logs",row:rec,onConflict:"client_id,week"}); if(error) return toast(error.message); toast(queued?"📴 اتحفظ على الموبايل":"✓ اتحفظ"); if(!queued) viewMeasures(el);
+function wireAssessment(root,p,onSaved){
+  const pv=()=>{ const items=[...root.querySelectorAll(".ohsa input:checked")].map(i=>i.value); const R=correctiveRoutine({items});
+    root.querySelectorAll(".ohsa-i").forEach(l=>l.classList.toggle("on",l.querySelector("input").checked));
+    $("#ohPv").innerHTML=R?`<div class="pv-meta">${R.map(([l,d,list])=>`<div style="margin-bottom:6px"><b>${l}</b> <small class="muted">${d}</small><div class="chips">${list.map(x=>`<span class="pill">${esc(x)}</span>`).join("")}</div></div>`).join("")}</div>`:`<div class="pv-ok">✅ مفيش تعويضات – الإحماء العام كفاية</div>`; };
+  root.querySelectorAll(".ohsa input").forEach(i=>i.onchange=pv); pv();
+  $("#ohSave").onclick=async()=>{
+    const assessment={date:today(), items:[...root.querySelectorAll(".ohsa input:checked")].map(i=>i.value), notes:$("#ohN").value.trim()};
+    const { error } = await sb.from("profiles").update({assessment}).eq("id",p.id); if(error) return toast(error.message);
+    p.assessment=assessment; toast("✓ اتحفظ – الروتين ظهر للعميل قبل كل تمرين"); onSaved&&onSaved();
   };
 }
 
-async function homeCheckinCard(p,wk){
-  const host=$("#hCI"); if(!host) return;
-  const { data } = await sb.from("checkins").select("week,reviewed_at,coach_reply").eq("client_id",p.id).order("week",{ascending:false}).limit(3);
-  if(!host.isConnected) return;
-  const C=data||[], thisW=C.find(c=>c.week===wk), lastReply=C.find(c=>c.coach_reply), sub=S.me.role==="client"?subStatus(p):null;
-  host.innerHTML=(sub&&sub.cls!=="good"?`<div class="card" style="border:1.5px solid var(--acc-line)"><div class="card-h"><div class="ic acc">${sub.icon}</div><h2>اشتراكك<small>${esc(sub.text)}</small></h2><button class="btn sm primary" onclick="openPlansSheet()">جدّد</button></div></div>`:"")+
-    `<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>متابعة الأسبوع ${wk}<small>${thisW?(thisW.reviewed_at?"✓✓ الكوتش رد":"✓ اتبعتت – مستنية رد الكوتش"):"لسه ما اتبعتتش – وزن + صور + إحساسك"}</small></h2><button class="btn sm ${thisW?"":"primary"}" id="goCI">${thisW?"عرض":"ابعت"}</button></div>
-     ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
-  $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
+/* ---------- 2) body composition (US Navy) ---------- */
+function bodyComp(p, m){
+  const h=+p.height_cm, w=+m.weight, wa=+m.waist, n=+m.neck, hip=+m.hips;
+  let bf=m.bodyfat?+m.bodyfat:null, src="مُدخلة";
+  if(!bf&&h&&wa&&n&&wa>n){
+    bf = p.sex==="أنثى" ? (hip? 495/(1.29579-0.35004*Math.log10(wa+hip-n)+0.22100*Math.log10(h))-450 : null)
+                       : 495/(1.0324-0.19077*Math.log10(wa-n)+0.15456*Math.log10(h))-450;
+    src="معادلة البحرية الأمريكية";
+  }
+  if(bf!==null&&(bf<3||bf>60)) bf=null;
+  const lean=bf!==null&&w?w*(1-bf/100):null, hm=h/100;
+  const ffmi=lean&&h?lean/(hm*hm)+6.1*(1.8-hm):null, whtr=wa&&h?wa/h:null;
+  return {bf,src,lean,fat:lean?w-lean:null,ffmi,whtr};
 }
+function bodyCompCard(p, m){
+  const c=bodyComp(p,m||{});
+  const bfBand=c.bf===null?"":p.sex==="أنثى"?(c.bf<14?"رياضي جداً":c.bf<21?"رياضي":c.bf<25?"لياقة":c.bf<32?"متوسط":"أعلى من الصحي"):(c.bf<6?"رياضي جداً":c.bf<14?"رياضي":c.bf<18?"لياقة":c.bf<25?"متوسط":"أعلى من الصحي");
+  const ff=c.ffmi===null?"":c.ffmi<18?"تحت المتوسط":c.ffmi<20?"متوسط":c.ffmi<22?"فوق المتوسط":c.ffmi<24?"عضلي جداً":"نخبة";
+  return `<div class="card"><div class="card-h"><div class="ic acc">🧬</div><h2>تركيب الجسم<small>${c.bf!==null?"نسبة الدهون: "+c.src:"اكتب الوسط + الرقبة"+(p.sex==="أنثى"?" + الأرداف":"")+" عشان نحسبها"}</small></h2></div>
+    <div class="grid4"><div class="stat dark"><div class="l">الدهون</div><div class="v num">${c.bf===null?"—":fmt(c.bf,1)+"%"}</div><div class="s">${bfBand}</div></div>
+    <div class="stat"><div class="l">الكتلة الصافية</div><div class="v num">${fmt(c.lean,1)}</div><div class="s">كجم</div></div>
+    <div class="stat"><div class="l">FFMI</div><div class="v num">${fmt(c.ffmi,1)}</div><div class="s">${ff}</div></div>
+    <div class="stat ${c.whtr&&c.whtr>=0.5?"acc":""}"><div class="l">الوسط ÷ الطول</div><div class="v num">${fmt(c.whtr,2)}</div><div class="s">${c.whtr===null?"":c.whtr<0.5?"✅ صحي":"⚠ فوق 0.5"}</div></div></div>
+    <p class="hint" style="margin-top:8px">💡 الميزان لوحده بيكدب: لو الوزن ثابت والوسط بينزل والـ FFMI بيزيد = بتخسر دهون وبتبني عضل.</p></div>`;
+}
+
+/* ---------- 3) safe rate of change + goal projection ---------- */
+const wOk=w=>w>=25&&w<=350;
+function trend(B){ const P=B.filter(b=>b.weight&&wOk(+b.weight)).map(b=>[+b.week,+b.weight]).slice(-4); if(P.length<2||Math.max(...P.map(x=>x[0]))-Math.min(...P.map(x=>x[0]))<1) return null;
+  const n=P.length, mx=avg(P.map(x=>x[0])), my=avg(P.map(x=>x[1])); const s=P.reduce((a,[x,y])=>a+(x-mx)*(y-my),0)/P.reduce((a,[x])=>a+(x-mx)**2,0)||0;
+  const pct=s/P[n-1][1]*100; return {kg:s, pct, cur:P[n-1][1], odd:Math.abs(pct)>5}; }
+const wksAr=n=>n===1?"أسبوع":n===2?"أسبوعين":n<=10?n+" أسابيع":n+" أسبوع";
+function rateVerdict(goal,pct){
+  if(/تنشيف/.test(goal||"")) return pct<-1?["bad","⚠ سريع جداً – غالباً بتخسر عضل. زوّد السعرات 100-200"]:pct<=-0.4?["good","✅ مثالي لخسارة الدهون مع الحفاظ على العضل"]:pct<0?["mid","🐢 بطيء – راجع الالتزام أو قلل 100-150 سعر"]:["bad","⛔ الوزن مش بينزل – محتاج مراجعة الدايت"];
+  if(/زيادة/.test(goal||"")) return pct>0.6?["bad","⚠ سريع – غالباً دهون. قلل 100-200 سعر"]:pct>=0.2?["good","✅ مثالي لبناء عضل نضيف"]:["mid","🐢 بطيء – زوّد 100-200 سعر"];
+  return Math.abs(pct)<=0.3?["good","✅ ثابت زي المطلوب"]:["mid","↕ فيه تغيّر – راجع السعرات"];
+}
+function goalCardHTML(p,B){
+  const t=trend(B||[]), tw=+p.target_weight||null;
+  if(!t&&!tw) return "";
+  const v=t&&!t.odd?rateVerdict(p.goal,t.pct):null;
+  let eta="";
+  if(t&&!t.odd&&tw){ const left=tw-t.cur; if(Math.abs(left)<0.3) eta="🎉 وصلت لهدفك!"; else if(Math.sign(left)===Math.sign(t.kg)&&Math.abs(t.kg)>0.05){ const wks=Math.ceil(left/t.kg); eta=`🎯 بالمعدل ده هتوصل ${fmt(tw,1)} كجم بعد ~${wksAr(wks)} (${niceDate(addDays(today(),wks*7))})`; } else eta=`🎯 الهدف ${fmt(tw,1)} كجم – الاتجاه الحالي مش رايح ناحيته`; }
+  return `<div class="card goal ${v?v[0]:""}"><div class="card-h"><div class="ic acc">🎯</div><h2>معدل التغيّر والهدف<small>متوسط آخر ${Math.min(4,(B||[]).filter(b=>b.weight).length)} قياسات</small></h2></div>
+    ${t&&t.odd?`<p class="verdict">⚠ أرقام الوزن المسجلة مش منطقية، راجع القياسات قبل ما نحسب المعدل.</p>`:""}
+    ${t&&!t.odd?`<div class="grid2"><div class="stat dark"><div class="l">في الأسبوع</div><div class="v num">${t.kg>0?"+":""}${fmt(t.kg,2)}</div><div class="s">كجم</div></div><div class="stat"><div class="l">من وزن الجسم</div><div class="v num">${t.pct>0?"+":""}${fmt(t.pct,2)}%</div><div class="s">المثالي: ${/تنشيف/.test(p.goal||"")?"-0.5 → -1%":/زيادة/.test(p.goal||"")?"+0.25 → +0.5%":"±0.25%"}</div></div></div><p class="verdict">${v[1]}</p>`:""}
+    ${eta?`<p class="hint" style="margin:6px 0 0">${eta}</p>`:""}</div>`;
+}
+function rateAlert(c){
+  const W=(S.overview?.[c.id]?.weights||[]).map(([week,weight])=>({week,weight})); const t=trend(W); if(!t||t.odd) return null;
+  if(/تنشيف/.test(c.goal||"")&&t.pct<-1.2) return {p:2,icon:"📉",text:`بيخسر ${fmt(Math.abs(t.pct),1)}%/أسبوع – خطر خسارة عضل`};
+  if(/زيادة/.test(c.goal||"")&&t.pct>0.8) return {p:2,icon:"📈",text:`بيزيد ${fmt(t.pct,1)}%/أسبوع – غالباً دهون`};
+  return null;
+}
+
+/* ---------- 4) heart-rate zones (Karvonen, Tanaka HRmax) ---------- */
+const ZONES=[["Z1","50-60%","استشفاء / مشي هادي","تقدر تغني",.5,.6,"#CBD5E1"],["Z2","60-70%","قاعدة هوائية · حرق دهون","تتكلم جمل كاملة",.6,.7,"#FDBA74"],["Z3","70-80%","تيمبو","كلام متقطع",.7,.8,"#FB923C"],["Z4","80-90%","عتبة لاكتيك","كلمتين بالعافية",.8,.9,"#F97316"],["Z5","90-100%","أقصى جهد / سبرنت","مستحيل تتكلم",.9,1,"#C2410C"]];
+function hrCardHTML(p){
+  if(!p.age) return "";
+  const rhr=+localStorage.getItem("mofit_rhr_"+p.id)||null, max=Math.round(208-0.7*p.age), r=rhr||70;
+  const bpm=f=>Math.round(r+(max-r)*f);
+  const plan=/تنشيف/.test(p.goal||"")?"150-300 دقيقة Z2 في الأسبوع + 8-10 ألف خطوة يومياً · فترات Z4 مرة واحدة بس":/زيادة/.test(p.goal||"")?"2-3 مرات × 20 دقيقة Z2 للقلب والاستشفاء – أكتر من كده بيسرق السعرات":"150 دقيقة Z2 في الأسبوع + 7-8 ألف خطوة";
+  return `<div class="card"><div class="card-h"><div class="ic acc">❤️</div><h2>مناطق النبض للكارديو<small>أقصى نبض ${max} · ${rhr?"نبض الراحة "+rhr:"اكتب نبض الراحة الصبح لدقة أعلى"}</small></h2></div>
+    <label class="f">نبض الراحة (قيسه أول ما تصحى)<input inputmode="numeric" id="rhr" value="${rhr||""}" placeholder="مثلاً 62"></label>
+    <div class="zones">${ZONES.map(z=>`<div class="zone"><i style="background:${z[6]}"></i><b>${z[0]}</b><span class="num">${bpm(z[4])}–${bpm(z[5])}</span><small>${z[2]} · ${z[3]}</small></div>`).join("")}</div>
+    <p class="hint" style="margin-top:8px">🏃 خطتك: ${plan}</p></div>`;
+}
+function wireHr(p,redraw){ const i=$("#rhr"); if(i) i.onchange=()=>{ const v=parseInt(i.value); if(v>=35&&v<=110) localStorage.setItem("mofit_rhr_"+p.id,v); else localStorage.removeItem("mofit_rhr_"+p.id); i.onchange=null; setTimeout(redraw,0); }; }
+
+/* ---------- 5) strength standards (e1RM ÷ bodyweight) ---------- */
+const LIFTS=[["سكوات",/BACK SQUAT|FRONT SQUAT/i,[.75,1.25,1.75,2.5],[.5,.75,1.25,1.75]],["بنش",/BENCH PRESS(?!.*CLOSE)/i,[.5,.75,1.25,1.75],[.25,.5,.75,1]],["ديدلفت",/CONVENTIONAL DEADLIFT|TRAP BAR DEADLIFT/i,[1,1.5,2,2.75],[.5,1,1.5,2.25]],["أوفرهيد",/OVERHEAD PRESS/i,[.4,.55,.8,1.05],[.2,.35,.5,.75]]];
+const LVL=["مبتدئ","متوسط","متقدم","نخبة"];
+function strengthCardHTML(p,sets,bw){
+  if(!bw) return "";
+  const nameOf=Object.fromEntries(S.program.map(e=>[e.id,e.name]));
+  const rows=LIFTS.map(([l,re,m,f])=>{ const best=Math.max(0,...(sets||[]).filter(s=>re.test(nameOf[s.exercise_id]||"")).map(s=>e1rm(s)||0)); if(!best) return null;
+    const th=p.sex==="أنثى"?f:m, r=best/bw, i=th.filter(x=>r>=x).length; const nxt=th[i];
+    const prog=nxt?Math.min(100,((r-(th[i-1]||0))/(nxt-(th[i-1]||0)))*100):100;
+    return `<div class="lift"><div class="lift-h"><b>${l}</b><span class="pill ${i>=2?"acc":""}">${i?LVL[i-1]:"بداية"}</span><span class="num muted">${fmt(best,1)} كجم · ×${fmt(r,2)}</span></div><div class="bar"><i style="width:${prog}%"></i></div><small>${nxt?`المستوى الجاي (${LVL[i]}) عند ${fmt(nxt*bw,1)} كجم`:"🏆 أعلى مستوى"}</small></div>`; }).filter(Boolean);
+  if(!rows.length) return "";
+  return `<div class="card"><div class="card-h"><div class="ic">🏆</div><h2>مستوى قوتك<small>1RM المقدّر ÷ وزن الجسم · معايير تقريبية</small></h2></div>${rows.join("")}</div>`;
+}
+
+/* ---------- 6) education: tip of the day ---------- */
+const TIPS=[
+  ["RIR","RIR = عدد العدات اللي كان ممكن تعملها زيادة. RIR 2 يعني وقفت وفاضلك عدتين. ده أهم رقم بتسجله."],
+  ["التطور التدريجي","العضل بيكبر لما تطلب منه أكتر: عدة زيادة، أو 2.5 كجم زيادة، أو تكنيك أنضف بنفس الوزن. مش لازم كل مرة أوزان."],
+  ["البروتين","وزّع البروتين على 3-5 وجبات (25-40 جم كل وجبة) – أحسن لبناء العضل من وجبة واحدة كبيرة."],
+  ["النوم","أقل من 7 ساعات نوم بيقلل القوة وبيزوّد الجوع وبيخلي التنشيف ياكل من العضل. النوم جزء من البرنامج."],
+  ["الخطوات","الخطوات اليومية (NEAT) ممكن تحرق أكتر من الكارديو. 8-10 ألف خطوة = فرق كبير في التنشيف."],
+  ["الوزن بيتذبذب","الوزن ممكن يتغيّر 1-2 كجم في يوم بسبب المية والملح والكارب. احكم على متوسط الأسبوع مش يوم واحد."],
+  ["التمبو","تمبو 3-1-1-0 يعني 3 ثواني نزول، ثانية وقفة، ثانية طلوع. النزول البطيء = تحكم أكتر وإصابات أقل."],
+  ["الألم الطبيعي","الشد العضلي بعد التمرين (DOMS) طبيعي ومش مقياس لجودة التمرين. الألم الحاد في المفصل لأ – بلّغ عنه."],
+  ["الكرياتين","الكرياتين مونوهيدرات 3-5 جم يومياً من أكتر المكملات المثبتة علمياً للقوة. استشير الكوتش أو الدكتور الأول لو عندك مشكلة صحية."],
+  ["المية","اشرب حوالي 35 مل لكل كيلو من وزنك يومياً، وزوّد في الحر والتمرين. لون البول الفاتح = مؤشر كويس."],
+  ["الديلود","أسبوع الديلود مش كسل – هو اللي بيخليك تكمّل تتطور من غير إصابة. الجسم بيبني وقت الراحة."],
+  ["الإحماء","5 دقايق إحماء + مجموعات تصاعدية للتمرين الأول بيقللوا الإصابة وبيزوّدوا قوتك في مجموعات الشغل."],
+  ["الالياف","25-35 جم ألياف يومياً (خضار، فاكهة، شوفان، بقوليات) = شبع أطول وهضم أحسن، خصوصاً في التنشيف."],
+  ["الاستمرارية","80% التزام لمدة سنة أحسن بكتير من 100% لمدة شهر. لو يوم باظ، الوجبة الجاية بداية جديدة."],
+  ["الوجبة قبل التمرين","وجبة فيها كارب + بروتين قبل التمرين بساعة ونص لـ 3 ساعات = طاقة أحسن وأداء أعلى."],
+  ["التنفّس والثبات","في التمارين التقيلة: خد نفس عميق في بطنك واشدها قبل ما تنزل (Bracing) – بيحمي ضهرك."],
+  ["القياسات","صوّر نفسك كل أسبوع بنفس الإضاءة والوقت. الصور بتكشف تقدم الميزان مش شايفه."],
+  ["الكحول والسكر","المشروبات المسكّرة والعصاير سعرات سايلة مابتشبعش. استبدلها بمية أو شاي أو مشروبات دايت."],
+  ["الفشل العضلي","الفشل التام مش لازم في كل مجموعة. أغلب المجموعات على RIR 1-3 بتدي نفس النتيجة بإرهاق أقل."],
+  ["الصبر","أول 4-8 أسابيع أغلب التطور عصبي (قوة). العضل الظاهر بياخد 8-12 أسبوع – كمّل."],
+];
+function tipCardHTML(){
+  const d=Math.floor(Date.now()/864e5), [t,b]=TIPS[d%TIPS.length];
+  return `<div class="card tip"><div class="tip-k">📚 معلومة اليوم</div><b>${t}</b><p>${b}</p></div>`;
+}
+
+/* ---------- 7) today's focus checklist ---------- */
+function todayCardHTML(p,{dn,setsThisDay,meals,habitToday,ready}){
+  const items=[];
+  if(dn) items.push(["train",setsThisDay>0,"🏋","تمرين النهارده",setsThisDay?`${setsThisDay} مجموعات اتسجلت`:"ابدأ وسجّل مجموعاتك"]);
+  if(dn) items.push(["ready",!!ready,"🔋","قيّم جاهزيتك","10 ثواني قبل التمرين"]);
+  items.push(["food",meals>0,"🍽","سجّل أكلك",meals?`${meals} أصناف`:"على الأقل الوجبات الأساسية"]);
+  items.push(["habits",!!habitToday,"✅","عادات اليوم","نوم · مية · خطوات"]);
+  const done=items.filter(i=>i[1]).length, pctv=done/items.length;
+  return `<div class="card today"><div class="today-h"><div>${ring(done,items.length,{size:64,label:`${done}/${items.length}`,sub:""})}</div><div><b>${pctv===1?"🔥 يوم كامل – عاش!":pctv>=.5?"كمّل… فاضل خطوة":"اللي عليك النهارده"}</b><small>${niceDate(today())}</small></div></div>
+    ${items.map(([k,ok,ic,t,s])=>`<button class="todo ${ok?"ok":""}" data-go="${k}"><span class="tick">${ok?"✓":ic}</span><span><b>${t}</b><small>${s}</small></span><span class="go">←</span></button>`).join("")}</div>`;
+}
+function wireToday(dn,wk){
+  document.querySelectorAll("[data-go]").forEach(b=>b.onclick=()=>{ const k=b.dataset.go;
+    if(k==="train"){ S.tab="train"; S.day=dn; S.week=wk; } else if(k==="ready"){ S.tab="train"; S.day=dn; S.week=wk; render(); return setTimeout(()=>openReadiness(()=>render()),300); } else if(k==="food"){ S.tab="food"; S.date=today(); } else S.tab="habits";
+    render(); });
+}
+
+/* ---------- 8) first-run onboarding ---------- */
+const ONB=[
+  ["✨","أهلاً بيك في Mofit","ده مكانك الوحيد للتمرين والأكل والمتابعة مع الكوتش. كل حاجة بتسجلها الكوتش بيشوفها ويعدّل عليها."],
+  ["🏋","سجّل كل مجموعة","الوزن + العدات + RIR (كام عدة كان فاضلك). من غيرهم الكوتش مايقدرش يزوّدلك صح. الأرقام الرمادي = هدفك المقترح."],
+  ["🔋","التطبيق بيتأقلم معاك","قيّم جاهزيتك قبل التمرين، ولو وقتك ضيق دوس ⏱. لو حسيت بألم دوس 🤕 – ماتكملش على الوجع أبداً."],
+  ["📸","كل أسبوع: متابعة","وزن + 3 صور + إحساسك. الكوتش بيرد عليك ويعدّل البرنامج. الالتزام 80% أحسن من الكمال اللي بيقف بعد أسبوعين."],
+];
+function maybeOnboard(){
+  if(S.me.role!=="client") return; const key="mofit_onb_"+S.me.id; if(localStorage.getItem(key)) return;
+  let i=0; const draw=()=>{ const [ic,t,b]=ONB[i];
+    const body=openSheet(`<div class="onb"><div class="onb-step">خطوة ${i+1} من ${ONB.length}</div><div class="onb-ic">${ic}</div><h3>${t}</h3><p>${b}</p><div class="dots">${ONB.map((_,j)=>`<i class="${j===i?"on":""}"></i>`).join("")}</div>
+      <button class="btn primary block" id="onbN">${i<ONB.length-1?"التالي ←":"يلا نبدأ 💪"}</button>${i<ONB.length-1?`<button class="btn ghost block" id="onbS" style="margin-top:6px">تخطّي</button>`:""}</div>`);
+    $("#onbN").onclick=()=>{ if(i<ONB.length-1){ i++; draw(); } else { localStorage.setItem(key,"1"); closeSheet(); } };
+    $("#onbS")&&($("#onbS").onclick=()=>{ localStorage.setItem(key,"1"); closeSheet(); });
+  }; draw();
+}
+
+/* ---------- 9) install as an app ---------- */
+let _bip=null; window.addEventListener("beforeinstallprompt",e=>{ e.preventDefault(); _bip=e; });
+const isStandalone=()=>matchMedia("(display-mode: standalone)").matches||navigator.standalone;
+function installCardHTML(){
+  if(isStandalone()||localStorage.getItem("mofit_noinst")) return "";
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent);
+  return `<div class="card install"><div class="card-h"><div class="ic dark"><img src="icon-192.png" alt="" style="width:100%;height:100%;border-radius:12px"></div><h2>ثبّت Mofit على موبايلك<small>${ios?"اضغط زر المشاركة ⬆ ثم «إضافة إلى الشاشة الرئيسية»":"يفتح كأنه تطبيق ويشتغل من غير نت في الجيم"}</small></h2><button class="x" id="instX" aria-label="إخفاء">✕</button></div>
+    ${ios?"":`<button class="btn primary block" id="instGo">📲 ثبّت التطبيق</button>`}</div>`;
+}
+function wireInstall(){
+  $("#instX")&&($("#instX").onclick=()=>{ localStorage.setItem("mofit_noinst","1"); $(".install")?.remove(); });
+  $("#instGo")&&($("#instGo").onclick=async()=>{ if(_bip){ _bip.prompt(); await _bip.userChoice; _bip=null; $(".install")?.remove(); } else toast("من قائمة المتصفح ⋮ اختار «تثبيت التطبيق»"); });
+}
+
+/* ---------- 10) muscle colour system + anatomical map ---------- */
+const MUSCLE_COLOR={"صدر":"#F97316","ضهر":"#2563EB","أكتاف":"#F59E0B","باي":"#059669","تراي":"#0891B2","أمامية":"#7C3AED","خلفية/أرداف":"#DB2777","سمانة":"#65A30D","بطن":"#DC2626","أخرى":"#64748B"};
+const mColor=m=>MUSCLE_COLOR[m]||MUSCLE_COLOR["أخرى"];
+const ARM="M22 72Q18 88 20 104Q26 108 31 104Q33 90 31 80Z", FOREARM="M19 106Q14 124 16 146Q20 148 24 146Q30 126 31 106Z", DELT="M36 54Q24 56 22 70Q24 80 30 82Q34 70 40 60Z";
+const BODY_FRONT=[[null,"M54 36h12v10H54z",1],["ضهر","M52 44Q44 48 36 54L50 55Z"],["أكتاف",DELT],["صدر","M58 58L40 58Q32 64 32 76Q36 88 50 88Q58 86 59 80Z"],["باي",ARM],[null,FOREARM],
+  ["بطن","M33 86Q34 112 40 140L46 140Q44 112 46 90Z"],["بطن","M48.5 92h9v13h-9z"],["بطن","M48.5 107h9v13h-9z"],["بطن","M48.5 122h9v14h-9z"],[null,"M40 142L59 142L59 156Q48 156 40 148Z"],
+  ["أمامية","M38 150Q32 175 36 205Q44 212 52 206Q58 180 58 158Q48 160 38 150Z"],[null,"M39 211a6 5 0 1012 0a6 5 0 10-12 0z"],[null,"M38 218Q36 240 40 252L48 252Q52 236 51 218Z"],[null,"M37 256a7 3 0 1014 0a7 3 0 10-14 0z"],[null,"M12 153a4 7 0 108 0a4 7 0 10-8 0z"]];
+const BODY_BACK=[[null,"M54 36h12v10H54z",1],["ضهر","M58 78Q48 66 36 62Q34 84 44 110Q52 116 58 118Z"],["ضهر","M58 120Q50 118 44 114Q44 128 46 139L58 139Z"],["ضهر","M60 38L52 44Q42 50 36 56Q48 60 60 76Z"],
+  ["أكتاف",DELT],["تراي",ARM],[null,FOREARM],["خلفية/أرداف","M59 141L42 141Q34 150 38 166Q50 172 59 166Z"],["خلفية/أرداف","M38 168Q34 190 38 208Q46 212 54 206Q58 188 58 170Q48 172 38 168Z"],
+  ["سمانة","M38 216Q32 230 38 246L48 248Q54 232 52 216Z"],[null,"M37 256a7 3 0 1014 0a7 3 0 10-14 0z"],[null,"M12 153a4 7 0 108 0a4 7 0 10-8 0z"]];
+function anatomySVG(vol,{dark=false}={}){
+  const max=Math.max(1,...Object.values(vol)), base=dark?"rgba(255,255,255,.09)":"#E2E8F0", gap=dark?"#16213A":"#FFFFFF";
+  let order=0; const ord={}; Object.entries(vol).sort((a,b)=>b[1]-a[1]).forEach(([m])=>ord[m]=order++);
+  const part=([m,d,center])=>{ const v=m?vol[m]||0:0;
+    const fill=v?mColor(m):base, op=v?(0.5+0.5*v/max).toFixed(2):1;
+    const el=`<path d="${d}" fill="${fill}" fill-opacity="${op}" ${v?`class="mm-on" style="--d:${ord[m]*.12}s"`:""}/>`;
+    return center?el:el+`<path d="${d}" fill="${fill}" fill-opacity="${op}" transform="translate(120 0) scale(-1 1)" ${v?`class="mm-on" style="--d:${ord[m]*.12}s"`:""}/>`; };
+  const fig=(parts,x,label)=>`<g transform="translate(${x} 0)" stroke="${gap}" stroke-width="1.4" stroke-linejoin="round"><ellipse cx="60" cy="21" rx="12.5" ry="15" fill="${base}" stroke="none"/>${parts.map(part).join("")}</g>
+    <text x="${x+60}" y="276" text-anchor="middle" font-size="11" fill="${dark?"#94A3B8":"#64748B"}">${label}</text>`;
+  return `<svg class="anat" viewBox="0 0 250 282" role="img" aria-label="خريطة العضلات المستهدفة">${fig(BODY_FRONT,0,"أمام")}${fig(BODY_BACK,130,"خلف")}</svg>`;
+}
+function muscleVol(exs){ const v={}; exs.forEach(e=>{ const m=muscleOf(e[0]||e.name); if(m==="أخرى") return; v[m]=(v[m]||0)+(+(e[1]??e.sets)||0); }); return v; }
+function muscleLegend(vol,{dark=false}={}){ const tot=Object.values(vol).reduce((a,b)=>a+b,0)||1;
+  return `<div class="mlg ${dark?"dk":""}">${Object.entries(vol).sort((a,b)=>b[1]-a[1]).map(([m,v])=>`<div class="mlg-r"><i style="background:${mColor(m)}"></i><span>${m}</span><b class="num">${v}</b><em><s style="width:${Math.round(v/tot*100)}%;background:${mColor(m)}"></s></em></div>`).join("")}</div>`; }
+function muscleMapSVG(vol){ return `<div class="mmap">${anatomySVG(vol)}${muscleLegend(vol)}</div>`; }
+const mChip=m=>`<span class="mchip" style="--mc:${mColor(m)}"><i></i>${m}</span>`;
+
+/* ---------- 11) muscle-specific warm-up (RAMP: Raise · Activate/Mobilise · Potentiate) ---------- */
+const WU={
+  "صدر":{mob:[["فتح الصدر ديناميكي على الحيطة","10 لكل ناحية"],["T-spine rotation على الجنب","6 لكل ناحية"]],act:[["Scap push-ups","2 × 10"],["Band chest fly خفيف","15"]],why:"يفتح الكتف الأمامي ويثبّت لوح الكتف قبل الضغط"},
+  "ضهر":{mob:[["Cat-camel","8 ببطء"],["Thread the needle","6 لكل ناحية"]],act:[["Band pull-apart","2 × 15"],["Scap pull-ups على العقلة","8"]],why:"يشغّل عضلات لوح الكتف عشان السحب يكون من الضهر مش الدراع"},
+  "أكتاف":{mob:[["Band dislocates (عصاية/باند)","10"],["Arm circles كبيرة","10 لكل اتجاه"]],act:[["Band external rotation","12 لكل دراع"],["Prone Y-raise","10"]],why:"يجهّز الروتيتور كاف – أكتر مفصل بيتصاب في الجيم"},
+  "باي":{mob:[["دوران الكوع والرسغ","10 لكل اتجاه"]],act:[["Band curls خفيف","20"]],why:"يدفّي وتر الكوع قبل الأوزان"},
+  "تراي":{mob:[["إطالة تراي فوق الراس ديناميكي","8 لكل دراع"]],act:[["Band pushdowns","20"]],why:"يحمي الكوع في الضغط والتراي"},
+  "أمامية":{mob:[["Leg swings قدام-ورا","10 لكل رجل"],["Walking lunge + reach لفوق","6 لكل رجل"]],act:[["سكوات بوزن الجسم تمبو 3-1-1","10"],["Goblet squat hold تحت","20 ثانية"]],why:"يفتح الحوض والكاحل ويعلّم الجسم العمق الصح"},
+  "خلفية/أرداف":{mob:[["World's greatest stretch","4 لكل ناحية"],["90/90 hip switches","8"]],act:[["Glute bridge مع وقفة ثانيتين","2 × 12"],["Band lateral walk","10 خطوات لكل ناحية"],["Hip hinge بالعصاية","10"]],why:"يصحّي الجلوت والخلفية ويحمي أسفل الضهر في الديدلفت"},
+  "سمانة":{mob:[["Ankle rocks (الركبة للحيطة)","10 لكل رجل"]],act:[["Pogo hops خفيف","20"]],why:"مرونة الكاحل = سكوات أعمق وركبة أأمن"},
+  "بطن":{mob:[["Cat-camel","6"]],act:[["Dead bug","8 لكل ناحية"],["Plank مع شد البطن","20-30 ثانية"]],why:"ثبات الجذع قبل أي حمل تقيل"},
+};
+const LOWER=new Set(["أمامية","خلفية/أرداف","سمانة"]);
+function warmupPlan(p,exs){
+  const vol=muscleVol(exs.map(e=>[e.name,e.sets])), ms=Object.entries(vol).sort((a,b)=>b[1]-a[1]).map(([m])=>m).filter(m=>WU[m]).slice(0,4);
+  const tot=Object.values(vol).reduce((a,b)=>a+b,0)||1, low=ms.reduce((a,m)=>a+(LOWER.has(m)?vol[m]:0),0)/tot;
+  const raise=low>.6?["عجلة ثابتة أو مشي على ميل","4 دقايق · تعرّق خفيف"]:low<.3?["Rower أو Jumping jacks + دوران دراعات","4 دقايق · نَفَس أسرع شوية"]:["Rower أو Elliptical","4 دقايق · الجسم كله"];
+  const blocks=ms.map((m,i)=>{ const w=WU[m]; return {m,why:w.why,items:[...w.mob.slice(0,1).map(x=>["mob",...x]),...w.act.slice(0,i===0?2:1).map(x=>["act",...x])]}; });
+  const R=correctiveRoutine(p.assessment);
+  const corr=R?[[R[0][2],R[0][1].replace(/^\S+\s/,"")],[R[1][2],R[1][1].replace(/^\S+\s/,"")],[R[2][2],R[2][1].replace(/^\S+\s/,"")]]:null;
+  const drills=blocks.reduce((a,b)=>a+b.items.length,0)+(corr?corr.length:0);
+  return {vol,ms,raise,blocks,corr,mins:Math.round(4+drills*0.6)};
+}
+function warmupCardHTML(p,exs,dayNo){
+  const W=warmupPlan(p,exs); if(!W.ms.length) return "";
+  const key=`mofit_wu_${p.id}_${today()}_${dayNo}`; let done=[]; try{ done=JSON.parse(localStorage.getItem(key)||"[]"); }catch(e){}
+  let n=0; const row=(id,t,d,tag)=>{ n++; const on=done.includes(id); return `<button class="wu-i ${on?"on":""}" data-wu="${id}"><span class="wu-c">${on?"✓":""}</span><span class="wu-t"><b>${esc(t)}</b><small>${esc(d)}</small></span>${tag?`<span class="wu-tag ${tag}">${tag==="mob"?"مرونة":"تنشيط"}</span>`:""}</button>`; };
+  let step=0; const sec=(t,sub,body,color)=>{ step++; return `<section class="wu-s" style="--mc:${color||"var(--acc)"}"><header><span class="wu-n">${step}</span><div><b>${t}</b>${sub?`<small>${sub}</small>`:""}</div></header>${body}</section>`; };
+  const html=[
+    sec("تسخين عام",W.raise[1],row("raise",W.raise[0],"لحد ما تحس بدفا وتعرّق خفيف")),
+    W.corr?sec("روتينك التصحيحي (NASM)","من تقييم "+niceDate(p.assessment.date),W.corr.map(([list,d],i)=>row(`c${i}`,list[0],d.replace(/<[^>]+>/g,""))).join("")):"",
+    ...W.blocks.map(b=>sec(b.m,b.why,b.items.map(([k,t,d],j)=>row(`${b.m}${j}`,t,d,k)).join(""),mColor(b.m))),
+    sec("مجموعات التهيئة","جوّه أول تمرين لكل عضلة – بأوزان خفيفة وعدات قليلة",`<p class="hint" style="margin:0">الأوزان محسوبة من وزن شغلك الأسبوع اللي فات. مابتتحسبش في التسجيل.</p>`)
+  ].join("");
+  const pctDone=Math.round(done.length/n*100);
+  return `<details class="card wu" ${pctDone<100?"open":""} data-wukey="${key}" data-wun="${n}">
+    <summary><div class="wu-hero"><div class="wu-map">${anatomySVG(W.vol,{dark:true})}</div><div class="wu-meta"><span class="wu-k">إحماء النهارده</span><b class="wu-title">${W.ms.slice(0,3).join(" · ")}${W.ms.length>3?` <span class="wu-more">+${W.ms.length-3}</span>`:""}</b><small>${W.mins} دقيقة · ${n} خطوات · مبني على العضلات اللي هتشتغل</small>
+      <div class="wu-prog"><i style="width:${pctDone}%"></i></div><small class="wu-pt">${pctDone===100?"✅ جاهز – يلا على أول تمرين":pctDone?`${pctDone}% خلصت`:"دوس على كل خطوة لما تخلّصها"}</small></div></div></summary>
+    <div class="wu-body">${html}</div></details>`;
+}
+function wireWarmup(root){
+  const card=root.querySelector("details.wu"); if(!card) return; const key=card.dataset.wukey, n=+card.dataset.wun;
+  card.querySelectorAll("[data-wu]").forEach(b=>b.onclick=()=>{ let done=[]; try{ done=JSON.parse(localStorage.getItem(key)||"[]"); }catch(e){}
+    const id=b.dataset.wu, on=!done.includes(id); done=on?[...done,id]:done.filter(x=>x!==id); localStorage.setItem(key,JSON.stringify(done));
+    b.classList.toggle("on",on); b.querySelector(".wu-c").textContent=on?"✓":""; try{ on&&navigator.vibrate&&navigator.vibrate(15); }catch(e){}
+    const pc=Math.round(done.length/n*100); card.querySelector(".wu-prog i").style.width=pc+"%"; card.querySelector(".wu-pt").textContent=pc===100?"✅ جاهز – يلا على أول تمرين":pc+"% خلصت"; });
+}
+function feederHTML(workW,m){
+  const r=v=>Math.max(2.5,Math.round(v/2.5)*2.5);
+  const steps=workW>=15?[[0.5,8],[0.75,3]].map(([p,n])=>`<span class="pill">${fmt(r(workW*p),1)} كجم × ${n}</span>`).join(""):`<span class="pill">وزن خفيف × 10</span><span class="pill">+ مجموعة متوسطة × 4</span>`;
+  return `<div class="warm" style="--mc:${mColor(m)}"><b>🔥 تهيئة ${m}</b><div class="scroller">${steps}</div><small>أول تمرين ${m} النهارده · راحة 45-60 ثانية</small></div>`;
+}
+
