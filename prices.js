@@ -70,7 +70,7 @@ function plansHTML(plans, who){
   return `<div class="pq" id="${uid}">${pqInner(uid,def)}</div>`;
 }
 /* PQ_NEUTRAL=true بيبدّل كلام المبيعات (الأكثر طلباً / أماكن محدودة) بصياغة محايدة. سطر واحد. */
-const PQ_NEUTRAL=false;
+const PQ_NEUTRAL=true;
 const PQ_WORDS=PQ_NEUTRAL
   ? {tag6:"اختيار الكوتش", flagS:"اختيار الكوتش", flagV:"متابعة فردية"}
   : {tag6:"الأكثر طلباً",   flagS:"الأكثر طلباً · متابعة الكوتش", flagV:"VIP · أماكن محدودة"};
