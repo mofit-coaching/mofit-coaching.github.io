@@ -77,3 +77,10 @@ html,body{max-width:100%;overflow-x:clip}
 .ciov-dots .d{width:11px;height:11px;border-radius:50%;background:#CBD5E1}
 .ciov-dots .d.good{background:var(--good)}.ciov-dots .d.mid{background:#F59E0B}.ciov-dots .d.bad{background:var(--bad)}
 .ciov-w{min-width:52px;text-align:center}
+
+/* client risk dot (coach clients list) */
+.client .av{position:relative}
+.risk{position:absolute;bottom:-3px;inset-inline-end:-3px;width:13px;height:13px;border-radius:50%;border:2px solid #fff;background:var(--good)}
+.risk.mid{background:#F59E0B}.risk.bad{background:var(--bad);animation:riskP 1.8s ease-in-out infinite}
+@keyframes riskP{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.5)}50%{box-shadow:0 0 0 5px rgba(220,38,38,0)}}
+@media(prefers-reduced-motion:reduce){.risk.bad{animation:none}}
