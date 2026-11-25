@@ -283,3 +283,8 @@ document.addEventListener("scroll",s,{passive:true,capture:true});document.addEv
   const ping=async()=>{ try{ if(busy||document.hidden||typeof S==="undefined"||!S.me||S.me.role!=="client"||Date.now()-last<18e4) return; busy=true; last=Date.now(); await sb.rpc("touch_active"); }catch(e){} busy=false; };
   document.addEventListener("visibilitychange",ping); window.addEventListener("focus",ping); setInterval(ping,20000); setTimeout(ping,4000);
 })();
+
+
+/* pause the Flame hero's loops when it is scrolled out of view */
+(function(){ let q=0; const upd=()=>{ q=0; const h=document.querySelector(".fl-hero"); if(!h) return; const r=h.getBoundingClientRect(); h.classList.toggle("fl-off", r.bottom<0||r.top>innerHeight); };
+  window.addEventListener("scroll",()=>{ if(!q) q=requestAnimationFrame(upd); },{passive:true}); })();

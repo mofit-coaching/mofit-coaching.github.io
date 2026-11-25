@@ -315,6 +315,7 @@ async function renderMeals(el,{mode}){
   const [pl,lg]=await Promise.all([
     sb.from("diet_plan_items").select("*").eq("client_id",p.id).order("meal_no").order("position"),
     planMode?{data:[]}:sb.from("meal_items").select("*").eq("client_id",p.id).eq("log_date",S.date).order("created_at")]);
+  if(!el.isConnected) return; /* user switched tab while loading */
   const plan=pl.data||[], items=lg.data||[];
   const drawTot=()=>{ const tot=sumMacros(planMode?plan:items);
     $("#fTot").innerHTML=`<div class="card-h"><div class="ic">${planMode?"📋":"🔥"}</div><h2>${planMode?"إجمالي الخطة":"ملخص اليوم"}<small>${planMode?"مقارنة بأهداف العميل":"المتبقي: "+(t.kcal?fmt(t.kcal-tot.kcal):"—")+" kcal"}</small></h2></div>
@@ -457,6 +458,7 @@ async function viewMeasures(el){
 async function homeCheckinCard(p,wk){
   const host=$("#hCI"); if(!host) return;
   const { data } = await sb.from("checkins").select("week,reviewed_at,coach_reply").eq("client_id",p.id).order("week",{ascending:false}).limit(3);
+  if(!host.isConnected) return;
   const C=data||[], thisW=C.find(c=>c.week===wk), lastReply=C.find(c=>c.coach_reply), sub=S.me.role==="client"?subStatus(p):null;
   host.innerHTML=(sub&&sub.cls!=="good"?`<div class="card" style="border:1.5px solid var(--acc-line)"><div class="card-h"><div class="ic acc">${sub.icon}</div><h2>اشتراكك<small>${esc(sub.text)}</small></h2><button class="btn sm primary" onclick="openPlansSheet()">جدّد</button></div></div>`:"")+
     `<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>متابعة الأسبوع ${wk}<small>${thisW?(thisW.reviewed_at?"✓✓ الكوتش رد":"✓ اتبعتت – مستنية رد الكوتش"):"لسه ما اتبعتتش – وزن + صور + إحساسك"}</small></h2><button class="btn sm ${thisW?"":"primary"}" id="goCI">${thisW?"عرض":"ابعت"}</button></div>
