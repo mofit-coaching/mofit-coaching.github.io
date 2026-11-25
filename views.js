@@ -67,7 +67,7 @@ function render(){
   const m=$("#main"); m.innerHTML="";
   if(S.me.role==="coach" && S.client){
     const bar=document.createElement("div"); bar.className="coachbar";
-    bar.innerHTML=`<div class="av">${initials(S.client)}</div><b>وضع الكوتش<small>أي تعديل هنا بيتحفظ في بيانات ${esc(S.client.full_name||"العميل")}</small></b><button class="btn sm navy">← العملاء</button>`;
+    bar.innerHTML=`<div class="av">${initials(S.client)}</div><b>وضع الكوتش<small>أي تعديل هنا بيتحفظ في بيانات ${esc(S.client.full_name||"العميل")}</small></b><button class="btn sm navy bk-btn"><svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></svg><span>العملاء</span></button>`;
     bar.querySelector("button").onclick=async()=>{ S.client=null; S.tab="clients"; stopRest(); await loadClients(); render(); };
     m.appendChild(bar);
   }
