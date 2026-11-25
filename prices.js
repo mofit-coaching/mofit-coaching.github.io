@@ -20,10 +20,10 @@ const PLAN_DEFAULTS = [
   {id:"b1",  tier:"b", position:0,  months:1,  free_months:0, price:300,  old_price:null,  currency:"ج.م", badge:null,          note:null, active:true},
   {id:"b3",  tier:"b", position:1,  months:3,  free_months:0, price:810,  old_price:900,   currency:"ج.م", badge:null,          note:null, active:true},
   {id:"b6",  tier:"b", position:2,  months:6,  free_months:0, price:1530, old_price:1800,  currency:"ج.م", badge:null,          note:null, active:true},
-  {id:"b12", tier:"b", position:3,  months:12, free_months:0, price:2700, old_price:3600,  currency:"ج.م", badge:"أفضل قيمة",   note:null, active:true},
+  {id:"b12", tier:"b", position:3,  months:12, free_months:0, price:2700, old_price:3600,  currency:"ج.م", badge:null,          note:null, active:true},
   {id:"s1",  tier:"s", position:4,  months:1,  free_months:0, price:500,  old_price:null,  currency:"ج.م", badge:null,          note:null, active:true},
   {id:"s3",  tier:"s", position:5,  months:3,  free_months:0, price:1350, old_price:1500,  currency:"ج.م", badge:null,          note:null, active:true},
-  {id:"s6",  tier:"s", position:6,  months:6,  free_months:0, price:2550, old_price:3000,  currency:"ج.م", badge:"الأكثر طلباً", note:null, active:true},
+  {id:"s6",  tier:"s", position:6,  months:6,  free_months:0, price:2550, old_price:3000,  currency:"ج.م", badge:null,          note:null, active:true},
   {id:"s12", tier:"s", position:7,  months:12, free_months:0, price:4500, old_price:6000,  currency:"ج.م", badge:null,          note:null, active:true},
   {id:"v1",  tier:"v", position:8,  months:1,  free_months:0, price:1000, old_price:null,  currency:"ج.م", badge:null,          note:null, active:true},
   {id:"v3",  tier:"v", position:9,  months:3,  free_months:0, price:2700, old_price:3000,  currency:"ج.م", badge:null,          note:null, active:true},
@@ -54,7 +54,7 @@ async function loadPlans(all=false){
 function plansHTML(plans, who){
   if(!plans.length) return `<p class="hint">العروض هتنزل قريب – كلم الكوتش على واتساب.</p>`;
   const perMonth=p=> planPrice(p) ? (+p.price)/((+p.months)+(+p.free_months||0)) : null;
-  const priced=plans.filter(planPrice), best=priced.length>1&&!plans.some(p=>p.badge)? priced.reduce((a,b)=>perMonth(b)<perMonth(a)?b:a) : null;
+  const best=null; // كروت موحّدة: مفيش كارت مميز غامق ولا شارة تلقائية
   const card=p=>{ const total=(+p.months)+(+p.free_months||0), pm=perMonth(p), pd=pm?pm/30:null, save=p.old_price&&planPrice(p)&&+p.old_price>+p.price?Math.round((1-(+p.price)/(+p.old_price))*100):0;
     return `<a class="plan ${p.badge||p===best?"hot":""}" href="${esc(waLink(planMsg(p,who)))}" target="_blank" rel="noopener">
       ${p.badge?`<span class="plan-badge">${esc(p.badge)}</span>`:p===best?`<span class="plan-badge">⭐ الأفضل قيمة</span>`:""}${save>0?`<span class="plan-save">وفّر ${save}%</span>`:""}
