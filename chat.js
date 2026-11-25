@@ -145,6 +145,7 @@ async function openChat(clientId, title){
       rec.start(); t0=Date.now(); $("#chatRec").classList.remove("hidden"); $("#chatMic").textContent="■"; $("#recT").textContent="0:00"; tick=setInterval(()=>{ const s=Math.floor((Date.now()-t0)/1000); $("#recT").textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); },250);
     }catch(_){ toast("محتاج تسمح بالميكروفون"); } };
   setTimeout(()=>$("#chatI")?.focus(),50);
+  if(typeof aiChatHook==="function") aiChatHook(clientId);
 }
 
 function chatIncoming(m){
