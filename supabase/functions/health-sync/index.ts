@@ -1,5 +1,5 @@
 // Supabase Edge Function: health-sync
-// Google Health connect + daily steps sync into habits.steps.
+// Google Health connect + steps sync (last 10 days) into habits.steps.
 // Secrets needed: GHEALTH_CLIENT_ID, GHEALTH_CLIENT_SECRET, CRON_SECRET (for the scheduled sync).
 // Verify JWT: ON (connect/disconnect/status run as the user; sync runs with x-cron-secret).
 // Identity deploy note: schedule action=sync 2-3x per evening (see ghealth.sql cron block).
@@ -31,14 +31,22 @@ const civil = (ymd: string) => {
   return { date: { year, month, day }, time: { hours: 0, minutes: 0, seconds: 0, nanos: 0 } };
 };
 
-// Returns the steps, or why there are none: "no_data" (Google answered, nothing for that day),
-// "scope_missing" (401/403: steps permission not granted) or "api_error" (anything else).
-type DayResult = { steps: number | null; reason?: "no_data" | "scope_missing" | "api_error"; upstream?: string };
-async function stepsForDay(accessToken: string, ymd: string): Promise<DayResult> {
+// How many civil days (today included) each sync reads in one call. Google allows up to 90 for steps.
+const BACKFILL_DAYS = 10;
+const prevDay = (ymd: string) => {
+  const [y, m, d] = ymd.split("-").map(Number);
+  return civilDate(new Date(Date.UTC(y, m - 1, d) - 86400000 + 12 * 3600000));
+};
+const pad = (n: number) => String(n).padStart(2, "0");
+
+// One dailyRollUp call over the last BACKFILL_DAYS days. Returns a map of YYYY-MM-DD -> steps, or why there are none:
+// "no_data" (Google answered, nothing in the range), "scope_missing" (401/403) or "api_error" (anything else).
+type RangeResult = { days: Record<string, number>; reason?: "no_data" | "scope_missing" | "api_error"; upstream?: string };
+async function stepsForRange(accessToken: string, startYmd: string, endYmdExclusive: string): Promise<RangeResult> {
   const r = await fetch(GH_BASE, {
     method: "POST",
     headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json", "Accept": "application/json" },
-    body: JSON.stringify({ range: { start: civil(ymd), end: civil(nextDay(ymd)) }, windowSizeDays: 1 }),
+    body: JSON.stringify({ range: { start: civil(startYmd), end: civil(endYmdExclusive) }, windowSizeDays: 1 }),
   });
   if (!r.ok) {
     // Log Google's real answer so an api_error toast can be diagnosed from the function logs.
@@ -46,16 +54,21 @@ async function stepsForDay(accessToken: string, ymd: string): Promise<DayResult>
     try { const t = await r.text(); const ej = JSON.parse(t); msg = String(ej?.error?.message || ej?.error?.status || t.slice(0, 200)); } catch { /* keep "" */ }
     console.log("health-sync dailyRollUp upstream error:", r.status, msg.slice(0, 300));
     const reason = r.status === 401 || r.status === 403 ? "scope_missing" : "api_error";
-    return { steps: null, reason, upstream: `${r.status} ${msg.slice(0, 140)}`.trim() };
+    return { days: {}, reason, upstream: `${r.status} ${msg.slice(0, 140)}`.trim() };
   }
   const j = await r.json().catch(() => ({}));
-  // dailyRollUp answers with `rollupDataPoints` (proto3 JSON: camelCase fields).
-  // Tolerate the older/guessed shapes so a Google-side change never reads as "no data" again.
+  // dailyRollUp answers with `rollupDataPoints` (proto3 JSON: camelCase); each point carries its window start in civilStartTime.date.
   const list = Array.isArray(j?.rollupDataPoints) ? j.rollupDataPoints : (Array.isArray(j?.dataPoints) ? j.dataPoints : []);
-  const dp = list[0] ?? null;
-  const stepsVal = dp?.steps ?? dp?.value ?? null;
-  const v = stepsVal?.countSum ?? stepsVal?.count_sum ?? null;
-  return v == null ? { steps: null, reason: "no_data" } : { steps: Math.max(0, parseInt(String(v), 10) || 0) };
+  const days: Record<string, number> = {};
+  for (const dp of list) {
+    const d = dp?.civilStartTime?.date;
+    if (!d?.year || !d?.month || !d?.day) continue;
+    const ymd = `${d.year}-${pad(d.month)}-${pad(d.day)}`;
+    const stepsVal = dp?.steps ?? dp?.value ?? null;
+    const v = stepsVal?.countSum ?? stepsVal?.count_sum ?? null;
+    if (v != null) days[ymd] = Math.max(0, parseInt(String(v), 10) || 0);
+  }
+  return Object.keys(days).length ? { days } : { days, reason: "no_data" };
 }
 
 // Write steps without touching any other habit field.
@@ -87,13 +100,21 @@ async function syncOne(admin: any, cid: string, secret: string, userId: string, 
     access = rf.access_token!;
   }
   const today = civilDate(new Date());
-  const yesterday = civilDate(new Date(Date.now() - 86400000));
+  const yesterday = prevDay(today);
+  let first = today;
+  for (let i = 1; i < BACKFILL_DAYS; i++) first = prevDay(first);
   const res: any = { user: userId };
-  for (const day of [today, yesterday]) {
-    const s = await stepsForDay(access, day);
-    if (s.steps != null) { await writeSteps(admin, userId, day, s.steps); res[day === today ? "today" : "yesterday"] = s.steps; }
-    else if (day === today) { res.reason = s.reason; if (s.upstream) res.upstream = s.upstream; }   // surfaced to the client so it can say why nothing changed
+  const s = await stepsForRange(access, first, nextDay(today));
+  // Today and yesterday always follow Google (as before). Older days are only filled with a real number,
+  // so a 0 from Google never wipes steps the client already logged by hand.
+  for (const [day, steps] of Object.entries(s.days)) {
+    if (day > today || day < first) continue;
+    if (day === today || day === yesterday || steps > 0) await writeSteps(admin, userId, day, steps);
   }
+  res.today = s.days[today] ?? null;
+  res.yesterday = s.days[yesterday] ?? null;
+  res.days = Object.keys(s.days).length;
+  if (res.today == null) { res.reason = s.reason ?? "no_data"; if (s.upstream) res.upstream = s.upstream; }   // surfaced to the client so it can say why nothing changed
   await admin.from("health_connections").update({ last_sync_at: new Date().toISOString() }).eq("user_id", userId);
   return res;
 }
