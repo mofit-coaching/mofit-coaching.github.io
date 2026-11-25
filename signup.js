@@ -64,12 +64,13 @@ viewClients = async function(el){
   renderPending(el);
 };
 function renderPending(el){
+  const refName=src=>{ const r=(S.coachClients||[]).find(x=>x.id===src); return r?(r.full_name||r.email||"عميل"):src; };
   const P=(S.coachClients||[]).filter(c=>!c.active && c.signup_days);
   if(!P.length) return;
   const host=document.createElement("div"); host.className="card"; host.id="pending";
   host.innerHTML=`<div class="card-h"><div class="ic acc">🆕</div><h2>طلبات جديدة (${P.length})<small>اتأكد من الدفع الأول وبعدين فعّل</small></h2></div>`+P.map(c=>`
     <div class="item" style="padding:10px 0;border-top:1px solid rgba(148,163,184,.2)" data-id="${esc(c.id)}">
-      <div class="nm"><b>${esc(c.full_name||c.email||"")}</b><small>📱 ${esc(c.phone||"")} · 🗓 ${esc(c.signup_days||"")}${c.signup_steps?` · 👣 ${esc(fmt(c.signup_steps))}`:""}${c.signup_plan?` · 💰 ${esc(c.signup_plan)}`:""}${c.signup_src?` · 🎁 عن طريق: ${esc(c.signup_src)}`:""}</small></div>
+      <div class="nm"><b>${esc(c.full_name||c.email||"")}</b><small>📱 ${esc(c.phone||"")} · 🗓 ${esc(c.signup_days||"")}${c.signup_steps?` · 👣 ${esc(fmt(c.signup_steps))}`:""}${c.signup_plan?` · 💰 ${esc(c.signup_plan)}`:""}${c.signup_src?` · 🎁 عن طريق: ${esc(refName(c.signup_src))}`:""}</small></div>
       <div class="row" style="margin-top:8px"><button class="btn primary grow" data-act="ok">✓ تفعيل</button>${c.signup_src?`<button class="btn grow" data-act="okg">🎁 تفعيل + منح الأسبوع</button>`:""}
       ${c.phone?`<a class="btn" target="_blank" rel="noopener" href="${esc(waLink("أهلاً "+(c.full_name||"")+" 👋 طلبك في Mofit وصل. تفاصيل الاشتراك والدفع:"))}">💬</a>`:""}
       <button class="btn danger" data-act="no">رفض</button></div></div>`).join("");
