@@ -54,6 +54,11 @@ const css=`
 .gh-hero-btn:active{transform:scale(.98)}
 .gh-hero-btn .g{display:inline-grid;place-items:center;width:20px;height:20px}
 .gh-strip{margin-bottom:14px;border-radius:14px;padding:10px 12px;border:1px solid rgba(34,197,94,.4);background:linear-gradient(135deg,#F0FDF4,#ECFDF5)}
+.gh-run{margin-top:10px;border-top:1px dashed #CBD5E1;padding-top:10px}
+.gh-run>b{display:block;font-size:12px;margin-bottom:6px}
+.gh-run-btn{width:100%;text-align:center}
+.gh-hero .gh-run{border-top-color:#334155}
+.gh-hero .gh-run>b{color:#E2E8F0}
 .gh-re{display:inline-flex;align-items:center;gap:5px;flex:none;border:1px solid rgba(34,197,94,.45);background:#fff;color:#15803D;font:800 11px/1 inherit;padding:6px 10px;border-radius:9px;cursor:pointer;transition:.2s}
 .gh-re:active{transform:scale(.96)}
 .gh-re:disabled{opacity:.55;cursor:default}
@@ -168,9 +173,10 @@ function autoGuide(){
      `<div class="gh-mk"><div class="r hl"><span>Automation</span><span class="ok">Run Immediately</span></div><div class="r"><span>Notify When Run</span><span class="tg"></span></div></div>`)+
    `<div class="gh-note">تمام كده — خطواتك هتتبعت لوحدها كل ليلة. لو الاختصار طلب إذن للصحة وافق عليه مرة واحدة.</div></div>`;
 }
-async function iosCard(box,s){
+async function iosCard(box,s,refresh){
   /* s = {code, shortcut_url} from shortcut_code action; null = not deployed yet */
   if(!s){ box.innerHTML=""; return; }
+  if(refresh) iosRefresh.add(refresh);
   const link=s.shortcut_url
     ?`<a class="gh-link-btn" href="${s.shortcut_url}" target="_blank" rel="noopener">تحميل الاختصار ←</a>`
     :`<span class="gh-note">الكوتش لسه بيجهز رابط الاختصار — كودك جاهز تحت.</span>`;
@@ -178,7 +184,12 @@ async function iosCard(box,s){
     <li>${link} دوس تحميل — الآيفون هيضيف الاختصار لوحده</li>
     <li>شغّل الاختصار أول مرة، ولما يطلب الكود الصق ده: <button type="button" class="gh-code" id="ghCode">${s.code} <small>نسخ</small></button></li>
     </ol>${autoGuide()}
+    <div class="gh-run"><b>خلصت الظبط؟ شغّلها في أي وقت:</b>
+    <a class="gh-link-btn gh-run-btn" id="ghRun" href="shortcuts://run-shortcut?name=Mofit">▶ شغّل المزامنة دلوقتي</a>
+    <div class="gh-note">بيفتح تطبيق الاختصارات ويسجّل خطواتك فورًا — ارجع هنا وهتلاقي الرقم اتحدث.</div></div>
     <div class="gh-note">خطواتك بتتشارك مع التطبيق ده بس، والكتابة اليدوية شغالة برضه.</div>`;
+  const run=box.querySelector("#ghRun");
+  if(run) run.addEventListener("click",()=>{ iosRunPending=true; });
   box.querySelector("#ghCode").onclick=async ev=>{
     try{ await navigator.clipboard.writeText(s.code); ev.currentTarget.querySelector("small").textContent="✓ اتنسخ"; }
     catch(_){ window.toast&&toast("الكود: "+s.code); }
@@ -191,7 +202,7 @@ async function renderStepsSlot(slot,p,refresh){
     let s=null; try{ s=await call("shortcut_code"); }catch(_){}
     if(!slot.isConnected) return;
     slot.innerHTML=`<div class="gh-box off"><b style="font-size:12.5px">🍎 اربط الآيفون — خطواتك تتسجل لوحدها</b><div id="ghIosBody"></div></div>`;
-    iosCard(slot.querySelector("#ghIosBody"),s);
+    iosCard(slot.querySelector("#ghIosBody"),s,refresh);
     return;
   }
   const s=await state(p); if(!s){ slot.innerHTML=""; return; }
@@ -223,7 +234,7 @@ async function renderHomeCard(slot,p,refresh){
       <p>اختصار بسيط بيسحب خطواتك من تطبيق صحة آبل ويبعتها للتطبيق كل يوم لوحده — دوس تحميل، الصق كودك مرة واحدة، وخلاص.</p>
       <div id="ghIosHome"></div></div>`;
     const body=slot.querySelector("#ghIosHome");
-    iosCard(body,s);
+    iosCard(body,s,refresh);
     body.querySelector(".gh-ios-steps")?.classList.add("on");
     return;
   }
@@ -243,6 +254,15 @@ async function renderHomeCard(slot,p,refresh){
     <button type="button" class="gh-hero-btn" id="ghOnH">${G_SVG} اربط حساب جوجل</button></div>`;
   slot.querySelector("#ghOnH").onclick=ev=>doConnect(cfg,ev.currentTarget,refresh,rerender);
 }
+
+/* iOS: after the user taps "run sync now" we refresh the views when they return. */
+let iosRunPending=false; const iosRefresh=new Set();
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState!=="visible"||!iosRunPending) return;
+  iosRunPending=false;
+  iosRefresh.forEach(f=>{ try{ f(); }catch(_){ } });
+  iosRefresh.clear();
+});
 
 window.ghRenderStepsSlot=renderStepsSlot;
 window.ghRenderHomeCard=renderHomeCard;
