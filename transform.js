@@ -133,21 +133,21 @@ async function drawTransformCard(p,st){
   if(st.dWa!=null) chips.push([fmt(Math.abs(st.dWa),1)+(st.dWa<0?"▼":"▲"),"سم من الوسط 📏"]);
   else if(st.cur!=null&&p.height_cm) chips.push([fmt(st.cur/((p.height_cm/100)*(p.height_cm/100)),1),"BMI دلوقتي"]);
   else chips.push(["🔥","الشعلة شغالة"]);
-  const bw=300,bh=180,gap=34,x0=(W-(3*bw+2*gap))/2,y0=830;
+  const bw=300,bh=175,gap=34,x0=(W-(3*bw+2*gap))/2,y0=815;
   chips.forEach((c2,i)=>{
     const a=x0+i*(bw+gap);
     rr(a,y0,bw,bh,28); x.fillStyle="rgba(255,255,255,.07)"; x.fill();
     x.strokeStyle="rgba(255,255,255,.14)"; x.lineWidth=2; x.stroke();
-    x.fillStyle="#FFB347"; x.font=F(800,64); x.fillText(String(c2[0]),a+bw/2,y0+88);
-    x.fillStyle="rgba(255,255,255,.8)"; x.font=F(600,32); x.fillText(c2[1],a+bw/2,y0+140);
+    x.fillStyle="#FFB347"; x.font=F(800,64); x.fillText(String(c2[0]),a+bw/2,y0+86);
+    x.fillStyle="rgba(255,255,255,.8)"; x.font=F(600,32); x.fillText(c2[1],a+bw/2,y0+136);
   });
 
   // footer: invite QR (carries the client's referral code)
   x.fillStyle="rgba(255,255,255,.92)"; x.font=F(700,44);
-  x.fillText("عايز تبدأ تحوّلك انت كمان؟ امسح الكود 📲",W/2,1090);
-  tfQR(x,W/2,1218,230,tfUrl(p));
-  x.fillStyle="rgba(255,255,255,.45)"; x.font="600 30px Outfit, Cairo, sans-serif"; x.direction="ltr";
-  x.fillText("mofit-coaching.github.io",W/2,H-14);
+  x.fillText("عايز تبدأ تحوّلك انت كمان؟ امسح الكود 📲",W/2,1062);
+  tfQR(x,W/2,1210,205,tfUrl(p));
+  x.fillStyle="rgba(255,255,255,.45)"; x.font="600 27px Outfit, Cairo, sans-serif"; x.direction="ltr";
+  x.fillText("mofit-coaching.github.io",W/2,H-6);
   return cv;
 }
 
