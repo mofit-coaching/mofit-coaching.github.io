@@ -71,7 +71,7 @@ const st=document.createElement('style');st.textContent=css;document.head.append
 const FN=()=>SUPABASE_URL+"/functions/v1/health-sync";
 const G_SVG='<svg class="g" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.2H12v4.2h6.5c-.1 1.1-.8 2.7-2.4 3.8l3.7 2.9c2.2-2 3.7-5 3.7-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.7-2.9c-1 .7-2.4 1.2-4.2 1.2-3.2 0-6-2.2-7-5.1l-3.9 3C3.2 21.3 7.3 24 12 24z"/><path fill="#FBBC05" d="M5 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3l-3.9-3C.4 8.2 0 10 0 12s.4 3.8 1.1 5.3l3.9-3z"/><path fill="#EA4335" d="M12 4.7c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.3 0 3.2 2.7 1.1 6.7l3.9 3c1-2.9 3.8-5 7-5z"/></svg>';
 const RE_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>';
-const SCOPE="https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly";
+const SCOPE="https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly https://www.googleapis.com/auth/googlehealth.sleep.readonly";
 
 function platform(){
   const ua=navigator.userAgent||"";
@@ -141,7 +141,7 @@ async function doResync(p,btn,refresh,rerender){
   try{
     const r=await call("sync_me");
     if(typeof r.today==="number"){
-      say("\u2713 \u0627\u062a\u062d\u062f\u062b\u062a \u2014 \u062e\u0637\u0648\u0627\u062a\u0643 \u0627\u0644\u0646\u0647\u0627\u0631\u062f\u0647: "+r.today.toLocaleString("en-US"));
+      say("\u2713 \u0627\u062a\u062d\u062f\u062b\u062a \u2014 \u062e\u0637\u0648\u0627\u062a\u0643 \u0627\u0644\u0646\u0647\u0627\u0631\u062f\u0647: "+r.today.toLocaleString("en-US")+(r.sleep_days>0?" · 😴 نوم "+r.sleep_days+" ليالي":""));
     }else{
       /* Google answered but sent no steps for today: say so, never fake a success. */
       const why=r.reason||"no_data";
