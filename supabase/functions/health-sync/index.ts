@@ -33,17 +33,28 @@ const civil = (ymd: string) => {
 
 // Returns the steps, or why there are none: "no_data" (Google answered, nothing for that day),
 // "scope_missing" (401/403: steps permission not granted) or "api_error" (anything else).
-type DayResult = { steps: number | null; reason?: "no_data" | "scope_missing" | "api_error" };
+type DayResult = { steps: number | null; reason?: "no_data" | "scope_missing" | "api_error"; upstream?: string };
 async function stepsForDay(accessToken: string, ymd: string): Promise<DayResult> {
   const r = await fetch(GH_BASE, {
     method: "POST",
     headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json", "Accept": "application/json" },
     body: JSON.stringify({ range: { start: civil(ymd), end: civil(nextDay(ymd)) }, windowSizeDays: 1 }),
   });
-  if (!r.ok) return { steps: null, reason: r.status === 401 || r.status === 403 ? "scope_missing" : "api_error" };
+  if (!r.ok) {
+    // Log Google's real answer so an api_error toast can be diagnosed from the function logs.
+    let msg = "";
+    try { const t = await r.text(); const ej = JSON.parse(t); msg = String(ej?.error?.message || ej?.error?.status || t.slice(0, 200)); } catch { /* keep "" */ }
+    console.log("health-sync dailyRollUp upstream error:", r.status, msg.slice(0, 300));
+    const reason = r.status === 401 || r.status === 403 ? "scope_missing" : "api_error";
+    return { steps: null, reason, upstream: `${r.status} ${msg.slice(0, 140)}`.trim() };
+  }
   const j = await r.json().catch(() => ({}));
-  const dp = Array.isArray(j?.dataPoints) ? j.dataPoints[0] : null;
-  const v = dp?.steps?.countSum ?? dp?.value?.countSum ?? null;
+  // dailyRollUp answers with `rollupDataPoints` (proto3 JSON: camelCase fields).
+  // Tolerate the older/guessed shapes so a Google-side change never reads as "no data" again.
+  const list = Array.isArray(j?.rollupDataPoints) ? j.rollupDataPoints : (Array.isArray(j?.dataPoints) ? j.dataPoints : []);
+  const dp = list[0] ?? null;
+  const stepsVal = dp?.steps ?? dp?.value ?? null;
+  const v = stepsVal?.countSum ?? stepsVal?.count_sum ?? null;
   return v == null ? { steps: null, reason: "no_data" } : { steps: Math.max(0, parseInt(String(v), 10) || 0) };
 }
 
@@ -81,7 +92,7 @@ async function syncOne(admin: any, cid: string, secret: string, userId: string, 
   for (const day of [today, yesterday]) {
     const s = await stepsForDay(access, day);
     if (s.steps != null) { await writeSteps(admin, userId, day, s.steps); res[day === today ? "today" : "yesterday"] = s.steps; }
-    else if (day === today) res.reason = s.reason;   // surfaced to the client so it can say why nothing changed
+    else if (day === today) { res.reason = s.reason; if (s.upstream) res.upstream = s.upstream; }   // surfaced to the client so it can say why nothing changed
   }
   await admin.from("health_connections").update({ last_sync_at: new Date().toISOString() }).eq("user_id", userId);
   return res;
@@ -178,7 +189,7 @@ Deno.serve(async (req) => {
       if (!cid || !secret) return out({ error: "not_configured" }, 503);
       const r = await syncOne(admin, cid, secret, u.user.id, row.refresh_token);
       if (r.error) return out({ error: "sync_failed" }, 502);
-      return out({ today: r.today ?? null, yesterday: r.yesterday ?? null, reason: r.today == null ? (r.reason ?? "no_data") : null });
+      return out({ today: r.today ?? null, yesterday: r.yesterday ?? null, reason: r.today == null ? (r.reason ?? "no_data") : null, detail: r.upstream ?? null });
     }
 
     if (b.action === "disconnect") {
