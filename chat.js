@@ -81,7 +81,7 @@ function chatBubble(m){
 }
 function chatAppend(m){
   const L=document.getElementById("chatL"); if(!L || L.querySelector(`[data-id="${m.id}"]`)) return;
-  L.querySelector(".chat-empty")?.remove();
+  L.querySelectorAll(".chat-empty,.empty").forEach(x=>x.remove());
   const day=chatDay(m.created_at); if(L.dataset.day!==day){ const h=document.createElement("div"); h.className="chat-day"; h.textContent=day; L.append(h); L.dataset.day=day; }
   const el=chatBubble(m), prev=L.lastElementChild;
   if(prev&&prev.classList.contains("msg")&&prev.classList.contains("me")===el.classList.contains("me")&&(new Date(m.created_at)-new Date(prev.dataset.t||0))<120000){ prev.classList.add("gnext"); el.classList.add("cont"); }
