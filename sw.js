@@ -1,5 +1,5 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-e91a3d70";
+const C="mofit-f3a71c02";
 const SHELL=["./","index.html","styles.css?v=e91a3d70","design.css?v=e91a3d70","design.js?v=e91a3d70","core.js?v=e91a3d70","data.js?v=e91a3d70","pro.js?v=e91a3d70","lab.js?v=e91a3d70","anatomy.js?v=e91a3d70","health.js?v=e91a3d70","posing.js?v=e91a3d70","minerals.js?v=e91a3d70","icons.js?v=e91a3d70","supps.js?v=e91a3d70","views.js?v=e91a3d70","coach.js?v=e91a3d70","signup.js?v=e91a3d70","qrcode.js?v=e91a3d70","invite.js?v=e91a3d70","chat.js?v=e91a3d70","inbox.js?v=e91a3d70","screens.js?v=e91a3d70","showcase.js?v=e91a3d70","flame.js?v=e91a3d70","prices.js?v=e91a3d70","training.js?v=e91a3d70","sharecard.js?v=e91a3d70","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
