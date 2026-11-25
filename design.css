@@ -92,3 +92,13 @@ html,body{max-width:100%;overflow-x:clip}
 .seen.cold{color:var(--bad)}.seen.cold i{background:var(--bad)}
 @keyframes seenP{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,.5)}50%{box-shadow:0 0 0 4px rgba(22,163,74,0)}}
 @media(prefers-reduced-motion:reduce){.seen.on i{animation:none}}
+
+/* calm header: the header sits on every tab, so its decorative loops were the only always-on load. Logo plays 3 loops then rests; animated filters (the expensive kind) are gone from loops; nav is solid instead of backdrop-blur. */
+.top .wm-pl2,.top .wm-m,.top .wm-m2,.top .wm-ic,.top .wm-ring{animation-iteration-count:3}
+.top .wm-f{animation:none;filter:none}
+.top:after{animation:none}
+.hello .av::after{animation-iteration-count:3}
+.ringwrap svg{animation:none}
+.nav{background:rgba(11,18,32,.97)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
+.nav button.on::before{filter:none!important;opacity:.55}
+.fl-hero.fl-off *,.fl-hero.fl-off *::before,.fl-hero.fl-off *::after{animation-play-state:paused!important}
