@@ -170,7 +170,7 @@ function wireBlockReview(p, el){
 const BADGES=[[1,"🌱","أول تمرين"],[5,"💪","٥ تمارين"],[10,"🔥","١٠ تمارين"],[25,"⚡","٢٥ تمرين"],[50,"🏆","٥٠ تمرين"],[100,"🌟","١٠٠ تمرين"]];
 async function streakCardHTML(p){
   const { data } = await sb.from("workout_sessions").select("log_date,week").eq("client_id",p.id);
-  const W=data||[]; if(!W.length) return "";
+  const W=data||[];
   const goal=Math.max(1,new Set(S.program.map(e=>e.day_no)).size||3), wkNow=currentWeek(p), cnt={};
   W.forEach(s=>{ cnt[s.week]=(cnt[s.week]||0)+1; });
   const done=cnt[wkNow]||0; let streak=0, w=done>=goal?wkNow:wkNow-1;
@@ -187,4 +187,3 @@ async function streakCardHTML(p){
     <button class="btn sm ghost block" style="margin-top:10px" onclick="shareStreakCard(this)" data-streak="${streak}" data-total="${total}" data-done="${done}" data-goal="${goal}" data-badge="${earned.length?earned[earned.length-1][1]:""}" data-badgename="${earned.length?earned[earned.length-1][2]:""}">📤 شارك تقدمك</button></div>`;
 }
 function streakAfter(p){ if(window._streakNew){ try{ localStorage.setItem(window._streakKey,window._streakCount); }catch(e){} setTimeout(()=>{ if(typeof burst==="function") burst(); toast("🎖 شارة جديدة اتفتحت!"); },700); } }
-

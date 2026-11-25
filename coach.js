@@ -82,6 +82,7 @@ async function viewClients(el){
     <div class="card" id="alerts"></div>
     <div class="card" id="wrep"></div>
     <div class="card" id="pgan"></div>
+    <div class="card" id="ciov"></div>
     <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
       ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
     <div class="card" id="bk"></div>
@@ -96,12 +97,12 @@ async function viewClients(el){
     if(/متابعة/.test(a.text)){ S.tab="body"; S.bodySeg="c"; const o=S.overview?.[c.id]; S.ciWeek=/ناقصة/.test(a.text)?currentWeek(c)-1:(o?.last_checkin_week||currentWeek(c)); } else if(/البلوك/.test(a.text)){ S.tab="setup"; S.setupTab="program"; } else if(/اشتراك|مدفوع/.test(a.text)){ S.tab="setup"; S.setupTab="data"; } else S.tab="home";
     render(); window.scrollTo(0,0); });
   const draw=q=>{ const list=C.filter(c=>!q||(c.full_name||"").includes(q)||(c.email||"").includes(q));
-    $("#cl").innerHTML=list.length?list.map(c=>{ const wk=currentWeek(c); return `<div class="client" data-id="${c.id}"><div class="av">${initials(c)}</div>
-      <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${(s=>s?s.icon+" "+esc(s.text)+" · ":"")(subStatus(c))}${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
+    $("#cl").innerHTML=list.length?list.map(c=>{ const wk=currentWeek(c); return `<div class="client" data-id="${c.id}"><div class="av">${initials(c)}${(()=>{ if(!c.active) return ""; const a=AL[c.id]||[], m=a.length?a[0].p:0, lv=m>=3?"bad":m==2?"mid":"good"; return `<i class="risk ${lv}" title="${esc(a.length?a.slice(0,2).map(x=>x.text).join(" · "):"تمام")}"></i>`; })()}</div>
+      <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${seenHTML(c)}${(s=>s?s.icon+" "+esc(s.text)+" · ":"")(subStatus(c))}${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
       <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","لسه مفيش عملاء","ضيف أول عميل وابدأ ابنِ برنامجه: تمرين وأكل ومتابعة من مكان واحد.",{label:"+ إضافة عميل جديد",click:"#addBtn"});
     $("#cl").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); deleteClientFlow(C.find(c=>c.id===b.dataset.del),async()=>{ await loadClients(); viewClients(el); }); });
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
-  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C);
+  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C); checkinOverviewCard($("#ciov"),C);
   draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
   $("#tplList").querySelectorAll("[data-tdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف البرنامج المحفوظ؟ (برامج العملاء الحالية مش هتتأثر)")) return; await sb.from("program_templates").delete().eq("id",b.dataset.tdel); await loadCoachTemplates(); viewClients(el); });
@@ -130,7 +131,7 @@ function addClientSheet(el){
   $("#nCreate").onclick=async()=>{
     $("#nErr").textContent=""; const btn=$("#nCreate"); btn.disabled=true; btn.textContent="جارٍ الإنشاء…";
     const email=$("#nEmail").value.trim(), password=$("#nPass").value, full_name=$("#nName").value.trim(), {sys,level}=getSys();
-    const { data, error } = await sb.functions.invoke("coach-admin",{ body:{ action:"create_client", email, password, full_name, profile:readProfile(body) } });
+    const { data, error } = await adminCall({ body:{ action:"create_client", email, password, full_name, profile:readProfile(body) } });
     btn.disabled=false; btn.textContent="إنشاء الحساب ✓";
     const msg=await fnErr(error,data); if(msg){ $("#nErr").textContent=msg; return; }
     if(sys) await applyProgram({id:data.id}, sys, level); else await sb.from("profiles").update({level}).eq("id",data.id);
@@ -322,7 +323,7 @@ function setupAccount(el){
       <div class="row"><input id="newPass" class="grow" placeholder="كلمة سر جديدة" autocomplete="new-password"><button class="btn sm" id="gp">توليد</button><button class="btn sm navy" id="sp">تغيير</button></div></div>
     <div class="card"><div class="card-h"><div class="ic">⚙️</div><h2>حالة الحساب<small>${p.active?"مفعّل – العميل يقدر يدخل":"موقوف – العميل مش هيقدر يدخل"}</small></h2></div>
       <div class="row"><button class="btn grow" id="act">${p.active?"⏸ إيقاف الحساب":"▶ تفعيل الحساب"}</button><button class="btn danger grow" id="del">🗑 حذف العميل نهائياً</button></div></div>`;
-  const call=async body=>{ const { data, error } = await sb.functions.invoke("coach-admin",{body}); const msg=await fnErr(error,data); if(msg){ toast(msg); return false; } return true; };
+  const call=async body=>{ const { data, error } = await adminCall({body}); const msg=await fnErr(error,data); if(msg){ toast(msg); return false; } return true; };
   $("#se").onclick=async()=>{ if(await call({action:"set_email",user_id:p.id,email:$("#newEmail").value.trim()})){ await refreshClient(); toast("✓ اتغيّر الإيميل"); } };
   $("#gp").onclick=()=>$("#newPass").value=genPass();
   $("#sp").onclick=async()=>{ const pw=$("#newPass").value; if(await call({action:"set_password",user_id:p.id,password:pw})){ navigator.clipboard?.writeText(pw); toast("✓ اتغيّرت واتنسخت: "+pw); } };
@@ -416,9 +417,38 @@ function deleteClientFlow(c,done){
   body.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeSheet());
   go.onclick=async()=>{
     if(inp.value.trim()!=="حذف") return; go.disabled=true; go.textContent="جاري الحذف…";
-    const { data, error } = await sb.functions.invoke("coach-admin",{ body:{ action:"delete_client", user_id:c.id } });
+    const { data, error } = await adminCall({ body:{ action:"delete_client", user_id:c.id } });
     const msg=await fnErr(error,data);
     if(msg){ toast(msg); go.disabled=false; go.textContent="🗑 احذف نهائياً"; return; }
     closeSheet(); toast("✓ اتحذف "+nm+" وكل بياناته"); await done();
   };
+}
+
+
+/* ---------- check-in overview: all active clients at a glance (latest check-in, 5 ratings as dots, weight change) ---------- */
+function ciTone(k,v){ if(v==null) return "na"; const bad=k==="stress"||k==="hunger"?v>=4:v<=2, good=k==="stress"||k==="hunger"?v<=2:v>=4; return bad?"bad":good?"good":"mid"; }
+async function checkinOverviewCard(host,C){
+  if(!host) return; const act=C.filter(c=>c.active); if(!act.length){ host.innerHTML=""; return; }
+  const head=n=>`<div class="card-h"><div class="ic acc">📋</div><h2>متابعات العملاء<small>${n}</small></h2></div>`;
+  host.innerHTML=head("بيحمّل…");
+  const { data } = await sb.from("checkins").select("client_id,week,checkin_date,weight,energy,hunger,sleep,stress,adherence,reviewed_at").in("client_id",act.map(c=>c.id)).order("week",{ascending:false}).range(0,2999);
+  const by={}; (data||[]).forEach(r=>(by[r.client_id]=by[r.client_id]||[]).push(r));
+  const rows=act.map(c=>{ const L=by[c.id]||[], last=L[0], prev=L.find(r=>r.weight!=null&&last&&r.week<last.week&&last.weight!=null), wk=currentWeek(c), due=wk>1&&(!last||last.week<wk-1);
+    const bad=last?["energy","sleep","adherence","stress","hunger"].filter(k=>ciTone(k,last[k])==="bad").length:0;
+    return {c,last,wk,due,bad,dw:last&&prev?last.weight-prev.weight:null,score:(due?10:0)+bad*2+(last&&!last.reviewed_at?1:0)}; }).sort((a,b)=>b.score-a.score);
+  const late=rows.filter(r=>r.due).length;
+  host.innerHTML=head(late?late+" عميل متابعته ناقصة":"كله سلّم متابعته 👌")+rows.map(({c,last,wk,due,dw})=>`<div class="ciov-row" data-id="${c.id}"><div class="av">${initials(c)}</div>
+    <div class="nm"><b>${esc(c.full_name||c.email)}</b><small>${seenHTML(c)}${last?`آخر متابعة: أسبوع ${last.week}${last.reviewed_at?"":" · مستنية ردك"}`:"لسه ما بعتش متابعة"}</small></div>
+    <div class="ciov-dots" title="الطاقة · الجوع · النوم · التوتر · الالتزام">${last?["energy","hunger","sleep","stress","adherence"].map(k=>`<i class="d ${ciTone(k,last[k])}"></i>`).join(""):""}</div>
+    <div class="ciov-w">${due?`<span class="pill acc-soft">ناقصة</span>`:dw==null?`<span class="muted">—</span>`:`<b class="num">${dw>0?"+":""}${fmt(dw,1)}</b>`}</div></div>`).join("");
+  host.querySelectorAll("[data-id]").forEach(r=>r.onclick=async()=>{ const c=C.find(x=>x.id===r.dataset.id); await openClient(c); S.tab="body"; S.bodySeg="c"; S.ciWeek=Math.max(1,(by[c.id]?.[0]?.week)||currentWeek(c)); render(); window.scrollTo(0,0); });
+}
+
+/* ---------- last seen: "online now" / "last active X ago" from profiles.last_active_at (written by touchActive in core.js) ---------- */
+function seenHTML(c){
+  if(!c||!c.last_active_at) return "";
+  const m=Math.max(0,Math.round((Date.now()-new Date(c.last_active_at).getTime())/6e4));
+  if(m<5) return `<span class="seen on"><i></i>أونلاين دلوقتي</span> · `;
+  const t=m<60?m+" د":m<1440?Math.floor(m/60)+" س":Math.floor(m/1440)+" يوم";
+  return `<span class="seen${m>=4320?" cold":""}"><i></i>آخر ظهور من ${t}</span> · `;
 }

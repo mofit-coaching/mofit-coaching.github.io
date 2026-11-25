@@ -73,6 +73,7 @@ async function viewHome(el){
   const p=S.client, t=targets(p), wk=currentWeek(p), dn=todayDayNo();
   const todayEx=S.program.filter(e=>e.day_no===dn);
   el.innerHTML=`${S.me.role==="client"?installCardHTML():""}
+    <div id="hFlame"></div>
     <div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
       ${dn?`<div class="hero-body">${anatomySVG(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<div>${muscleLegend(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<small class="hero-sub">${todayEx.length} تمارين · ${todayEx.reduce((a,e)=>a+(+e.sets||0),0)} مجموعة</small></div></div><button class="btn primary block" style="margin-top:10px" id="goTrain">ابدأ التمرين ←</button>`
           :`<p class="hint">😴 الراحة جزء من التطور. سجّل نومك ومياهك وخطواتك في العادات.</p>`}</div>
@@ -102,7 +103,8 @@ async function viewHome(el){
   const H=hab.data||[];
   $("#hCardio").innerHTML=cardioCardHTML(p,H,wk); wireCardioCard();
   loadCardHTML(p).then(h=>{ const x=$("#hLoad"); if(x) x.innerHTML=h; });
-  if(S.me.role==="client"&&typeof streakCardHTML==="function") streakCardHTML(p).then(h=>{ const x=$("#hStreak"); if(x){ x.innerHTML=h; if(window.streakAfter) streakAfter(p); } }).catch(()=>{});
+  if(typeof flameHeroHTML==="function") flameHeroHTML(p).then(h=>{ const x=$("#hFlame"); if(x){ x.innerHTML=h; if(window.flameAfter) flameAfter(x,p); } }).catch(()=>{});
+  if(typeof streakCardHTML==="function") streakCardHTML(p).then(h=>{ const x=$("#hStreak"); if(x){ x.innerHTML=h; if(window.streakAfter&&S.me.role==="client") streakAfter(p); } }).catch(()=>{});
   $("#hH").innerHTML=`<div class="card-h"><div class="ic">✅</div><h2>الالتزام<small>${H.length} يوم مسجّل</small></h2></div>
     <div class="grid4"><div class="stat"><div class="l">🥗 الدايت</div><div class="v">${pct(avg(H.map(h=>h.diet)))}</div></div>
     <div class="stat"><div class="l">💪 التمرين</div><div class="v">${pct(avg(H.map(h=>h.training)))}</div></div>
@@ -460,4 +462,3 @@ async function homeCheckinCard(p,wk){
      ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
   $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
 }
-

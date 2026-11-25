@@ -17,13 +17,31 @@ function _scFrame(s,t){
   g=x.createRadialGradient(W*0.1,H*(0.9+0.03*Math.cos(t*2*Math.PI)),0,W*0.1,H*0.9,560);
   g.addColorStop(0,`rgba(37,99,235,${glow})`);g.addColorStop(1,"rgba(37,99,235,0)");
   x.fillStyle=g;x.fillRect(0,0,W,H);
-  // header: M-pulse mark + wordmark
-  const mg=x.createLinearGradient(0,90,0,190);mg.addColorStop(0,"#FF6B1A");mg.addColorStop(1,"#FFB347");
-  rr(80,88,104,104,26);x.fillStyle=mg;x.fill();
-  x.strokeStyle="#fff";x.lineWidth=11;x.lineCap="round";x.lineJoin="round";
-  x.beginPath();x.moveTo(102,140);x.lineTo(122,140);x.lineTo(134,112);x.lineTo(150,166);x.lineTo(162,140);x.lineTo(180,140);x.stroke();
-  x.direction="ltr";x.textAlign="left";x.fillStyle="#fff";x.font="800 62px Outfit, Cairo, sans-serif";
-  x.fillText("MOFIT",212,158);
+  // header: dumbbell-M tile + Anton wordmark (matches the app logo)
+  const k=104/64,ox=80,oy=88;
+  x.save();x.translate(ox,oy);x.scale(k,k);
+  const mg=x.createLinearGradient(0,0,64,64);mg.addColorStop(0,"#FF5A0A");mg.addColorStop(1,"#FFB347");
+  const ph=(t*2)%1,rg=Math.sin(Math.PI*ph);
+  x.save();x.shadowColor="rgba(255,179,0,"+(0.35+0.4*rg)+")";x.shadowBlur=26;
+  rr(0,0,64,64,16);x.fillStyle=mg;x.fill();x.restore();
+  x.strokeStyle="rgba(255,194,26,"+(0.7*(1-ph))+")";x.lineWidth=1.6;
+  const e=ph*7;rr(1-e,1-e,62+2*e,62+2*e,16+e);x.stroke();
+  x.fillStyle="#fff";
+  [[5,22,6,20],[12,16,6,32],[53,22,6,20],[46,16,6,32]].forEach(r=>{rr(r[0],r[1],r[2],r[3],2.5);x.fill();});
+  const M=new Path2D("M18 42V24L26 36 32 28 38 36 46 24V42");
+  x.lineCap="round";x.lineJoin="round";x.lineWidth=4.2;x.strokeStyle="rgba(255,255,255,.92)";x.stroke(M);
+  x.lineWidth=4.6;x.strokeStyle="#FFE680";x.shadowColor="#FFC21A";x.shadowBlur=10;
+  x.setLineDash([0.22*70,70]);x.lineDashOffset=-(((t*2)%1)*1.3-0.22)*70*-1;x.stroke(M);x.setLineDash([]);
+  x.restore();
+  x.direction="ltr";x.textAlign="left";x.font="400 78px Anton, Outfit, sans-serif";
+  const wm=x.measureText("MO").width,sp=6;
+  x.save();x.fillStyle="#fff";x.fillText("M",214,166);x.fillText("O",214+x.measureText("M").width+sp,166);
+  const fx=214+wm+2*sp,fw=x.measureText("FIT").width+2*sp;
+  const fg=x.createLinearGradient(fx,0,fx+fw,0);const sh=(t*1.0)%1;
+  fg.addColorStop(0,"#FFB300");fg.addColorStop(Math.max(0,sh-0.18),"#FFB300");fg.addColorStop(sh,"#FFF2B0");fg.addColorStop(Math.min(1,sh+0.18),"#FFB300");fg.addColorStop(1,"#FFE680");
+  x.fillStyle=fg;x.shadowColor="rgba(255,179,0,.45)";x.shadowBlur=18;
+  let cx=fx;for(const ch of "FIT"){x.fillText(ch,cx,166);cx+=x.measureText(ch).width+sp;}
+  x.restore();
   // hero: pulsing flame + counting streak
   x.textAlign="center";x.direction="rtl";
   const pulse=1+0.09*Math.sin(t*2*Math.PI*2);
@@ -56,11 +74,11 @@ function _scFrame(s,t){
 }
 function drawShareCard(d){
   const s=_scSetup(d);
-  return document.fonts.ready.then(()=>{_scFrame(s,1);return s.cv;});
+  return Promise.all([document.fonts.ready,document.fonts.load("400 78px Anton")]).then(()=>{_scFrame(s,1);return s.cv;});
 }
 async function _scRecord(d,ms){
   const s=_scSetup(d);
-  await document.fonts.ready;
+  await document.fonts.ready;try{await document.fonts.load("400 78px Anton");}catch(e){}
   const stream=s.cv.captureStream(30);
   const cands=["video/mp4;codecs=avc1.640028,mp4a.40.2","video/mp4;codecs=avc1.42E01E,mp4a.40.2","video/mp4","video/webm;codecs=vp9","video/webm"];
   let rec=null;
