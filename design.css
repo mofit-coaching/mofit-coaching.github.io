@@ -164,3 +164,15 @@ html .grid2>.stat.dark,html .grid3>.stat.dark,html .grid4>.stat.dark{background:
 html .grid2>.stat.acc,html .grid3>.stat.acc,html .grid4>.stat.acc{background:var(--c60-card)!important}
 html .client .av,html .client:nth-child(n) .av{background:linear-gradient(145deg,#1E2B47,#0B1220)!important;box-shadow:0 8px 18px -8px rgba(11,18,32,.6)!important;color:#fff}
 .stat:after{background:radial-gradient(circle,rgba(11,18,32,.06),transparent 70%)!important}
+
+/* ===== 60-30-10 follow-up: colours that JS-injected styles hard-code ===== */
+html .qr{border-color:#CBD2E1;background:var(--c30-tint);color:var(--c30-tint-ink)}
+html .aid-dr{border-color:#CBD2E1;background:var(--c30-tint);color:var(--c30-tint-ink)}
+html .aid-chip{border-color:#94A3B8;background:var(--c30-tint)}
+html .pp-eyebrow:before,html .pp-eyebrow:after,html .pp-month-h i{background:linear-gradient(90deg,transparent,rgba(95,107,127,.5),transparent)}
+html .stp-pill{background:rgba(255,255,255,.1);color:#E2E8F0;border-color:rgba(255,255,255,.22)}
+html .pp-chip.on{background:var(--c30-tint);border-color:var(--c30);color:var(--c30);box-shadow:none}
+/* avatars and "needs activation" pills: navy / soft tint instead of orange (orange stays for hero + primary actions) */
+html .av{background:linear-gradient(145deg,#1E2B47,#0B1220);box-shadow:0 8px 18px -8px rgba(11,18,32,.6);color:#fff}
+html .hello .av{background:linear-gradient(145deg,#D04A0A,#E2540A);box-shadow:0 14px 30px -8px rgba(255,107,26,.6)}
+html .client .pill.acc,html .inb .pill.acc{background:var(--c30-tint);color:var(--c30-tint-ink)}
