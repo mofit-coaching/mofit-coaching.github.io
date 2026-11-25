@@ -67,6 +67,7 @@ async function drawPublicPlans(){
   const gen=$("#askLink"); if(gen) gen.href=waLink("السلام عليكم كوتش 👋 عندي استفسار عن الاشتراك في Mofit");
   // shareable link: mofit-coaching.github.io/#prices opens the price list directly
   if(/^#(prices|plans|offers)$/i.test(location.hash) || new URLSearchParams(location.search).has("prices")) loginTab("plans");
+  if(/^#(join|signup)$/i.test(location.hash) || new URLSearchParams(location.search).has("join")) loginTab("signup");
 })();
 
 /* ---------- client: renewal + contact coach ---------- */
@@ -137,6 +138,7 @@ async function nudgeClient(c,a,btn){
   if(error) return toast("تعذر الإرسال، جرّب تاني");
   btn&&btn.classList.add("sent"); toast("✓ اتبعتت في الشات");
 }
+
 
 
 
