@@ -387,13 +387,7 @@ function cycleInfo(rows,date){
 async function cycleCard(host,p,rerender){
   if(!host||!p) return;
   const coach=S.me&&S.me.role==="coach";
-  if(p.sex!=="أنثى"){
-    if(!coach&&!p.sex){
-      host.innerHTML=`<div class="card"><div class="card-h"><div class="ic">🌸</div><h2>عشان نظبط تجربتك<small>النوع (اختياري)، بيفتح خيارات تناسبك</small></h2></div><div class="row" style="display:flex;gap:8px"><button class="btn sm" data-sx="ذكر">ذكر</button><button class="btn sm" data-sx="أنثى">أنثى</button></div></div>`;
-      host.querySelectorAll("[data-sx]").forEach(b=>b.onclick=async()=>{ const { error }=await sb.rpc("set_my_sex",{p_sex:b.dataset.sx}); if(error) return toast("مقدرتش أحفظ، جرّب تاني"); p.sex=b.dataset.sx; if(S.me) S.me.sex=b.dataset.sx; rerender&&rerender(); });
-    } else host.innerHTML="";
-    return;
-  }
+  if(p.sex!=="أنثى"){ host.innerHTML=""; return; }
   if(!coach&&localStorage.getItem("cyc_hide")==="1"){
     host.innerHTML=`<div class="muted" style="text-align:center;margin:4px 0 12px;font-size:.8rem">🌸 كارد الدورة مخفي · <a href="#" id="cycShow" style="color:var(--acc,#ff6a13);font-weight:700">إظهار</a></div>`;
     $("#cycShow").onclick=e=>{ e.preventDefault(); localStorage.removeItem("cyc_hide"); rerender&&rerender(); }; return;
