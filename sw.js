@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-4f5e6d7c";
-const SHELL=["./","index.html","styles.css?v=4f5e6d7c","design.css?v=4f5e6d7c","design.js?v=4f5e6d7c","core.js?v=4f5e6d7c","data.js?v=4f5e6d7c","pro.js?v=4f5e6d7c","lab.js?v=4f5e6d7c","anatomy.js?v=4f5e6d7c","health.js?v=4f5e6d7c","posing.js?v=4f5e6d7c","minerals.js?v=4f5e6d7c","icons.js?v=4f5e6d7c","supps.js?v=4f5e6d7c","views.js?v=4f5e6d7c","coach.js?v=4f5e6d7c","signup.js?v=4f5e6d7c","qrcode.js?v=4f5e6d7c","invite.js?v=4f5e6d7c","chat.js?v=4f5e6d7c","inbox.js?v=4f5e6d7c","screens.js?v=4f5e6d7c","prices.js?v=4f5e6d7c","training.js?v=4f5e6d7c","sharecard.js?v=4f5e6d7c","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-7f3b1a9e";
+const SHELL=["./","index.html","styles.css?v=7f3b1a9e","design.css?v=7f3b1a9e","design.js?v=7f3b1a9e","core.js?v=7f3b1a9e","data.js?v=7f3b1a9e","pro.js?v=7f3b1a9e","lab.js?v=7f3b1a9e","anatomy.js?v=7f3b1a9e","health.js?v=7f3b1a9e","posing.js?v=7f3b1a9e","minerals.js?v=7f3b1a9e","icons.js?v=7f3b1a9e","supps.js?v=7f3b1a9e","views.js?v=7f3b1a9e","coach.js?v=7f3b1a9e","signup.js?v=7f3b1a9e","qrcode.js?v=7f3b1a9e","invite.js?v=7f3b1a9e","chat.js?v=7f3b1a9e","inbox.js?v=7f3b1a9e","screens.js?v=7f3b1a9e","prices.js?v=7f3b1a9e","training.js?v=7f3b1a9e","sharecard.js?v=7f3b1a9e","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -12,7 +12,6 @@ self.addEventListener("fetch",e=>{
     e.respondWith(caches.match(e.request).then(hit=>{ const net=fetch(e.request).then(r=>{ if(r.ok||r.type==="opaque"){ const cp=r.clone(); caches.open(C).then(c=>c.put(e.request,cp)); } return r; }).catch(()=>hit); return hit||net; }));
   }
 });
-
 
 
 
