@@ -200,6 +200,7 @@ function setupData(el){
 }
 function setupProgram(el){
   const p=S.client, days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
+  if(S._bcid!==p.id){ S._bcid=p.id; S.day=days[0]||1; }
   if(!days.includes(S.day)&&days.length) S.day=days[0];
   el.innerHTML=`<div id="brHost"></div><div class="card" style="${p.program_pending?"border:1.5px solid var(--acc-line,#FDBA74)":""}"><label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="progPend" ${p.program_pending?"checked":""} style="width:22px;height:22px;min-height:0;margin-top:2px"><span><b>البرنامج لسه متعملش</b><br><small class="muted">لما تفعّلها، العميل بيشوف رسالة متحركة إن الكوتش لسه بيجهّز التمرين، ومبيشوفش أي تمارين. البرنامج بتاعك محفوظ زي ما هو.</small></span></label></div><div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
       <div id="sysBox">${systemFields(p.training_days||3, p.level||"متوسط")}</div>
@@ -356,7 +357,7 @@ async function viewVideos(el){
     <div class="card" style="border:1.5px solid var(--acc-line)"><div class="card-h"><div class="ic acc">🎯</div><h2>تمارين عملائك<small>${usedVid} من ${used.length} ليهم فيديو${used.length-usedVid?` · ناقص ${used.length-usedVid}`:" · كله تمام 👌"}</small></h2></div>
       <div class="bar"><i style="width:${used.length?usedVid/used.length*100:0}%"></i></div>
       <p class="hint" style="margin:8px 0 0">ابدأ بالناقص – مرتبين حسب عدد العملاء اللي عندهم التمرين. زرار 🔎 بيفتح بحث يوتيوب، اختار الفيديو وانسخ لينكه هنا.</p></div>
-    <div class="card"><div class="row" style="margin-bottom:10px"><input id="vq" class="grow" placeholder="🔍 ابحث عن تمرين"><select id="vf" style="width:auto"><option value="usedno">عملائي – بدون فيديو</option><option value="used">عملائي – الكل</option><option value="">المكتبة كلها</option><option value="no">بدون فيديو</option><option value="yes">بفيديو</option></select></div>
+    <div class="card"><div class="row vq-row" style="margin-bottom:10px"><input id="vq" class="grow" placeholder="🔍 ابحث عن تمرين"><select id="vf" style="width:auto"><option value="usedno">عملائي – بدون فيديو</option><option value="used">عملائي – الكل</option><option value="">المكتبة كلها</option><option value="no">بدون فيديو</option><option value="yes">بفيديو</option></select></div>
       <div class="row" style="margin-bottom:12px"><input id="vNew" class="grow" placeholder="+ تمرين جديد للمكتبة"><button class="btn sm navy" id="vAdd">إضافة</button></div><div id="vl"></div></div>`;
   const draw=()=>{ const q=$("#vq").value.trim().toUpperCase(), f=$("#vf").value;
     const ok=n=> f==="usedno"? usedBy[n]&&!map[n] : f==="used"? !!usedBy[n] : (!f||(f==="yes")===!!map[n]);
@@ -382,10 +383,11 @@ async function viewFoods(el){
     <div class="card"><input id="fq" placeholder="🔍 ابحث…"><div id="fl" style="margin-top:8px"></div></div>
     <div class="card"><div class="card-h"><div class="ic acc">➕</div><h2>صنف جديد<small>جم/مل: القيم لكل 100 · حبة/شريحة: اكتب قيم القطعة الواحدة</small></h2></div>
      <label class="f">الاسم<input id="fn"></label>
-     <div class="grid3"><label class="f">الوحدة<select id="fu">${["جم","مل","حبة","شريحة","قطعة","كوب","ملعقة كبيرة","سكوب","رغيف"].map(u=>`<option>${u}</option>`).join("")}</select></label>
+     <div class="grid2"><label class="f">الوحدة<select id="fu">${["جم","مل","حبة","شريحة","قطعة","كوب","ملعقة كبيرة","سكوب","رغيف"].map(u=>`<option>${u}</option>`).join("")}</select></label>
      <label class="f">سعرات<input id="fk" inputmode="decimal"></label><label class="f">بروتين<input id="fp" inputmode="decimal"></label>
-     <label class="f">كارب<input id="fcb" inputmode="decimal"></label><label class="f">دهون<input id="ff" inputmode="decimal"></label></div>
-     <div class="grid3">${[["sodium_mg","صوديوم (مجم)"],["potassium_mg","بوتاسيوم (مجم)"],["magnesium_mg","ماغنيسيوم (مجم)"],["iron_mg","حديد (مجم)"],["calcium_mg","كالسيوم (مجم)"],["zinc_mg","زنك (مجم)"],["fiber_g","ألياف (جم)"]].map(([k,l])=>`<label class="f">${l}<input data-fm="${k}" inputmode="decimal" placeholder="اختياري"></label>`).join("")}</div>
+     <label class="f">كارب<input id="fcb" inputmode="decimal"></label><label class="f">دهون<input id="ff" inputmode="decimal"></label>${[["fiber_g","ألياف (جم)"]].map(([k,l])=>`<label class="f">${l}<input data-fm="${k}" inputmode="decimal" placeholder="اختياري"></label>`).join("")}</div>
+     <div class="f-sec">معادن (اختياري)</div>
+     <div class="grid2">${[["sodium_mg","صوديوم (مجم)"],["potassium_mg","بوتاسيوم (مجم)"],["magnesium_mg","ماغنيسيوم (مجم)"],["iron_mg","حديد (مجم)"],["calcium_mg","كالسيوم (مجم)"],["zinc_mg","زنك (مجم)"]].map(([k,l])=>`<label class="f">${l}<input data-fm="${k}" inputmode="decimal" placeholder="اختياري"></label>`).join("")}</div>
      <p class="hint" id="fuHint"></p><button class="btn primary block" id="fAdd">إضافة</button></div>`;
   const { count } = await sb.from("foods").select("id",{count:"exact",head:true}); $("#fc").textContent=fmt(count)+" صنف · خاصة – العملاء بيبحثوا فيها بس";
   const hint=()=>{ const u=$("#fu").value; $("#fuHint").innerHTML=COUNT_UNITS(u)?`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fone" checked style="width:auto;min-height:0"> القيم اللي كتبتها لـ ${u} واحدة</label>`:`القيم لكل 100 ${u}.`; };
