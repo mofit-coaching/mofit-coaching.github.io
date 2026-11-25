@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-f4c2a817";
-const SHELL=["./","index.html","styles.css?v=f4c2a817","design.css?v=f4c2a817","design.js?v=f4c2a817","core.js?v=f4c2a817","data.js?v=f4c2a817","pro.js?v=f4c2a817","lab.js?v=f4c2a817","anatomy.js?v=f4c2a817","health.js?v=f4c2a817","posing.js?v=f4c2a817","minerals.js?v=f4c2a817","icons.js?v=f4c2a817","supps.js?v=f4c2a817","views.js?v=f4c2a817","coach.js?v=f4c2a817","signup.js?v=f4c2a817","qrcode.js?v=f4c2a817","invite.js?v=f4c2a817","chat.js?v=f4c2a817","inbox.js?v=f4c2a817","screens.js?v=f4c2a817","showcase.js?v=f4c2a817","flame.js?v=f4c2a817","firstweek.js?v=f4c2a817","prices.js?v=f4c2a817","training.js?v=f4c2a817","sharecard.js?v=f4c2a817","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-a51c9e02";
+const SHELL=["./","index.html","styles.css?v=a51c9e02","design.css?v=a51c9e02","design.js?v=a51c9e02","core.js?v=a51c9e02","data.js?v=a51c9e02","media.js?v=a51c9e02","pro.js?v=a51c9e02","lab.js?v=a51c9e02","anatomy.js?v=a51c9e02","health.js?v=a51c9e02","posing.js?v=a51c9e02","minerals.js?v=a51c9e02","icons.js?v=a51c9e02","supps.js?v=a51c9e02","views.js?v=a51c9e02","coach.js?v=a51c9e02","signup.js?v=a51c9e02","qrcode.js?v=a51c9e02","invite.js?v=a51c9e02","chat.js?v=a51c9e02","inbox.js?v=a51c9e02","screens.js?v=a51c9e02","showcase.js?v=a51c9e02","flame.js?v=a51c9e02","firstweek.js?v=a51c9e02","prices.js?v=a51c9e02","training.js?v=a51c9e02","sharecard.js?v=a51c9e02","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -12,6 +12,7 @@ self.addEventListener("fetch",e=>{
     e.respondWith(caches.match(e.request).then(hit=>{ const net=fetch(e.request).then(r=>{ if(r.ok||r.type==="opaque"){ const cp=r.clone(); caches.open(C).then(c=>c.put(e.request,cp)); } return r; }).catch(()=>hit); return hit||net; }));
   }
 });
+
 
 
 
