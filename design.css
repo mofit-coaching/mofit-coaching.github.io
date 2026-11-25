@@ -102,3 +102,4 @@ html,body{max-width:100%;overflow-x:clip}
 .nav{background:rgba(11,18,32,.97)!important;-webkit-backdrop-filter:none!important;backdrop-filter:none!important}
 .nav button.on::before{filter:none!important;opacity:.55}
 .fl-hero.fl-off *,.fl-hero.fl-off *::before,.fl-hero.fl-off *::after{animation-play-state:paused!important}
+.seen.none{color:#94A3B8;font-weight:600}.seen.none i{background:transparent;border:1.5px solid #CBD5E1;box-sizing:border-box}
