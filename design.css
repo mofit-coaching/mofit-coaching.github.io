@@ -14,11 +14,20 @@
 .wm-pl2{transform-box:fill-box;transform-origin:center;animation:wmLift 2.6s ease-in-out infinite}
 .wm-pl2.b{animation-delay:.25s}
 @keyframes wmLift{0%,100%{transform:scaleY(1)}18%{transform:scaleY(1.14)}36%{transform:scaleY(1)}}
-.wm-m{animation:wmGlow 2.6s ease-in-out infinite}
-@keyframes wmGlow{0%,100%{filter:drop-shadow(0 0 0 rgba(255,255,255,0))}18%{filter:drop-shadow(0 0 5px rgba(255,255,255,.95))}36%{filter:drop-shadow(0 0 0 rgba(255,255,255,0))}}
+.wm-m{animation:wmGlow 2.4s ease-in-out infinite}
+@keyframes wmGlow{0%,100%{filter:drop-shadow(0 0 0 rgba(255,255,255,0))}40%{filter:drop-shadow(0 0 4px rgba(255,255,255,.9))}}
+.wm-m2{stroke-dasharray:.2 1;stroke-dashoffset:.2;filter:drop-shadow(0 0 3px #FFC21A) drop-shadow(0 0 8px rgba(255,179,0,.9));animation:wmTravel 2.4s cubic-bezier(.5,0,.5,1) infinite}
+@keyframes wmTravel{0%{stroke-dashoffset:.2}70%,100%{stroke-dashoffset:-1}}
+.wm-ic{animation:wmRadiate 2.4s ease-in-out infinite}
+@keyframes wmRadiate{0%,100%{filter:drop-shadow(0 6px 14px rgba(255,107,26,.45))}40%{filter:drop-shadow(0 0 16px rgba(255,194,26,.85)) drop-shadow(0 4px 22px rgba(255,107,26,.6))}}
+.wm-ring{transform-box:fill-box;transform-origin:center;opacity:0;animation:wmRing 2.4s ease-out infinite}
+.wm-ring.r2{animation-delay:.5s}
+@keyframes wmRing{0%{opacity:0;transform:scale(1)}8%{opacity:.7}70%,100%{opacity:0;transform:scale(1.5)}}
+.wm-f{font-style:normal;background:linear-gradient(100deg,#FFB300 0%,#FFE680 45%,#FFB300 60%);background-size:250% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;animation:wmShine 2.6s linear infinite;filter:drop-shadow(0 0 6px rgba(255,194,26,.5))}
+@keyframes wmShine{to{background-position:-250% 0}}
 .logo-big .wm-ic{animation:wmin .9s cubic-bezier(.2,1.2,.4,1) both}
 @keyframes wmin{from{opacity:0;transform:translateY(8px) scale(.9)}to{opacity:1;transform:none}}
-@media(prefers-reduced-motion:reduce){.wm-pl2,.wm-m,.logo-big .wm-ic{animation:none!important}}
+@media(prefers-reduced-motion:reduce){.wm-pl2,.wm-m,.wm-m2,.wm-ic,.wm-ring,.wm-f,.logo-big .wm-ic{animation:none!important}.wm-m2,.wm-ring{display:none}}
 /* anatomy figure v2 animation */
 .anat .mm-on{filter:drop-shadow(0 0 3px color-mix(in srgb,var(--mc,#FF6B1A) 55%,transparent))}
 .anat .mm-top{animation:mmIn .7s cubic-bezier(.2,.8,.2,1) both,mmPulse 2.8s ease-in-out 1s infinite}
@@ -56,4 +65,5 @@ nav button.on{background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,2
 .alert-row,.alert-row *{min-width:0}
 .alert-row .pill{overflow-wrap:anywhere}
 html,body{max-width:100%;overflow-x:clip}
+
 
