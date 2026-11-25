@@ -130,7 +130,7 @@ function addClientSheet(el){
   $("#nCreate").onclick=async()=>{
     $("#nErr").textContent=""; const btn=$("#nCreate"); btn.disabled=true; btn.textContent="جارٍ الإنشاء…";
     const email=$("#nEmail").value.trim(), password=$("#nPass").value, full_name=$("#nName").value.trim(), {sys,level}=getSys();
-    const { data, error } = await sb.functions.invoke("coach-admin",{ body:{ action:"create_client", email, password, full_name, profile:readProfile(body) } });
+    const { data, error } = await adminCall({ body:{ action:"create_client", email, password, full_name, profile:readProfile(body) } });
     btn.disabled=false; btn.textContent="إنشاء الحساب ✓";
     const msg=await fnErr(error,data); if(msg){ $("#nErr").textContent=msg; return; }
     if(sys) await applyProgram({id:data.id}, sys, level); else await sb.from("profiles").update({level}).eq("id",data.id);
@@ -322,7 +322,7 @@ function setupAccount(el){
       <div class="row"><input id="newPass" class="grow" placeholder="كلمة سر جديدة" autocomplete="new-password"><button class="btn sm" id="gp">توليد</button><button class="btn sm navy" id="sp">تغيير</button></div></div>
     <div class="card"><div class="card-h"><div class="ic">⚙️</div><h2>حالة الحساب<small>${p.active?"مفعّل – العميل يقدر يدخل":"موقوف – العميل مش هيقدر يدخل"}</small></h2></div>
       <div class="row"><button class="btn grow" id="act">${p.active?"⏸ إيقاف الحساب":"▶ تفعيل الحساب"}</button><button class="btn danger grow" id="del">🗑 حذف العميل نهائياً</button></div></div>`;
-  const call=async body=>{ const { data, error } = await sb.functions.invoke("coach-admin",{body}); const msg=await fnErr(error,data); if(msg){ toast(msg); return false; } return true; };
+  const call=async body=>{ const { data, error } = await adminCall({body}); const msg=await fnErr(error,data); if(msg){ toast(msg); return false; } return true; };
   $("#se").onclick=async()=>{ if(await call({action:"set_email",user_id:p.id,email:$("#newEmail").value.trim()})){ await refreshClient(); toast("✓ اتغيّر الإيميل"); } };
   $("#gp").onclick=()=>$("#newPass").value=genPass();
   $("#sp").onclick=async()=>{ const pw=$("#newPass").value; if(await call({action:"set_password",user_id:p.id,password:pw})){ navigator.clipboard?.writeText(pw); toast("✓ اتغيّرت واتنسخت: "+pw); } };
@@ -416,9 +416,10 @@ function deleteClientFlow(c,done){
   body.querySelectorAll("[data-close]").forEach(b=>b.onclick=()=>closeSheet());
   go.onclick=async()=>{
     if(inp.value.trim()!=="حذف") return; go.disabled=true; go.textContent="جاري الحذف…";
-    const { data, error } = await sb.functions.invoke("coach-admin",{ body:{ action:"delete_client", user_id:c.id } });
+    const { data, error } = await adminCall({ body:{ action:"delete_client", user_id:c.id } });
     const msg=await fnErr(error,data);
     if(msg){ toast(msg); go.disabled=false; go.textContent="🗑 احذف نهائياً"; return; }
     closeSheet(); toast("✓ اتحذف "+nm+" وكل بياناته"); await done();
   };
 }
+
