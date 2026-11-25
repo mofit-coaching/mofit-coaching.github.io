@@ -98,7 +98,7 @@ async function viewClients(el){
     render(); window.scrollTo(0,0); });
   const draw=q=>{ const list=C.filter(c=>!q||(c.full_name||"").includes(q)||(c.email||"").includes(q));
     $("#cl").innerHTML=list.length?list.map(c=>{ const wk=currentWeek(c); return `<div class="client" data-id="${c.id}"><div class="av">${initials(c)}${(()=>{ if(!c.active) return ""; const a=AL[c.id]||[], m=a.length?a[0].p:0, lv=m>=3?"bad":m==2?"mid":"good"; return `<i class="risk ${lv}" title="${esc(a.length?a.slice(0,2).map(x=>x.text).join(" · "):"تمام")}"></i>`; })()}</div>
-      <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${(s=>s?s.icon+" "+esc(s.text)+" · ":"")(subStatus(c))}${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
+      <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${seenHTML(c)}${(s=>s?s.icon+" "+esc(s.text)+" · ":"")(subStatus(c))}${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
       <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","لسه مفيش عملاء","ضيف أول عميل وابدأ ابنِ برنامجه: تمرين وأكل ومتابعة من مكان واحد.",{label:"+ إضافة عميل جديد",click:"#addBtn"});
     $("#cl").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); deleteClientFlow(C.find(c=>c.id===b.dataset.del),async()=>{ await loadClients(); viewClients(el); }); });
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
@@ -438,8 +438,17 @@ async function checkinOverviewCard(host,C){
     return {c,last,wk,due,bad,dw:last&&prev?last.weight-prev.weight:null,score:(due?10:0)+bad*2+(last&&!last.reviewed_at?1:0)}; }).sort((a,b)=>b.score-a.score);
   const late=rows.filter(r=>r.due).length;
   host.innerHTML=head(late?late+" عميل متابعته ناقصة":"كله سلّم متابعته 👌")+rows.map(({c,last,wk,due,dw})=>`<div class="ciov-row" data-id="${c.id}"><div class="av">${initials(c)}</div>
-    <div class="nm"><b>${esc(c.full_name||c.email)}</b><small>${last?`آخر متابعة: أسبوع ${last.week}${last.reviewed_at?"":" · مستنية ردك"}`:"لسه ما بعتش متابعة"}</small></div>
+    <div class="nm"><b>${esc(c.full_name||c.email)}</b><small>${seenHTML(c)}${last?`آخر متابعة: أسبوع ${last.week}${last.reviewed_at?"":" · مستنية ردك"}`:"لسه ما بعتش متابعة"}</small></div>
     <div class="ciov-dots" title="الطاقة · الجوع · النوم · التوتر · الالتزام">${last?["energy","hunger","sleep","stress","adherence"].map(k=>`<i class="d ${ciTone(k,last[k])}"></i>`).join(""):""}</div>
     <div class="ciov-w">${due?`<span class="pill acc-soft">ناقصة</span>`:dw==null?`<span class="muted">—</span>`:`<b class="num">${dw>0?"+":""}${fmt(dw,1)}</b>`}</div></div>`).join("");
   host.querySelectorAll("[data-id]").forEach(r=>r.onclick=async()=>{ const c=C.find(x=>x.id===r.dataset.id); await openClient(c); S.tab="body"; S.bodySeg="c"; S.ciWeek=Math.max(1,(by[c.id]?.[0]?.week)||currentWeek(c)); render(); window.scrollTo(0,0); });
+}
+
+/* ---------- last seen: "online now" / "last active X ago" from profiles.last_active_at (written by touchActive in core.js) ---------- */
+function seenHTML(c){
+  if(!c||!c.last_active_at) return "";
+  const m=Math.max(0,Math.round((Date.now()-new Date(c.last_active_at).getTime())/6e4));
+  if(m<5) return `<span class="seen on"><i></i>أونلاين دلوقتي</span> · `;
+  const t=m<60?m+" د":m<1440?Math.floor(m/60)+" س":Math.floor(m/1440)+" يوم";
+  return `<span class="seen${m>=4320?" cold":""}"><i></i>آخر ظهور من ${t}</span> · `;
 }
