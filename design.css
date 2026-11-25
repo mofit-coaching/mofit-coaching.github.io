@@ -103,3 +103,30 @@ html,body{max-width:100%;overflow-x:clip}
 .nav button.on::before{filter:none!important;opacity:.55}
 .fl-hero.fl-off *,.fl-hero.fl-off *::before,.fl-hero.fl-off *::after{animation-play-state:paused!important}
 .seen.none{color:#94A3B8;font-weight:600}.seen.none i{background:transparent;border:1.5px solid #CBD5E1;box-sizing:border-box}
+
+/* ===== a11y pass (designer fixes): readable text, AA contrast, skeleton loader ===== */
+#dayCards .daycard small,.badge small,.blocknav b small,.card-h h2 small,.card.tip .tip-k,.card.today .today-h small,.client .nm small,.cmp small,.coachbar b small,.daycard small,.food-r small,.hero-sub,.hint,.item .nm small,.legend,.lift small,.loadbars span,.mchip,.meal-h b small,.ohsa-i small,.onb-step,.pain-row small,.pill,.plan-note,.plan-pm,.plan-save,.plan-total,.pr-head .muted,.pr-pop small,.prep-ph>small,.pv-ex,.pv-h small,.pv-note,.ready small,.set .prev,.set-head,.stat .l,.stat .s,.sub,.supp-calc,.supp-dose small,.supp-warn,.tempo div,.timer .t-info small,.todo small,.unitbox .g4 small,.vchip,.warm small,.wk-body small,.wk-day small,.wu-k,.wu-meta small,.wu-s header small,.wu-t small,.wu-tag,.zone small,details.card:not(.wu)>summary small,label.f,th{font-size:.84rem}
+.ibtn,.login-links,.ltab,.mlg-r,.mm-list,.offbar,.plan-pay,.prog,.ptier-h span,.pv-warn,.set .no,.supp-meta,.unitbox .u{font-size:.84rem}
+.btn.sm,.hello p,.macro .between,.mode,.muted,.pdur-chip,.pv-ok,.seg button,.warm b,.zone,table{font-size:.84rem}
+.chip,.err,.pain-row b,.plan-feats,.pv-desc,table{font-size:.84rem}
+.item .kc,.wu-c,.wu-more{font-size:.84rem}
+:root{--acc-ink:#D04A0A;--acc-ink2:#BF400B}
+/* white-on-orange: darker brand orange so white text reaches WCAG AA (4.5:1) */
+html .btn.primary,html .btn.primary.block{background:linear-gradient(135deg,#BF400B,#C9460B 60%,#D04A0A);border-color:#BF400B;color:#fff}
+html .chip.on.cur,html .pill.acc,html .ex-n,html .unitbox .u,html .timer.done,html .av{background-color:var(--acc-ink);color:#fff}
+html .av{background-image:linear-gradient(135deg,#BF400B,#D04A0A)}
+html .msg.me,html .aich-m.me{background:var(--acc-ink);color:#fff}
+html #sheet.msgr .msg.me{background:linear-gradient(135deg,#C9460B,#BF400B 60%,#B03A08);color:#fff}
+html .msg.them .cplay,html .mdot,html .nbdg{background:var(--acc-ink);color:#fff}
+html #sheet.msgr #chatSend{background:linear-gradient(135deg,#D04A0A,#BF400B)}
+.msg .t,.msg time,.aich-m small{font-size:.78rem}
+/* skeleton loader (replaces the "⏳ بيتحمل…" text) */
+.sk{display:block;border-radius:10px;background:linear-gradient(90deg,var(--soft2,#F1F5F9) 25%,var(--soft,#E2E8F0) 50%,var(--soft2,#F1F5F9) 75%);background-size:200% 100%;animation:skim 1.3s linear infinite}
+.sk-l{height:14px;margin:10px 0}.sk-l.s{width:55%}.sk-l.m{width:80%}.sk-b{height:76px;margin:10px 0;border-radius:16px}
+.sk-wrap{padding:6px 2px}
+@keyframes skim{to{background-position:-200% 0}}
+/* reduced motion: also kill the remaining decorative loops, keep state changes instant */
+@media(prefers-reduced-motion:reduce){
+ *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
+ .sk{animation:none;background:var(--soft,#E2E8F0)}
+}
