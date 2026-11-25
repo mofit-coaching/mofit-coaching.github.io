@@ -1,5 +1,6 @@
+
 /* ======================================================================
-   WOMEN'S MATRIX (gym + home, 2-5 days) + LIGAMENT REHAB (doctor-cleared)
+   WOMEN'S MATRIX (gym + home, 2-5 days)
    ====================================================================== */
 Object.assign(B,{
   /* ---- women's gym ---- */
@@ -17,11 +18,6 @@ Object.assign(B,{
   WH_UA:[["DB SHOULDER PRESS",3,"10-12","2"],["ONE-ARM DB ROW",3,"10-12/ناحية","2"],["PUSH-UP (PROGRESSION)",3,"8-15","2"],["DB LATERAL RAISE",2,"12-20","1"],["SUPERMAN HOLD",3,"20-30 ث","—"]],
   WH_LB:[["DB ROMANIAN DEADLIFT",4,"10-15","2"],["DB BULGARIAN SPLIT SQUAT",3,"8-10/رجل","2"],["DB SUMO DEADLIFT",3,"10-15","2"],["STANDING CALF RAISE",3,"15-20","1"],["SIDE PLANK",3,"15-30 ث/ناحية","—"]],
   WH_UB:[["DB FLOOR PRESS",3,"10-15","2"],["DOOR TOWEL ROW",3,"10-15","2"],["PIKE PUSH-UP",3,"6-12","2"],["DB HAMMER CURL",2,"10-15","1"],["DB OVERHEAD TRICEPS EXTENSION",2,"10-15","1"]],
-  /* ---- ligament rehab (doctor clearance) ---- */
-  ACL_A:[["INCLINE TREADMILL WALK",1,"5-10 د إحماء","—",F({note:"التمرين ده بإذن الدكتور بعد إصابة الرباط الصليبي – ألم أو تورم أو طقطقة مؤلمة = وقف ومراجعة"})],["LEG PRESS",3,"12-15","3",F({note:"مدى محدود: نزول لحد 90° بس وبدون ضغط في الركبة"})],["LEG EXTENSION MACHINE",2,"15-20","3",F({note:"خفيف ومدى 90←45° بس – المدى الكامل لما الدكتور يسمح"})],["HIP THRUST",3,"10-12","2"],["SEATED LEG CURL",2,"12-15","3",F({note:"لو الرباط متاخد من الهامسترنج (طعم): خفيف جداً أو سيبه لحد إذن الدكتور"})],["STANDING CALF RAISE",3,"12-15","2"],["PLANK",3,"20-40 ث","—"]],
-  ACL_B:[["INCLINE TREADMILL WALK",1,"5-10 د إحماء","—",F({note:"التمرين ده بإذن الدكتور بعد إصابة الرباط الصليبي – ألم أو تورم أو طقطقة مؤلمة = وقف ومراجعة"})],["DB STEP-UP",3,"8-10/رجل","2",F({note:"صندوق واطي، نزول هادي ومتحكم"})],["GOBLET SQUAT",3,"10-12","3",F({note:"لصندوق أو كرسي وراك – عمق 60-70° بس"})],["45-DEGREE HIP EXTENSION",2,"12-15","2"],["MACHINE CHEST PRESS",3,"10-12","2"],["SA ISO LAT ROW MACHINE",3,"10-12","2"],["SIDE PLANK",3,"15-30 ث/ناحية","—"]],
-  PCL_A:[["INCLINE TREADMILL WALK",1,"5-10 د إحماء","—",F({note:"التمرين ده بإذن الدكتور بعد إصابة الرباط الصليبي – ألم أو تورم أو طقطقة مؤلمة = وقف ومراجعة"})],["LEG PRESS",3,"12-15","3",F({note:"مدى 0-45° بس – العمق الكامل ممنوع دلوقتي (بيحمل على الرباط الخلفي)"})],["LEG EXTENSION MACHINE",3,"12-15","2",F({note:"التمرين الأساسي للرباط الخلفي – مدى مريح وتدرج هادي في الوزن"})],["DB STEP-UP",3,"8-10/رجل","2",F({note:"صندوق واطي"})],["STANDING CALF RAISE",3,"12-15","2"],["MACHINE SHOULDER PRESS",3,"10-12","2"],["LAT PULLDOWN",3,"10-12","2"],["DEAD BUG",3,"8/ناحية","—"]],
-  PCL_B:[["INCLINE TREADMILL WALK",1,"5-10 د إحماء","—",F({note:"التمرين ده بإذن الدكتور بعد إصابة الرباط الصليبي – ألم أو تورم أو طقطقة مؤلمة = وقف ومراجعة"})],["GOBLET SQUAT",3,"10-12","3",F({note:"لصندوق أو كرسي – عمق 45-60° بس"})],["HIP THRUST",3,"10-12","2",F({note:"حركة بطيئة ومتحكمة – لو حسيت شد ورا الركبة وقف"})],["LEG EXTENSION MACHINE",2,"15-20","2"],["SEATED CABLE ROW",3,"10-12","2"],["FLAT DB PRESS",3,"10-12","2"],["SIDE PLANK",3,"15-30 ث/ناحية","—"]],
 });
 SYSTEMS.push(
   {key:"wg2", days:2, cat:"glute", min:"مبتدئ", name:"سيدات جيم – يومين", desc:"فول بادي مرتين بالأساسيات وتركيز على الأرداف والتكنيك. أقل جرعة فعالة – أحسن من صفر بكتير.", plan:[D("Full Body A","WG_FA"),D("Full Body B","WG_FB2")]},
@@ -32,6 +28,4 @@ SYSTEMS.push(
   {key:"wh3", days:3, cat:"glute", min:"مبتدئ", name:"سيدات بيت – 3 أيام", desc:"يومين فول بادي + يوم أرداف في البيت – نفس منطق الجيم بأدوات بسيطة.", plan:[D("Home Full A","WH_FA"),D("Home Full B","WH_FB2"),D("Home Glutes","WH_FC")]},
   {key:"wh4", days:4, cat:"glute", min:"مبتدئ", name:"سيدات بيت – 4 أيام", desc:"لوور ×2 وأبر ×2 بالدمبلز – توزيع كامل من غير جيم.", plan:[D("Home Lower A","WH_LA"),D("Home Upper A","WH_UA"),D("Home Lower B","WH_LB"),D("Home Upper B","WH_UB")]},
   {key:"wh5", days:5, cat:"glute", min:"متوسط", name:"سيدات بيت – 5 أيام", desc:"أقصى توزيع للبيت: لوور ×2 وأبر ×2 + فول بادي.", plan:[D("Home Lower A","WH_LA"),D("Home Upper A","WH_UA"),D("Home Lower B","WH_LB"),D("Home Upper B","WH_UB"),D("Home Full A","WH_FA")]},
-  {key:"acl3", days:3, cat:"special", min:"مبتدئ", name:"🦵 رباط صليبي أمامي (ACL) – عودة بإذن الدكتور", desc:"لعميل عنده إذن من الدكتور يرجع للجيم بعد قطع الرباط الصليبي الأمامي. تقوية تدريجية للقدام والخلفية بمدى محدود. ممنوع قفز أو جري أو تغيير اتجاه – دول بإذن الدكتور بس. ألم أو تورم بعد الجلسة = رجوع خطوة.", plan:[D("Rehab A","ACL_A"),D("Rehab B","ACL_B"),D("Rehab A","ACL_A")]},
-  {key:"pcl3", days:3, cat:"special", min:"مبتدئ", name:"🦵 رباط صليبي خلفي (PCL) – عودة بإذن الدكتور", desc:"لعميل عنده إذن من الدكتور يرجع للجيم بعد قطع الرباط الصليبي الخلفي. تركيز على القدام. ممنوع تمارين الهامسترنج (ليج كيرل / ديدلفت) والعمق الكامل في السكوات والليج بريس لحد إذن الدكتور – الخلفية بتشد عظمة الساق للورا. ألم أو تورم = وقف.", plan:[D("Rehab A","PCL_A"),D("Rehab B","PCL_B"),D("Rehab A","PCL_A")]},
 );
