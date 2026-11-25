@@ -18,3 +18,78 @@
 })();
 
 
+
+/* Polish 3: mixed-script text and scroll cues.
+   1) Latin runs inside Arabic text are wrapped in <bdi> so brackets and numbers stay on the right side.
+   2) ALL-CAPS exercise names are shown in Title Case (display only; stored names are untouched).
+   3) Horizontal chip rows show a fade on the side that has more items. */
+(function(){
+  const main=()=>document.getElementById("main");
+  const AR=/[\u0600-\u06FF]/, LAT=/[A-Za-z]/;
+  const KEEP=new Set("DB BB EZ RDL SL KB TRX RIR RPE HIIT LISS AMRAP EMOM PR GVT ACL PCL TDEE BMR PPL GHR JM PNF TUT ATG CNS BCAA EAA USDA AI PWA QR OK US UK USA FBEOD ULPPL AMPM RM 1RM HR".split(" "));
+  const SKIP="script,style,textarea,input,select,option,code,pre,bdi,.logo,.logo-big,.wm2,.sc-eyebrow,.pp-eyebrow,.eyebrow,.stp-pill,th,[contenteditable],[data-nocaps],.cb,.mm,.mt,[class*=bub],[class*=msg]";
+  const EXSEL=".ex-t b,.edit-ex b,.pv-ex span,.ex-n,.exr b,.xname";
+  const run=/[A-Za-z][A-Za-z0-9'\u2019\-+&.\/]*(?: [A-Za-z][A-Za-z0-9'\u2019\-+&.\/]*)*/g;
+  const isCaps=w=>w.replace(/[^A-Za-z]/g,"").length>=2&&w===w.toUpperCase();
+  const title=w=>KEEP.has(w)?w:w.toLowerCase().replace(/(^|[-\/(])([a-z])/g,(m,a,b)=>a+b.toUpperCase());
+  function fixRun(t,single){
+    const words=t.split(" ");
+    if(!words.every(isCaps)) return t;
+    if(words.length<2&&!(single&&words[0].length>=5)) return t;
+    return words.map(title).join(" ");
+  }
+  function proc(n){
+    const par=n.parentElement; if(!par||par.closest(SKIP)) return;
+    const txt=n.nodeValue; if(!LAT.test(txt)) return;
+    const single=!!par.closest(EXSEL);
+    const mixed=AR.test(txt)||(par.closest("[dir=rtl],html")&&AR.test(par.textContent||""));
+    let m,last=0,frag=null; run.lastIndex=0;
+    const parts=[];
+    while((m=run.exec(txt))){
+      const r=m[0], fixed=fixRun(r,single);
+      parts.push([txt.slice(last,m.index),fixed,fixed!==r]); last=m.index+r.length;
+    }
+    if(!parts.length) return;
+    const tail=txt.slice(last);
+    if(!mixed){
+      const nv=parts.map(p=>p[0]+p[1]).join("")+tail;
+      if(nv!==txt) n.nodeValue=nv; return;
+    }
+    frag=document.createElement("span"); frag.className="bw";
+    parts.forEach(p=>{ if(p[0]) frag.appendChild(document.createTextNode(p[0])); const b=document.createElement("bdi"); b.textContent=p[1]; frag.appendChild(b); });
+    if(tail) frag.appendChild(document.createTextNode(tail));
+    n.parentNode.replaceChild(frag,n);
+  }
+  function walk(root){
+    if(!root||root.nodeType!==1&&root.nodeType!==3) return;
+    if(root.nodeType===3){ proc(root); return; }
+    if(root.closest&&root.closest(SKIP)) return;
+    const w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,null), list=[]; let n;
+    while((n=w.nextNode())) if(LAT.test(n.nodeValue)) list.push(n);
+    list.forEach(proc);
+  }
+  const rows=".seg,.scroller,.scrollx,.qr-row,[style*='overflow-x']";
+  function cue(el){
+    if(el.clientWidth<1) return;
+    const r=el.getBoundingClientRect(), kids=el.children; if(!kids.length) return;
+    const a=kids[0].getBoundingClientRect(), b=kids[kids.length-1].getBoundingClientRect();
+    const left=Math.min(a.left,b.left), right=Math.max(a.right,b.right);
+    el.classList.add("sc-cue");
+    el.classList.toggle("sc-l",left<r.left-3); el.classList.toggle("sc-r",right>r.right+3);
+  }
+  function cues(root){
+    const list=(root&&root.querySelectorAll)?[...root.querySelectorAll(rows)]:[];
+    if(root&&root.matches&&root.matches(rows)) list.push(root);
+    list.forEach(el=>{ cue(el); if(!el._scc){ el._scc=1; el.addEventListener("scroll",()=>cue(el),{passive:true}); } });
+  }
+  let q=new Set(), raf=0;
+  function flush(){ raf=0; const items=[...q]; q.clear(); items.forEach(n=>{ if(n.isConnected){ walk(n); if(n.nodeType===1) cues(n); } }); }
+  function start(){
+    const m=main(); if(!m) return setTimeout(start,200);
+    walk(m); cues(m);
+    new MutationObserver(ms=>{ ms.forEach(x=>{ x.addedNodes.forEach(n=>{ if(n.nodeType===1||n.nodeType===3) q.add(n.nodeType===3?n.parentNode:n); }); if(x.type==="characterData"&&x.target.parentNode) q.add(x.target.parentNode); }); if(!raf) raf=requestAnimationFrame(flush); }).observe(m,{childList:true,subtree:true,characterData:true});
+    window.addEventListener("resize",()=>cues(m),{passive:true});
+    setTimeout(()=>cues(m),600);
+  }
+  if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",start); else start();
+})();

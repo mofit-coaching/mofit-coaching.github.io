@@ -200,6 +200,7 @@ function setupData(el){
 }
 function setupProgram(el){
   const p=S.client, days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
+  if(S._bcid!==p.id){ S._bcid=p.id; S.day=days[0]||1; }
   if(!days.includes(S.day)&&days.length) S.day=days[0];
   el.innerHTML=`<div id="brHost"></div><div class="card" style="${p.program_pending?"border:1.5px solid var(--acc-line,#FDBA74)":""}"><label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="progPend" ${p.program_pending?"checked":""} style="width:22px;height:22px;min-height:0;margin-top:2px"><span><b>البرنامج لسه متعملش</b><br><small class="muted">لما تفعّلها، العميل بيشوف رسالة متحركة إن الكوتش لسه بيجهّز التمرين، ومبيشوفش أي تمارين. البرنامج بتاعك محفوظ زي ما هو.</small></span></label></div><div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
       <div id="sysBox">${systemFields(p.training_days||3, p.level||"متوسط")}</div>
@@ -215,7 +216,7 @@ function setupProgram(el){
       <p class="hint">الدورة 7 أيام وبتبدأ من تاريخ البداية${p.start_date?" ("+esc(p.start_date)+")":""}. المجموعات المسجلة بتفضل مع تمارينها.</p></div>
     <div class="card"><div class="card-h"><div class="ic dark">✏️</div><h2>تعديل البرنامج يدوياً<small>العدات · RIR · الراحة · التمبو · رابط الفيديو</small></h2></div>
       <div class="scroller">${[1,2,3,4,5,6,7].map(d=>`<button class="chip ${S.day===d?"on":""}" data-d="${d}">يوم ${d}${days.includes(d)?" ("+S.program.filter(e=>e.day_no===d).length+")":""}</button>`).join("")}</div>
-      <div class="row" style="margin:10px 0"><input id="dLbl" class="grow" placeholder="اسم اليوم (مثلاً Push / Upper A)" value="${esc(dayLabel(S.day))}"><button class="btn sm" id="dLblSave">حفظ الاسم</button></div>
+      <div class="row" style="margin:10px 0"><input id="dLbl" class="grow" placeholder="اسم اليوم (مثلاً Push)" value="${esc(dayLabel(S.day))}"><button class="btn sm" id="dLblSave">حفظ الاسم</button></div>
       <div id="pList"></div>
       <div class="row"><button class="btn navy grow" id="exAdd">+ تمرين ليوم ${S.day}</button>${S.program.length?`<button class="btn grow" id="tplSave">💾 حفظ كبرنامج كوتش</button>`:""}</div></div>`;
   const getSys=wireSystemPicker($("#sysBox"), p.split_key, p.id);
@@ -242,7 +243,7 @@ function setupProgram(el){
         <label class="f">RIR<input data-e="target_rir" placeholder="1-2" value="${esc(ex.target_rir??"")}"></label>
         <label class="f">الراحة (ثانية)<input inputmode="numeric" data-e="rest_sec" placeholder="90" value="${esc(ex.rest_sec??"")}"></label>
         <label class="f">التمبو<input data-e="tempo" placeholder="3-1-1-0" value="${esc(ex.tempo??"")}"></label></div>
-      <label class="f">🎬 رابط فيديو الأداء (YouTube)<input data-e="video_url" placeholder="${lib?"من المكتبة: "+esc(lib):"https://youtu.be/…"}" value="${esc(ex.video_url??"")}"></label>
+      <label class="f">🎬 رابط فيديو الأداء (YouTube)<input data-e="video_url" placeholder="${lib?"✓ فيديو من المكتبة":"https://youtu.be/…"}" value="${esc(ex.video_url??"")}"></label>
       <label class="f">ملاحظات للعميل<input data-e="notes" value="${esc(ex.notes??"")}"></label>
       <div class="row"><button class="btn sm primary" data-save aria-label="حفظ ${esc(ex.name)}">حفظ</button>${videoFor(ex)?`<button class="btn sm" data-play>▶ معاينة</button>`:""}<span class="grow"></span><button class="btn sm danger" data-del>حذف</button></div>`;
     d.querySelector("[data-save]").onclick=async()=>{
@@ -356,14 +357,14 @@ async function viewVideos(el){
     <div class="card" style="border:1.5px solid var(--acc-line)"><div class="card-h"><div class="ic acc">🎯</div><h2>تمارين عملائك<small>${usedVid} من ${used.length} ليهم فيديو${used.length-usedVid?` · ناقص ${used.length-usedVid}`:" · كله تمام 👌"}</small></h2></div>
       <div class="bar"><i style="width:${used.length?usedVid/used.length*100:0}%"></i></div>
       <p class="hint" style="margin:8px 0 0">ابدأ بالناقص – مرتبين حسب عدد العملاء اللي عندهم التمرين. زرار 🔎 بيفتح بحث يوتيوب، اختار الفيديو وانسخ لينكه هنا.</p></div>
-    <div class="card"><div class="row" style="margin-bottom:10px"><input id="vq" class="grow" placeholder="🔍 ابحث عن تمرين"><select id="vf" style="width:auto"><option value="usedno">عملائي – بدون فيديو</option><option value="used">عملائي – الكل</option><option value="">المكتبة كلها</option><option value="no">بدون فيديو</option><option value="yes">بفيديو</option></select></div>
+    <div class="card"><div class="row vq-row" style="margin-bottom:10px"><input id="vq" class="grow" placeholder="🔍 ابحث عن تمرين"><select id="vf" style="width:auto"><option value="usedno">عملائي – بدون فيديو</option><option value="used">عملائي – الكل</option><option value="">المكتبة كلها</option><option value="no">بدون فيديو</option><option value="yes">بفيديو</option></select></div>
       <div class="row" style="margin-bottom:12px"><input id="vNew" class="grow" placeholder="+ تمرين جديد للمكتبة"><button class="btn sm navy" id="vAdd">إضافة</button></div><div id="vl"></div></div>`;
   const draw=()=>{ const q=$("#vq").value.trim().toUpperCase(), f=$("#vf").value;
     const ok=n=> f==="usedno"? usedBy[n]&&!map[n] : f==="used"? !!usedBy[n] : (!f||(f==="yes")===!!map[n]);
     const list=all.filter(n=>(!q||n.includes(q))&&ok(n)).slice(0,80);
     $("#vl").innerHTML=list.map(n=>`<div class="edit-ex" data-n="${esc(n)}"><div class="between"><b>${map[n]?"🎬":"⚪"} ${esc(n)}${usedBy[n]?` <span class="pill acc-soft">👥 ${usedBy[n].size}</span>`:""}</b><span class="row" style="gap:6px"><a class="btn sm" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${encodeURIComponent(n.toLowerCase()+" exercise proper form")}" title="بحث يوتيوب">🔎</a>${map[n]?`<button class="btn sm" data-play>▶</button>`:""}</span></div>
       <div class="row" style="margin-top:6px"><input class="grow" data-url placeholder="🎬 https://youtu.be/…" value="${esc(map[n]||"")}"></div>
-      <div class="row" style="margin-top:6px"><input class="grow" data-alts placeholder="⇄ البدائل (افصل بفاصلة) – الافتراضي: ${esc((DEFAULT_ALTS[n]||[]).join("، ")||"لا يوجد")}" value="${esc((altMap[n]||[]).join(", "))}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox(f==="usedno"&&!q?"👌":"🔎",f==="usedno"&&!q?"كل تمارين عملائك ليها فيديو":"مفيش نتائج",f==="usedno"&&!q?"":"جرّب اسم تمرين تاني أو غيّر الفلتر.","","es-sm");
+      <div class="row" style="margin-top:6px"><input class="grow" data-alts placeholder="⇄ بدائل (بفاصلة)" title="الافتراضي: ${esc((DEFAULT_ALTS[n]||[]).join("، ")||"لا يوجد")}" value="${esc((altMap[n]||[]).join(", "))}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox(f==="usedno"&&!q?"👌":"🔎",f==="usedno"&&!q?"كل تمارين عملائك ليها فيديو":"مفيش نتائج",f==="usedno"&&!q?"":"جرّب اسم تمرين تاني أو غيّر الفلتر.","","es-sm");
     $("#vl").querySelectorAll("[data-n]").forEach(r=>{ const n=r.dataset.n;
       r.querySelector("[data-save]").onclick=async()=>{ const url=r.querySelector("[data-url]").value.trim(), alts=r.querySelector("[data-alts]").value.split(/[,،]/).map(x=>x.trim().toUpperCase()).filter(Boolean);
         const { error } = (url||alts.length)? await sb.from("exercise_videos").upsert({name:n,video_url:url||null,alternatives:alts.length?alts:null,updated_at:new Date().toISOString()}) : await sb.from("exercise_videos").delete().eq("name",n);
@@ -382,10 +383,11 @@ async function viewFoods(el){
     <div class="card"><input id="fq" placeholder="🔍 ابحث…"><div id="fl" style="margin-top:8px"></div></div>
     <div class="card"><div class="card-h"><div class="ic acc">➕</div><h2>صنف جديد<small>جم/مل: القيم لكل 100 · حبة/شريحة: اكتب قيم القطعة الواحدة</small></h2></div>
      <label class="f">الاسم<input id="fn"></label>
-     <div class="grid3"><label class="f">الوحدة<select id="fu">${["جم","مل","حبة","شريحة","قطعة","كوب","ملعقة كبيرة","سكوب","رغيف"].map(u=>`<option>${u}</option>`).join("")}</select></label>
+     <div class="grid2"><label class="f">الوحدة<select id="fu">${["جم","مل","حبة","شريحة","قطعة","كوب","ملعقة كبيرة","سكوب","رغيف"].map(u=>`<option>${u}</option>`).join("")}</select></label>
      <label class="f">سعرات<input id="fk" inputmode="decimal"></label><label class="f">بروتين<input id="fp" inputmode="decimal"></label>
-     <label class="f">كارب<input id="fcb" inputmode="decimal"></label><label class="f">دهون<input id="ff" inputmode="decimal"></label></div>
-     <div class="grid3">${[["sodium_mg","صوديوم (مجم)"],["potassium_mg","بوتاسيوم (مجم)"],["magnesium_mg","ماغنيسيوم (مجم)"],["iron_mg","حديد (مجم)"],["calcium_mg","كالسيوم (مجم)"],["zinc_mg","زنك (مجم)"],["fiber_g","ألياف (جم)"]].map(([k,l])=>`<label class="f">${l}<input data-fm="${k}" inputmode="decimal" placeholder="اختياري"></label>`).join("")}</div>
+     <label class="f">كارب<input id="fcb" inputmode="decimal"></label><label class="f">دهون<input id="ff" inputmode="decimal"></label>${[["fiber_g","ألياف (جم)"]].map(([k,l])=>`<label class="f">${l}<input data-fm="${k}" inputmode="decimal" placeholder="اختياري"></label>`).join("")}</div>
+     <div class="f-sec">معادن (اختياري)</div>
+     <div class="grid2">${[["sodium_mg","صوديوم (مجم)"],["potassium_mg","بوتاسيوم (مجم)"],["magnesium_mg","ماغنيسيوم (مجم)"],["iron_mg","حديد (مجم)"],["calcium_mg","كالسيوم (مجم)"],["zinc_mg","زنك (مجم)"]].map(([k,l])=>`<label class="f">${l}<input data-fm="${k}" inputmode="decimal" placeholder="اختياري"></label>`).join("")}</div>
      <p class="hint" id="fuHint"></p><button class="btn primary block" id="fAdd">إضافة</button></div>`;
   const { count } = await sb.from("foods").select("id",{count:"exact",head:true}); $("#fc").textContent=fmt(count)+" صنف · خاصة – العملاء بيبحثوا فيها بس";
   const hint=()=>{ const u=$("#fu").value; $("#fuHint").innerHTML=COUNT_UNITS(u)?`<label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="fone" checked style="width:auto;min-height:0"> القيم اللي كتبتها لـ ${u} واحدة</label>`:`القيم لكل 100 ${u}.`; };

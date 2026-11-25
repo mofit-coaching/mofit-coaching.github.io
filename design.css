@@ -185,3 +185,26 @@ html .grid3>.stat{min-width:0}
 @media(max-width:460px){html .inbst.grid3{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
 @media(min-width:461px){html .inbst.grid3{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
 html .qr-row{scrollbar-width:none}html .qr-row::-webkit-scrollbar{display:none}
+
+/* ===== polish batch 3 ===== */
+/* avatar ring: it ran 3 loops then fell back to its full-opacity base style, leaving a permanent ghost ring */
+html .hello .av::after{animation-fill-mode:both}
+/* mixed Arabic / Latin text: each element takes its own direction from its first strong letter */
+html .pill,html .edit-ex b,html .pv-ex span,html .ex-t b{unicode-bidi:plaintext}
+html bdi{unicode-bidi:isolate}
+/* back button: chevron points right (RTL "back") */
+html .bk-btn{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+/* scroll cues: soft fade on the side that still has more chips */
+html .sc-cue.sc-l{-webkit-mask-image:linear-gradient(to right,transparent 0,#000 28px);mask-image:linear-gradient(to right,transparent 0,#000 28px)}
+html .sc-cue.sc-r{-webkit-mask-image:linear-gradient(to left,transparent 0,#000 28px);mask-image:linear-gradient(to left,transparent 0,#000 28px)}
+html .sc-cue.sc-l.sc-r{-webkit-mask-image:linear-gradient(to right,transparent 0,#000 28px,#000 calc(100% - 28px),transparent 100%);mask-image:linear-gradient(to right,transparent 0,#000 28px,#000 calc(100% - 28px),transparent 100%)}
+/* "جهّز الملخص" no longer wraps */
+html .aid-b{flex-wrap:wrap;gap:8px}
+html .aid-run{white-space:nowrap;flex:none}
+/* selects match inputs */
+html select{height:48px;line-height:1.3}
+html .vq-row{flex-wrap:wrap}
+html .vq-row #vq{flex:1 1 100%;min-width:0}
+html .vq-row #vf{flex:1 1 100%;width:100%!important}
+html .f-sec{font-size:.84rem;font-weight:700;color:var(--slate,#5F6B7F);margin:14px 0 4px}
+html input::placeholder,html textarea::placeholder{font-size:.84rem}
