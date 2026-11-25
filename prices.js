@@ -85,19 +85,27 @@ function pqInner(uid,m){
   const cta={b:"اختار البرنامج",s:"اختار المتابعة",v:"اختار VIP"};
   const cards=Object.keys(TIER_DEFS).map(k=>{ const t=TIER_DEFS[k], p=pick(k,m); if(!p) return "";
     const total=(+p.months)+(+p.free_months||0), pm=planPrice(p)?(+p.price)/total:null, sv=saveOf(p), cur=esc(p.currency||"ج.م");
-    return `<div class="pq-card t-${k}">
+    return `<div class="pq-card t-${k}" tabindex="0">
       ${(p.badge||flag[k])?`<span class="pq-flag">${esc(p.badge||flag[k])}</span>`:""}
       <small class="pq-k">${esc(eyebrow[k])}</small>
       <div class="pq-h"><b>${esc(t.name)}</b></div><p class="pq-tag">${esc(t.tag)}</p>
       <div class="pq-price">${planPrice(p)?`<span class="cur">${cur}</span><b class="num">${fmt(p.price)}</b><span class="per">/ ${esc(planTitle(p))}</span>`:`<span class="per">تواصل لمعرفة السعر</span>`}</div>
       <div class="pq-sub">${pm?`<span><b class="num">${fmt(pm)}</b> ${cur} في الشهر</span>`:""}${sv?`<s class="num">${fmt(p.old_price)}</s><i>وفّر <bdi dir="ltr">${sv}%</bdi></i>`:""}</div>
+      ${pm?`<div class="pq-day">يعني <b class="num">${fmt(pm/30,1)}</b> ${cur} بس في اليوم</div>`:""}
       ${p.note?`<div class="pq-note">${esc(p.note)}</div>`:""}
       <ul class="pq-ul">${t.feats.map((f,i)=>`<li${(k==="v"&&i>=1)||(k==="s"&&i>=1&&i<=2)?` class="hl"`:""}>${esc(f)}</li>`).join("")}</ul>
       <a class="pq-cta" href="${esc(waLink(planMsg(p,who)))}" target="_blank" rel="noopener">${cta[k]} ←</a></div>`; }).join("");
   return seg+`<div class="pq-cards">${cards}</div><p class="pq-pay">💳 الدفع بإنستاباي · واشتراكك بيبدأ يوم استلام برنامجك مش يوم الدفع</p>`;
 }
+/* الأرقام بتعدّ لحد السعر الجديد (من غير حركة لو الجهاز مطفّي الحركة) */
+function pqCount(w){ if(!w||!PQ[w.id]) return; const st=PQ[w.id].prev||(PQ[w.id].prev={}), still=matchMedia("(prefers-reduced-motion:reduce)").matches;
+  w.querySelectorAll(".pq-card").forEach(card=>{ const el=card.querySelector(".pq-price b.num"); if(!el) return;
+    const to=+String(el.textContent).replace(/,/g,""), k=card.className.match(/t-(\w)/)[1], from=st[k]!=null?st[k]:to*.6; st[k]=to;
+    if(still||isNaN(to)||from===to) return; const t0=performance.now(), dur=650;
+    (function step(t){ const x=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-x,3); el.textContent=fmt(Math.round(from+(to-from)*e)); if(x<1) requestAnimationFrame(step); else el.textContent=fmt(to); })(t0); }); }
+function pqCountAll(){ document.querySelectorAll(".pq").forEach(pqCount); }
 document.addEventListener("click",e=>{ const c=e.target.closest(".pq-d"); if(!c||!PQ[c.dataset.uid]) return;
-  const w=document.getElementById(c.dataset.uid); if(w) w.innerHTML=pqInner(c.dataset.uid,+c.dataset.m); });
+  const w=document.getElementById(c.dataset.uid); if(w){ w.innerHTML=pqInner(c.dataset.uid,+c.dataset.m); pqCount(w); } });
 
 /* ---------- public: tab next to login ---------- */
 function loginTab(t){
@@ -108,7 +116,7 @@ function loginTab(t){
 }
 async function drawPublicPlans(){
   const box=$("#plansBox"); if(!box.dataset.done) box.innerHTML=`<div class="sk-wrap" role="status" aria-label="بيتحمل"><i class="sk sk-b"></i><i class="sk sk-l m"></i><i class="sk sk-l s"></i></div>`;
-  box.innerHTML=plansHTML(await loadPlans()); box.dataset.done=1;
+  box.innerHTML=plansHTML(await loadPlans()); box.dataset.done=1; pqCountAll();
 }
 (function initLoginTabs(){
   document.querySelectorAll(".ltab").forEach(b=>b.onclick=()=>loginTab(b.dataset.lt));
@@ -134,7 +142,7 @@ async function openPlansSheet(){
   const who=S.client?.full_name||S.me?.full_name||"";
   const body=openSheet(`<div class="between" style="margin-bottom:6px"><b>💳 جدّد اشتراكك</b><button class="btn sm ghost" onclick="closeSheet()">✕</button></div>
     <p class="hint" style="margin-top:0">اختار العرض وهيتبعت للكوتش على واتساب.</p><div id="sheetPlans"><div class="sk-wrap" role="status" aria-label="بيتحمل"><i class="sk sk-b"></i><i class="sk sk-l m"></i><i class="sk sk-l s"></i></div></div>`);
-  body.querySelector("#sheetPlans").innerHTML=plansHTML(await loadPlans(), who);
+  body.querySelector("#sheetPlans").innerHTML=plansHTML(await loadPlans(), who); pqCountAll();
 }
 function contactCoach(){ window.open(waLink(`السلام عليكم كوتش 👋\nأنا ${S.me?.full_name||""} من Mofit\n`),"_blank","noopener"); }
 
