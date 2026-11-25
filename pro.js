@@ -286,9 +286,10 @@ async function ensureHealth(){
       ${PARQ.map(([k,q])=>`<div class="item" style="padding:8px 0;display:block"><div style="margin-bottom:6px">${q}</div><div class="seg" data-q="${k}"><button data-v="0" class="on">لأ</button><button data-v="1">أيوه</button></div></div>`).join("")}
       <label class="f">لو في "أيوه" – اكتب التفاصيل<textarea id="hDet" rows="2"></textarea></label>
       <label class="row" style="gap:8px;align-items:flex-start;margin:10px 0"><input type="checkbox" id="hOk" style="width:auto;margin-top:4px"><span style="font-size:.85rem">أقر إن الإجابات صحيحة، وموافق إن الكوتش يحتفظ ببياناتي (القياسات، الصور، الأكل، التمرين) بشكل سري لمتابعة البرنامج فقط، وأقدر أطلب حذفها في أي وقت.</span></label>
-      <p class="err" id="hErr"></p><button class="btn primary block" id="hSave">حفظ والمتابعة ✓</button>`);
+      <p class="err" id="hErr"></p><button class="btn primary block" id="hSave">حفظ والمتابعة ✓</button><button class="btn block" type="button" id="hLater" style="margin-top:8px">لاحقاً</button><p class="hint" style="text-align:center">هنسألك تاني في المرة الجاية، والكوتش محتاج إجاباتك قبل التمارين التقيلة.</p>`);
     $("#sheet").dataset.lock="1";
     body.querySelectorAll(".seg[data-q]").forEach(s=>s.querySelectorAll("button").forEach(b=>b.onclick=()=>{ s.querySelectorAll("button").forEach(x=>x.classList.toggle("on",x===b)); }));
+    $("#hLater").onclick=()=>{ delete $("#sheet").dataset.lock; closeSheet(); res(); };
     $("#hSave").onclick=async()=>{
       if(!$("#hOk").checked){ $("#hErr").textContent="لازم توافق على الإقرار"; return; }
       const answers=Object.fromEntries([...body.querySelectorAll(".seg[data-q]")].map(s=>[s.dataset.q,s.querySelector(".on").dataset.v==="1"]));

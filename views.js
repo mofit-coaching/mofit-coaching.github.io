@@ -9,6 +9,8 @@ $("#loginForm").addEventListener("submit", async e=>{
 });
 async function logout(){ await sb.auth.signOut(); location.reload(); }
 
+function skelCards(){ return [70,150,110].map(h=>`<div class="card"><div class="skel sk" style="height:20px;width:45%;margin-bottom:12px"></div><div class="skel sk" style="height:${h}px"></div></div>`).join(""); }
+function waitCard(host,retry,n=0){ host.innerHTML=skelCards()+`<p class="muted" style="text-align:center;font-weight:700">بنحمّل بياناتك... لحظة</p>`+(n>=5?`<button class="btn block" id="wRetry">جرّب تاني</button>`:""); if(n>=5){ $("#wRetry").onclick=()=>{ waitCard(host,retry,0); retry(); }; return; } setTimeout(()=>{ if(host.isConnected&&host.querySelector(".skel")) retry(n+1); },4000); }
 const PW={train:["🏋","خطة التمرين","الكوتش لسه بيجهّز برنامج التمرين بتاعك"],food:["🍽","الخطة الغذائية","الكوتش لسه بيجهّز نظامك الغذائي"]};
 function planningInner(k){ const [ic,t,m]=PW[k]; return `<div class="pw-orb"><span class="pw-ring"></span><span class="pw-ring r2"></span><div class="pw-ic">${ic}</div></div><h2 class="pw-t">${m}</h2><p class="pw-s">${t} هتظهر هنا أول ما تجهز<span class="pw-dots"><i></i><i></i><i></i></span></p><p class="pw-s2">تقدر تبدأ تسجّل نومك ومياهك وخطواتك من تبويب العادات في الأثناء.</p>`; }
 function planningCard(k){ return `<div class="card plan-wait">${planningInner(k)}</div>`; }
@@ -16,10 +18,11 @@ const progWait=()=>S.me?.role!=="coach"&&(S.progPending||!(S.program||[]).length
 async function boot(){
   const { data:{ session } } = await sb.auth.getSession();
   if(!session){ $("#loginView").classList.remove("hidden"); $("#appView").classList.add("hidden"); return; }
-  let { data:me } = await sb.from("profiles").select("*").eq("id",session.user.id).single();
-  if(me) cacheSet("me",me); else { me=cacheGet("me"); if(!me||me.id!==session.user.id){ toast("تعذر تحميل الحساب"); return; } }
+  let me=null; try{ ({ data:me } = await sb.from("profiles").select("*").eq("id",session.user.id).single()); }catch(e){ me=null; }
+  if(me) cacheSet("me",me); else { me=cacheGet("me"); if(!me||me.id!==session.user.id){ $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden"); window.__bootN=(window.__bootN||0)+1; waitCard($("#main"),()=>boot(),Math.min(window.__bootN-1,5)); return; } }
   if(!me.active){ await sb.auth.signOut(); $("#loginView").classList.remove("hidden"); $("#loginErr").textContent=me.signup_days?"طلبك قيد المراجعة – الكوتش هيفعّل حسابك بعد تأكيد الاشتراك":"الحساب غير مفعّل – تواصل مع الكوتش"; return; }
   S.me=me; $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
+  if(!$("#main").children.length) $("#main").innerHTML=skelCards();
   await loadVideos(); flushQueue();
   if(me.role==="coach"){ S.tab="clients"; await Promise.all([loadClients(),loadCoachTemplates(),loadDietTemplates()]); }
   else { await openClient(me); const qt=new URLSearchParams(location.search).get("tab"); if(qt==="supps"&&S.supps?.length){ S.tab="supps"; } else if(qt==="train"||qt==="food"){ S.tab=qt; if(qt==="food") S.date=today(); } }
@@ -69,7 +72,7 @@ function render(){
     m.appendChild(bar);
   }
   const host=document.createElement("div"); m.appendChild(host);
-  ({home:viewHome,train:viewTrain,food:viewFood,habits:viewHabits,body:viewBody,setup:viewSetup,supps:viewSupps,clients:viewClients,videos:viewVideos,foods:viewFoods,ai:window.viewAiChat}[S.tab]||viewHome)(host);
+  try{ const r=({home:viewHome,train:viewTrain,food:viewFood,habits:viewHabits,body:viewBody,setup:viewSetup,supps:viewSupps,clients:viewClients,videos:viewVideos,foods:viewFoods,ai:window.viewAiChat}[S.tab]||viewHome)(host); if(r&&r.catch) r.catch(e=>{ console.warn(e); waitCard(host,n=>{ window.__rn=n; render(); },window.__rn||0); }); }catch(e){ console.warn(e); waitCard(host,n=>{ window.__rn=n; render(); },window.__rn||0); }
 }
 
 /* ======================================================================
@@ -123,7 +126,7 @@ async function viewHome(el){
     <div class="stat"><div class="l">💤 النوم</div><div class="v num">${fmt(avg(H.map(h=>h.sleep_hours)),1)}</div><div class="s">ساعة</div></div></div>
     <div style="margin-top:12px">${heatmap(p,H)}</div>`;
   const B=(body.data||[]).filter(b=>b.weight), startW=(body.data||[]).find(b=>b.week===0)?.weight ?? p.start_weight, cur=B.length?+B[B.length-1].weight:null;
-  const bmi=cur&&p.height_cm?cur/((p.height_cm/100)**2):null, ch=cur&&startW?cur-startW:null;
+  const bmi=cur&&p.height_cm?cur/((p.height_cm/100)**2):null, ch=cur&&startW&&wOk(+cur)&&wOk(+startW)?cur-startW:null;
   $("#hB").innerHTML=`<div class="card-h"><div class="ic">⚖</div><h2>الجسم<small>الوزن والقياسات</small></h2></div>
     <div class="grid3"><div class="stat dark"><div class="l">الوزن الحالي</div><div class="v num">${fmt(cur,1)}</div><div class="s">كجم</div></div>
     <div class="stat ${ch!==null&&ch<0?"acc":""}"><div class="l">التغيّر</div><div class="v num">${ch===null?"—":(ch>0?"+":"")+fmt(ch,1)}</div><div class="s">كجم منذ البداية</div></div>

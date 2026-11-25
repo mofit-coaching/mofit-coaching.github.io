@@ -200,7 +200,7 @@ function setupProgram(el){
   if(!days.includes(S.day)&&days.length) S.day=days[0];
   el.innerHTML=`<div id="brHost"></div><div class="card" style="${p.program_pending?"border:1.5px solid var(--acc-line,#FDBA74)":""}"><label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="progPend" ${p.program_pending?"checked":""} style="width:22px;height:22px;min-height:0;margin-top:2px"><span><b>البرنامج لسه متعملش</b><br><small class="muted">لما تفعّلها، العميل بيشوف رسالة متحركة إن الكوتش لسه بيجهّز التمرين، ومبيشوفش أي تمارين. البرنامج بتاعك محفوظ زي ما هو.</small></span></label></div><div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
       <div id="sysBox">${systemFields(p.training_days||3, p.level||"متوسط")}</div>
-      <button class="btn primary block" id="sysApply" style="margin-top:10px">تطبيق على ${esc(p.full_name||"العميل")}</button>
+      <button class="btn danger block" id="sysApply" style="margin-top:10px">⚠ استبدال البرنامج بنظام جديد</button>
       <p class="hint">⚠ التطبيق بيستبدل البرنامج الحالي ويمسح المجموعات المسجلة على التمارين القديمة.</p></div>
     <div class="card"><div class="card-h"><div class="ic">🔄</div><h2>أسابيع الديلود<small>العميل بيشوف مجموعات أقل ~40% وRIR 3-4 – بتتكرر في كل بلوك (كل 12 أسبوع)</small></h2></div>
       <div class="row" style="gap:6px" id="dl">${[...Array(12)].map((_,i)=>`<button class="chip ${(p.deload_weeks||[]).includes(i+1)?"on":""}" data-dw="${i+1}">${i+1}</button>`).join("")}</div>
@@ -223,7 +223,7 @@ function setupProgram(el){
   $("#progPend").onchange=async e=>{ const v=e.target.checked; const { error } = await sb.from("profiles").update({program_pending:v}).eq("id",p.id); if(error){ e.target.checked=!v; return toast(error.message); } await refreshClient(); S.tab="setup"; toast(v?"✓ التمرين مخفي عن العميل لحد ما تلغي الخيار":"✓ التمرين ظاهر للعميل"); render(); };
   $("#sysApply").onclick=async()=>{
     const {sys,level}=getSys(); if(!sys) return toast("اختار نظام");
-    if(S.program.length && !confirm(`استبدال برنامج ${p.full_name||""} الحالي بـ "${sys.name}" (${level})؟`)) return;
+    if(S.program.length && !confirm(`استبدال برنامج ${p.full_name||"العميل"} الحالي بـ "${sys.name}" (${level})؟\n\nهيتمسح البرنامج الحالي وكل المجموعات والأوزان المسجلة على تمارينه، ومينفعش ترجعها.\n\nمتأكد؟`)) return;
     if(await applyProgram(p, sys, level)){ await refreshClient(); S.day=1; toast("✓ تم تطبيق النظام"); render(); }
   };
   el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{S.day=+b.dataset.d; setupProgram(el);});
