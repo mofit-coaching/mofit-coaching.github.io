@@ -281,10 +281,32 @@ document.addEventListener("scroll",s,{passive:true,capture:true});document.addEv
 /* ---------- activity ping: lets the coach see "last active". One tiny RPC at most every 3 minutes while a client has the app open; silent if the function is missing. ---------- */
 (function(){ let last=0, busy=false;
   const ping=async()=>{ try{ if(busy||document.hidden||typeof S==="undefined"||!S.me||S.me.role!=="client"||Date.now()-last<18e4) return; busy=true; last=Date.now(); await sb.rpc("touch_active"); }catch(e){} busy=false; };
-  document.addEventListener("visibilitychange",ping); window.addEventListener("focus",ping); setInterval(ping,20000); setTimeout(ping,4000);
+  document.addEventListener("visibilitychange",ping); window.addEventListener("focus",ping); window.addEventListener("pageshow",ping); window.addEventListener("online",ping); setInterval(ping,20000); setTimeout(ping,4000);
+  /* right after a fresh login the session is not ready at 4s: retry every 2s until the first ping goes out */
+  let en=0; const early=setInterval(()=>{ ping(); if(last||++en>45) clearInterval(early); },2000);
 })();
 
 
 /* pause the Flame hero's loops when it is scrolled out of view */
 (function(){ let q=0; const upd=()=>{ q=0; const h=document.querySelector(".fl-hero"); if(!h) return; const r=h.getBoundingClientRect(); h.classList.toggle("fl-off", r.bottom<0||r.top>innerHeight); };
   window.addEventListener("scroll",()=>{ if(!q) q=requestAnimationFrame(upd); },{passive:true}); })();
+/* ---------- stale-app check: an installed PWA resumes from memory and can keep running old code for days. When the app comes back to the foreground and the live site has a newer build, reload quietly, but ONLY when it is safe: never on the training tab, never with a sheet, chat, rest timer or focused field open, and never within 20s of the user's last touch. ---------- */
+(function(){
+  const cur=()=>{ const l=document.querySelector('link[href*="design.css"]'); const m=l&&l.getAttribute("href").match(/v=([0-9a-f]{8})/); return m&&m[1]; };
+  let lastTouch=Date.now(), lastCheck=0, busy=false;
+  ["touchstart","pointerdown","keydown","scroll"].forEach(e=>window.addEventListener(e,()=>{ lastTouch=Date.now(); },{passive:true,capture:true}));
+  const safe=()=>{ if(typeof S==="undefined"||!S.me) return false; if(S.tab==="train") return false;
+    const sh=document.getElementById("sheet"), tm=document.getElementById("timer"), ae=document.activeElement;
+    if(sh&&!sh.classList.contains("hidden")) return false; if(tm&&!tm.classList.contains("hidden")) return false;
+    if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return false; if(Date.now()-lastTouch<20000) return false; return true; };
+  async function check(){ try{
+    if(busy||document.hidden||Date.now()-lastCheck<10*6e4) return; busy=true; lastCheck=Date.now();
+    const mine=cur(); if(!mine) { busy=false; return; }
+    const r=await fetch(location.pathname+"?t="+Date.now(),{cache:"no-store"}); const t=await r.text(); const m=t.match(/design\.css\?v=([0-9a-f]{8})/);
+    if(m&&m[1]!==mine&&sessionStorage.getItem("mofit_reloaded")!==m[1]){
+      const go=()=>{ if(safe()){ sessionStorage.setItem("mofit_reloaded",m[1]); location.reload(); return true; } return false; };
+      if(!go()){ let n=0; const iv=setInterval(()=>{ if(go()||++n>30) clearInterval(iv); },10000); }
+    }
+  }catch(e){} busy=false; }
+  document.addEventListener("visibilitychange",()=>{ if(!document.hidden) setTimeout(check,3000); }); window.addEventListener("pageshow",()=>setTimeout(check,3000)); setTimeout(check,30000);
+})();
