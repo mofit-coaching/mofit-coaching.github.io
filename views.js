@@ -78,13 +78,27 @@ function render(){
 /* ======================================================================
    HOME
    ====================================================================== */
+/* weekly recap card (client Home): this week's sets, volume, new bests, weight change. Shows only once something is logged. */
+function weekRecapHTML(all,bodyRows,wk){
+  const cur=all.filter(x=>x.week===wk&&logged(x)); if(!cur.length) return "";
+  const vol=cur.reduce((a,x)=>a+(+x.reps||0)*(+x.weight||0),0);
+  const bestBy=(rows)=>{ const m={}; rows.forEach(x=>{ const v=e1rm(x)||0; if(v>(m[x.exercise_id]||0)) m[x.exercise_id]=v; }); return m; };
+  const nowB=bestBy(cur), before=bestBy(all.filter(x=>x.week<wk&&logged(x)));
+  const prs=Object.keys(nowB).filter(k=>before[k]>0&&nowB[k]>before[k]*1.005).length;
+  const wts=(bodyRows||[]).filter(b=>b.weight!=null&&b.week<=wk).sort((x,y)=>x.week-y.week);
+  let wd=""; if(wts.length>=2){ const d=+wts[wts.length-1].weight-+wts[wts.length-2].weight; wd=`<div style="background:var(--c30-tint,#EEF1F6);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px"><small style="opacity:.75">الوزن</small><b class="num" style="font-size:1.5rem">${d>0?"+":""}${fmt(d,1)}</b><small style="opacity:.7">كجم عن آخر قياس</small></div>`; }
+  return `<div class="card" id="recapCard"><div class="card-h"><div class="ic acc">📊</div><h2>ملخص أسبوعك<small>أسبوع ${wk} لحد دلوقتي</small></h2></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px"><div style="background:var(--c30-tint,#EEF1F6);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px"><small style="opacity:.75">مجموعات</small><b class="num" style="font-size:1.5rem">${cur.length}</b><small style="opacity:.7">اتسجلت</small></div>
+    <div style="background:var(--c30-tint,#EEF1F6);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px"><small style="opacity:.75">حجم التمرين</small><b class="num" style="font-size:1.5rem">${fmt(Math.round(vol))}</b><small style="opacity:.7">كجم إجمالي</small></div>
+    <div style="background:var(--c30-tint,#EEF1F6);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px"><small style="opacity:.75">أرقام جديدة</small><b class="num" style="font-size:1.5rem">${prs}</b><small style="opacity:.7">تمرين اتحسّن</small></div>${wd}</div></div>`;
+}
 async function viewHome(el){
   const p=S.client, t=targets(p), wk=currentWeek(p), dn=todayDayNo();
   const todayEx=S.program.filter(e=>e.day_no===dn);
   el.innerHTML=`${progWait()?planningCard("train"):`<div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
       ${dn?`<div class="hero-body">${anatomySVG(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<div>${muscleLegend(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<small class="hero-sub">${todayEx.length} تمارين · ${todayEx.reduce((a,e)=>a+(+e.sets||0),0)} مجموعة</small></div></div><button class="btn primary block" style="margin-top:10px" id="goTrain">ابدأ التمرين ←</button>`
           :`<p class="hint">😴 الراحة جزء من التطور. سجّل نومك ومياهك وخطواتك في العادات.</p>`}</div>`}
-    <div id="hToday"></div><div id="hMiss"></div>
+    <div id="hToday"></div><div id="hMiss"></div><div id="hRecap"></div>
     <div class="card" id="hN"><div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2></div><p class="muted">جارٍ التحميل…</p></div>
     <div id="hSteps"></div><div id="hCI"></div><div id="hCardio"></div>
     <div id="hFlame"></div><div id="hStreak"></div><div id="hFirst"></div>
@@ -106,6 +120,7 @@ async function viewHome(el){
     sb.from("set_logs").select("exercise_id,week,set_no,reps,weight,rir,failure").eq("client_id",id),
   ]);
   const mc=$("#hMiss"); if(mc){ mc.innerHTML=missedCard(p, sets.data); const b=$("#doMissed"); if(b) b.onclick=()=>{ S.tab="train"; S.day=+b.dataset.d; S.week=+b.dataset.w; render(); }; }
+  try{ const rc=$("#hRecap"); if(rc) rc.innerHTML=weekRecapHTML(sets.data||[],body.data||[],wk); }catch(e){}
   const tot=sumMacros(meals.data||[]);
   $("#hN").innerHTML=`<div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2><button class="btn sm" id="goFood">سجّل أكلك</button></div>
     <div style="display:flex;gap:16px;align-items:center">${ring(tot.kcal,t.kcal||1,{size:118,label:fmt(tot.kcal),sub:"من "+fmt(t.kcal)+" kcal"})}
