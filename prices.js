@@ -8,21 +8,37 @@
    - Client: renewal button inside the app when the subscription is ending.
    ====================================================================== */
 const COACH_WA = "201093047225";
+/* الباقات: 3 مستويات × 4 مدد. الشهري 300/500/1000 ج.م وخصم الالتزام
+   10% (3 شهور) · 15% (6 شهور) · 25% (12 شهر). old_price = سعر الشهري × المدة عشان يظهر "وفّر".
+   المستوى بيتحدد من أول حرف في الـid (b/s/v) عشان يفضل شغال حتى بعد ما الكوتش يحفظ من التطبيق. */
+const TIER_DEFS = {
+  b:{name:"البرنامج",        tag:"نظامك كامل جوه التطبيق",              feats:["برنامج تمرين مخصوص ليك","نظام غذائي محسوب على هدفك","المساعد الذكي بيرد على أسئلتك فوراً","تسجيل الخطوات والتقدم في التطبيق","الدوري والتحديات"]},
+  s:{name:"المتابعة",        tag:"برنامجك + متابعة الكوتش أسبوعياً",    feats:["كل اللي في باقة البرنامج","متابعة أسبوعية مع الكوتش","شات مباشر مع الكوتش جوه التطبيق","تعديل البرنامج على حسب نتيجتك"]},
+  v:{name:"واحد لواحد VIP",  tag:"أعلى مستوى متابعة شخصية",            feats:["كل اللي في باقة المتابعة","متابعة يومية ورد خلال ٢٤ ساعة","مراجعة فيديوهات تمارينك وتصحيح الأداء","مكالمة شهرية مع الكوتش"]},
+};
 const PLAN_DEFAULTS = [
-  {id:"p1",  position:0, months:1,  free_months:0, price:null, old_price:null, currency:"ج.م", badge:null,          note:null, active:true},
-  {id:"p3",  position:1, months:3,  free_months:1, price:null, old_price:null, currency:"ج.م", badge:null,          note:null, active:true},
-  {id:"p6",  position:2, months:6,  free_months:2, price:null, old_price:null, currency:"ج.م", badge:"الأكثر طلباً", note:null, active:true},
-  {id:"p12", position:3, months:12, free_months:6, price:null, old_price:null, currency:"ج.م", badge:"أفضل قيمة",   note:null, active:true},
+  {id:"b1",  tier:"b", position:0,  months:1,  free_months:0, price:300,  old_price:null,  currency:"ج.م", badge:null,          note:null, active:true},
+  {id:"b3",  tier:"b", position:1,  months:3,  free_months:0, price:810,  old_price:900,   currency:"ج.م", badge:null,          note:null, active:true},
+  {id:"b6",  tier:"b", position:2,  months:6,  free_months:0, price:1530, old_price:1800,  currency:"ج.م", badge:null,          note:null, active:true},
+  {id:"b12", tier:"b", position:3,  months:12, free_months:0, price:2700, old_price:3600,  currency:"ج.م", badge:"أفضل قيمة",   note:null, active:true},
+  {id:"s1",  tier:"s", position:4,  months:1,  free_months:0, price:500,  old_price:null,  currency:"ج.م", badge:null,          note:null, active:true},
+  {id:"s3",  tier:"s", position:5,  months:3,  free_months:0, price:1350, old_price:1500,  currency:"ج.م", badge:null,          note:null, active:true},
+  {id:"s6",  tier:"s", position:6,  months:6,  free_months:0, price:2550, old_price:3000,  currency:"ج.م", badge:"الأكثر طلباً", note:null, active:true},
+  {id:"s12", tier:"s", position:7,  months:12, free_months:0, price:4500, old_price:6000,  currency:"ج.م", badge:null,          note:null, active:true},
+  {id:"v1",  tier:"v", position:8,  months:1,  free_months:0, price:1000, old_price:null,  currency:"ج.م", badge:null,          note:null, active:true},
+  {id:"v3",  tier:"v", position:9,  months:3,  free_months:0, price:2700, old_price:3000,  currency:"ج.م", badge:null,          note:null, active:true},
+  {id:"v6",  tier:"v", position:10, months:6,  free_months:0, price:5100, old_price:6000,  currency:"ج.م", badge:null,          note:null, active:true},
+  {id:"v12", tier:"v", position:11, months:12, free_months:0, price:9000, old_price:12000, currency:"ج.م", badge:null,          note:null, active:true},
 ];
-const PLAN_FEATURES = ["برنامج تمرين مخصص ليك","نظام غذائي محسوب على هدفك","متابعة أسبوعية مع الكوتش","تطبيق Mofit لتسجيل تمرينك وأكلك","مكملات محسوبة على وزنك"];
 
 function waLink(text){ return `https://wa.me/${COACH_WA}?text=${encodeURIComponent(text)}`; }
 function monthsAr(n){ n=+n; return n===1?"شهر":n===2?"شهرين":n<=10?`${n} شهور`:`${n} شهر`; }
 function planTitle(p){ return `${monthsAr(p.months)}${p.free_months?` + ${monthsAr(p.free_months)} هدية`:""}`; }
 function planPrice(p){ return p.price!==null&&p.price!==undefined&&p.price!==""; }
+function planTier(p){ return TIER_DEFS[p.tier||""]||TIER_DEFS[(p.id||"")[0]]||null; }
 function planMsg(p, who){
-  const total=(+p.months)+(+p.free_months||0);
-  return `السلام عليكم كوتش 👋\nعايز أشترك في عرض Mofit:\n✅ ${planTitle(p)} (إجمالي ${monthsAr(total)})`
+  const total=(+p.months)+(+p.free_months||0), t=planTier(p);
+  return `السلام عليكم كوتش 👋\nعايز أشترك في ${t?`باقة ${t.name} – `:""}عرض Mofit:\n✅ ${planTitle(p)} (إجمالي ${monthsAr(total)})`
     + (planPrice(p)?`\n💰 السعر: ${fmt(p.price)} ${p.currency||"ج.م"}`:"")
     + (who?`\n👤 ${who}`:"")
     + `\n\nممكن تفاصيل الاشتراك وطريقة الدفع؟`;
@@ -39,7 +55,7 @@ function plansHTML(plans, who){
   if(!plans.length) return `<p class="hint">العروض هتنزل قريب – كلم الكوتش على واتساب.</p>`;
   const perMonth=p=> planPrice(p) ? (+p.price)/((+p.months)+(+p.free_months||0)) : null;
   const priced=plans.filter(planPrice), best=priced.length>1&&!plans.some(p=>p.badge)? priced.reduce((a,b)=>perMonth(b)<perMonth(a)?b:a) : null;
-  return `<div class="plans">${plans.map(p=>{ const total=(+p.months)+(+p.free_months||0), pm=perMonth(p), pd=pm?pm/30:null, save=p.old_price&&planPrice(p)&&+p.old_price>+p.price?Math.round((1-(+p.price)/(+p.old_price))*100):0;
+  const card=p=>{ const total=(+p.months)+(+p.free_months||0), pm=perMonth(p), pd=pm?pm/30:null, save=p.old_price&&planPrice(p)&&+p.old_price>+p.price?Math.round((1-(+p.price)/(+p.old_price))*100):0;
     return `<a class="plan ${p.badge||p===best?"hot":""}" href="${esc(waLink(planMsg(p,who)))}" target="_blank" rel="noopener">
       ${p.badge?`<span class="plan-badge">${esc(p.badge)}</span>`:p===best?`<span class="plan-badge">⭐ الأفضل قيمة</span>`:""}${save>0?`<span class="plan-save">وفّر ${save}%</span>`:""}
       <div class="plan-top"><b>${esc(monthsAr(p.months))}</b>${p.free_months?`<span class="plan-free">+ ${esc(monthsAr(p.free_months))} هدية 🎁</span>`:""}</div>
@@ -47,7 +63,13 @@ function plansHTML(plans, who){
       <div class="plan-price">${planPrice(p)?`${p.old_price?`<s class="num">${fmt(p.old_price)}</s> `:""}<b class="num">${fmt(p.price)}</b> <small>${esc(p.currency||"ج.م")}</small>`:`<small>تواصل لمعرفة السعر</small>`}</div>
       ${pm?`<div class="plan-pm">يعني <span class="num">${fmt(pm)}</span> ${esc(p.currency||"ج.م")} في الشهر · <b class="num">${fmt(pd,1)}</b> في اليوم</div>`:""}
       ${p.note?`<div class="plan-note">${esc(p.note)}</div>`:""}
-      <span class="plan-cta">اشترك عن طريق واتساب ›</span></a>`; }).join("")}</div>`;
+      <span class="plan-cta">اشترك عن طريق واتساب ›</span></a>`; };
+  if(!plans.every(planTier)) return `<div class="plans">${plans.map(card).join("")}</div>`;
+  return Object.keys(TIER_DEFS).map(k=>{ const t=TIER_DEFS[k], ps=plans.filter(p=>planTier(p)===t);
+    return ps.length?`<div class="ptier"><div class="ptier-h"><b>${esc(t.name)}</b><span>${esc(t.tag)}</span></div>
+      <ul class="plan-feats">${t.feats.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>
+      <div class="plans ptier-grid">${ps.map(card).join("")}</div></div>`:""; }).join("")
+    + `<p class="plan-pay">💳 الدفع بإنستاباي · واشتراكك بيبدأ يوم استلام برنامجك مش يوم الدفع</p>`;
 }
 
 /* ---------- public: tab next to login ---------- */
@@ -94,8 +116,8 @@ async function coachPricesCard(host){
   const plans=await loadPlans(true), rows=plans.length?plans:PLAN_DEFAULTS;
   const fld=(p,k,label,attrs="")=>`<label class="f">${label}<input data-f="${k}" value="${esc(p[k]??"")}" ${attrs}></label>`;
   host.innerHTML=`<div class="card-h"><div class="ic acc">💰</div><h2>الأسعار والعروض<small>بتظهر في تبويب "الأسعار" جنب تسجيل الدخول</small></h2></div>
-    <div id="prRows">${rows.map(p=>`<div class="pr-row" data-id="${esc(p.id)}">
-      <label class="row pr-head"><input type="checkbox" data-f="active" ${p.active?"checked":""}><b>${esc(planTitle(p))}</b><span class="muted">${p.active?"ظاهر":"مخفي"}</span></label>
+    <div id="prRows">${rows.map(p=>{ const t=planTier(p); return `<div class="pr-row" data-id="${esc(p.id)}">
+      <label class="row pr-head"><input type="checkbox" data-f="active" ${p.active?"checked":""}><b>${t?esc(t.name)+" · ":""}${esc(planTitle(p))}</b><span class="muted">${p.active?"ظاهر":"مخفي"}</span></label>
       <div class="grid3">
         ${fld(p,"price","السعر","type=number inputmode=decimal min=0 step=any placeholder='اكتب السعر'")}
         ${fld(p,"old_price","السعر قبل الخصم (اختياري)","type=number inputmode=decimal min=0 step=any")}
@@ -103,7 +125,7 @@ async function coachPricesCard(host){
         ${fld(p,"months","عدد الشهور","type=number inputmode=numeric min=1 max=60")}
         ${fld(p,"free_months","شهور هدية","type=number inputmode=numeric min=0 max=60")}
         ${fld(p,"badge","شارة (اختياري)","maxlength=30 placeholder='الأكثر طلباً'")}
-      </div>${fld(p,"note","ملاحظة تحت السعر (اختياري)","maxlength=120 placeholder='مثلاً: العرض لحد آخر الشهر'")}</div>`).join("")}</div>
+      </div>${fld(p,"note","ملاحظة تحت السعر (اختياري)","maxlength=120 placeholder='مثلاً: العرض لحد آخر الشهر'")}</div>`; }).join("")}</div>
     <div class="row" style="gap:8px"><button class="btn primary" style="flex:1" id="prSave">💾 حفظ الأسعار</button>
       <a class="btn" style="text-decoration:none;display:flex;align-items:center" href="./#prices" target="_blank" rel="noopener">👁 معاينة</a></div>
     <p class="hint">لينك صفحة الأسعار تقدر تحطه على صفحة الفيسبوك: <b dir="ltr">mofit-coaching.github.io/#prices</b></p>`;
