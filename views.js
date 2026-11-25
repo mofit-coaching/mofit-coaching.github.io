@@ -321,7 +321,7 @@ async function renderMeals(el,{mode}){
   const drawTot=()=>{ const tot=sumMacros(planMode?plan:items);
     $("#fTot").innerHTML=`<div class="card-h"><div class="ic">${planMode?"📋":"🔥"}</div><h2>${planMode?"إجمالي الخطة":"ملخص اليوم"}<small>${planMode?"مقارنة بأهداف العميل":"المتبقي: "+(t.kcal?fmt(t.kcal-tot.kcal):"—")+" kcal"}</small></h2></div>
       <div style="display:flex;gap:16px;align-items:center">${ring(tot.kcal,t.kcal||1,{size:112,track:"rgba(255,255,255,.15)",label:fmt(tot.kcal),sub:"من "+fmt(t.kcal),textColor:"#fff"})}
-      <div style="flex:1;color:#fff">${macroRow("بروتين",tot.P,t.P,"جم")}${macroRow("كارب",tot.C,t.C,"جم")}${macroRow("دهون",tot.F,t.F,"جم")}</div></div>${planMode?mineralTotHTML(plan):""}`; };
+      <div style="flex:1;color:#fff">${macroRow("بروتين",tot.P,t.P,"جم")}${macroRow("كارب",tot.C,t.C,"جم")}${macroRow("دهون",tot.F,t.F,"جم")}</div></div>${planMode?mineralTotHTML(plan):mineralTotHTML(items,"اللي اتاكل النهارده")}`; };
   drawTot();
   const wrap=$("#meals");
   for(let m=1;m<=meals;m++){
@@ -341,7 +341,7 @@ async function renderMeals(el,{mode}){
         ${!mp.length&&!ml.length&&!edit?`<div class="item"><span class="muted">مفيش أصناف لسه</span></div>`:""}
         <div class="meal-f">${edit?`<button class="btn sm navy grow" data-padd>+ صنف للخطة</button>`:`${mp.length?`<button class="btn sm grow" data-all>✓ أكلت الوجبة كلها</button>`:""}<button class="btn sm primary grow" data-ladd>+ سجّل صنف</button>`}</div>`;
       box.querySelector("[data-edit]")&&(box.querySelector("[data-edit]").onclick=()=>{edit=!edit; draw();});
-      const logOne=async pi=>{ const rec={id:crypto.randomUUID(),client_id:p.id,log_date:S.date,meal_no:m,food_id:pi.food_id,food_name:pi.food_name,unit:pi.unit,qty:pi.qty,kcal:pi.kcal,protein:pi.protein,carbs:pi.carbs,fat:pi.fat};
+      const logOne=async pi=>{ const rec={id:crypto.randomUUID(),client_id:p.id,log_date:S.date,meal_no:m,food_id:pi.food_id,food_name:pi.food_name,unit:pi.unit,qty:pi.qty,kcal:pi.kcal,protein:pi.protein,carbs:pi.carbs,fat:pi.fat}; MIN_KEYS.forEach(([k])=>{ if(pi[k]!==undefined) rec[k]=pi[k]; });
         const { data:ins, error } = await dbWrite({op:"insert",table:"meal_items",row:rec}); if(error){ toast(error.message); return; } items.push(ins); };
       box.querySelectorAll("[data-swap]").forEach(b=>b.onclick=()=>{ const pi=plan.find(i=>i.id===b.dataset.swap);
         openFoodPicker("تبديل "+pi.food_name, async(food,qty)=>{ const upd={food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)};
@@ -355,7 +355,7 @@ async function renderMeals(el,{mode}){
       box.querySelectorAll("[data-ldel]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("meal_items").delete().eq("id",b.dataset.ldel); if(error) return toast(error.message); items.splice(items.findIndex(i=>i.id===b.dataset.ldel),1); draw(); drawTot(); });
       box.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("diet_plan_items").delete().eq("id",b.dataset.pdel); if(error) return toast(error.message); plan.splice(plan.findIndex(i=>i.id===b.dataset.pdel),1); draw(); drawTot(); });
       box.querySelector("[data-ladd]")&&(box.querySelector("[data-ladd]").onclick=()=>openFoodPicker("سجّل في "+mealName(p,m), async(food,qty)=>{
-        const { data:ins, error } = await sb.from("meal_items").insert({client_id:p.id,log_date:S.date,meal_no:m,food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty)}).select().single();
+        const { data:ins, error } = await sb.from("meal_items").insert({client_id:p.id,log_date:S.date,meal_no:m,food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)}).select().single();
         if(error) return toast(error.message); items.push(ins); draw(); drawTot(); toast("✓ اتسجل"); }));
       box.querySelector("[data-padd]")&&(box.querySelector("[data-padd]").onclick=()=>openFoodPicker("أضف لخطة "+mealName(p,m), async(food,qty)=>{
         const { data:ins, error } = await sb.from("diet_plan_items").insert({client_id:p.id,meal_no:m,position:mp.length,food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)}).select().single();
@@ -465,4 +465,4 @@ async function homeCheckinCard(p,wk){
     `<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>متابعة الأسبوع ${wk}<small>${thisW?(thisW.reviewed_at?"✓✓ الكوتش رد":"✓ اتبعتت – مستنية رد الكوتش"):"لسه ما اتبعتتش – وزن + صور + إحساسك"}</small></h2><button class="btn sm ${thisW?"":"primary"}" id="goCI">${thisW?"عرض":"ابعت"}</button></div>
      ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
   $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
-                                                                             }
+}
