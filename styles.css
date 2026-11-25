@@ -1315,3 +1315,64 @@ input[type=url],input[placeholder*="youtu"]{direction:ltr;text-align:left}
 @media(min-width:760px){.pq-seg{max-width:560px}.pq-cards{gap:22px}.pq-card.t-v::after{border-radius:26px}}
 .pq-card:nth-child(1){animation-delay:.04s,var(--fl)}.pq-card:nth-child(2){animation-delay:.14s,var(--fl)}.pq-card:nth-child(3){animation-delay:.24s,var(--fl)}
 @media(prefers-reduced-motion:reduce){.pq-card::before,.pq-card::after,.pq-price b,.pq-cta::after,.pq-flag{animation:none!important}.pq-card{translate:none!important}}
+
+/* ---------- login v4: dark glass card, merged with the night scene + savage motion ---------- */
+@keyframes lcin{from{opacity:0;transform:translateY(34px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes lcglow{50%{box-shadow:0 -30px 80px -30px rgba(0,0,0,.9),0 0 90px -18px rgba(255,107,26,.6)}}
+@keyframes lcfade{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes lcpulse{50%{box-shadow:0 0 0 3px rgba(255,107,26,.32),0 0 34px -4px rgba(255,107,26,.85)}}
+@keyframes lcshake{20%{transform:translateX(-4px)}40%{transform:translateX(4px)}60%{transform:translateX(-3px)}80%{transform:translateX(2px)}}
+@keyframes lcedge{0%{background-position:180% 0}60%,100%{background-position:-80% 0}}
+@keyframes ltabpop{0%{transform:scale(.92)}60%{transform:scale(1.045)}100%{transform:scale(1)}}
+@keyframes chippop{0%{transform:scale(.85)}60%{transform:scale(1.08)}100%{transform:scale(1)}}
+.login-card{position:relative;color-scheme:dark;
+  background:linear-gradient(180deg,rgba(22,31,54,.78),rgba(11,18,32,.9));
+  -webkit-backdrop-filter:blur(18px) saturate(1.3);backdrop-filter:blur(18px) saturate(1.3);
+  border:1.5px solid rgba(255,255,255,.09);border-radius:34px 34px 0 0;
+  box-shadow:0 -30px 80px -30px rgba(0,0,0,.9),0 0 60px -22px rgba(255,107,26,.35);
+  animation:lcin .7s cubic-bezier(.2,.9,.25,1) backwards .15s,lcglow 4.5s ease-in-out 1.2s infinite}
+/* light sweeping along the card's top edge */
+.login-card::before{content:"";position:absolute;top:-1.5px;left:26px;right:26px;height:3px;border-radius:3px;pointer-events:none;z-index:5;
+  background:linear-gradient(90deg,transparent,rgba(255,150,70,.95),#FFC48F,rgba(255,150,70,.95),transparent);
+  background-size:220% 100%;background-position:180% 0;animation:lcedge 6s ease-in-out infinite}
+/* soft sheen sweep across the glass */
+.login-card::after{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;z-index:4;
+  background:linear-gradient(115deg,transparent 40%,rgba(255,255,255,.05) 50%,transparent 60%);
+  background-size:250% 100%;background-position:160% 0;animation:pqsheen 11s ease-in-out 2.5s infinite}
+/* tabs: dark pill, orange active with pop */
+.login-card .ltabs{background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.09)}
+.login-card .ltab{color:#93A1BC}
+.login-card .ltab.on{background:linear-gradient(135deg,#FF6B1A,#FF9248);color:#fff;box-shadow:0 8px 20px -6px rgba(255,107,26,.7);animation:ltabpop .35s cubic-bezier(.2,.9,.3,1.4)}
+/* pane swap: fade-rise every time a tab opens */
+#loginForm,#signupPane,#plansPane{animation:lcfade .5s cubic-bezier(.2,.9,.25,1)}
+/* fields: dark glass with a living focus ring */
+.login-card .f{color:#A9B6CE}
+.login-card .f>.scroller{margin-top:6px}
+.login-card input,.login-card select,.login-card textarea{background:rgba(255,255,255,.055);border:1.5px solid rgba(255,255,255,.12);color:#fff;caret-color:#FF8A3D}
+.login-card input::placeholder,.login-card textarea::placeholder{color:#5E6C88}
+.login-card input:hover,.login-card select:hover,.login-card textarea:hover{border-color:rgba(255,255,255,.24)}
+.login-card input:focus,.login-card select:focus,.login-card textarea:focus{background:rgba(255,255,255,.09);border-color:#FF7A2E;box-shadow:0 0 0 3px rgba(255,107,26,.22),0 0 24px -6px rgba(255,107,26,.55);animation:lcpulse 2.4s ease-in-out infinite}
+.login-card input:-webkit-autofill{-webkit-box-shadow:0 0 0 80px #18233C inset;-webkit-text-fill-color:#fff;border-color:rgba(255,138,61,.5)}
+.login-card select option{background:#0E1628;color:#fff}
+/* day chips: dark, orange burst when picked */
+.login-card .chip{background:rgba(255,255,255,.05);border:1.5px solid rgba(255,255,255,.13);color:#C7D2E6}
+.login-card .chip.on{background:linear-gradient(135deg,#FF7A2E,#FF5A0A);border-color:transparent;color:#fff;box-shadow:0 10px 20px -8px rgba(255,107,26,.85);animation:chippop .32s cubic-bezier(.2,.9,.3,1.5)}
+/* microcopy, links, errors */
+.login-card .hint{color:#93A1BC}
+.login-card h2{color:#fff}
+.login-card .login-links{color:#8FA0BD}
+.login-card .login-links a{color:#FF8A3D}
+.login-card .err{color:#FF9D8F}
+.login-card .err:not(:empty){animation:lcshake .35s}
+/* signup "request received" card matches the glass */
+.login-card .card{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.1);box-shadow:none;color:#E8EEF8}
+/* signup submit gets the same breathing glow as the login button */
+#suForm .btn.primary{animation:glowp 3.2s ease-in-out infinite}
+/* prices tab still turns the card fully transparent over the dark page */
+.login-card:has(#plansPane:not(.hidden)){background:transparent;border-color:transparent;box-shadow:none;-webkit-backdrop-filter:none;backdrop-filter:none;animation:none}
+.login-card:has(#plansPane:not(.hidden))::before,.login-card:has(#plansPane:not(.hidden))::after{content:none}
+@media(prefers-reduced-motion:reduce){
+  .login-card,.login-card::before,.login-card::after,#loginForm,#signupPane,#plansPane,
+  .login-card .ltab.on,.login-card .chip.on,.login-card .err:not(:empty),
+  .login-card input:focus,.login-card select:focus,.login-card textarea:focus,#suForm .btn.primary{animation:none!important}
+       }
