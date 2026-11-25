@@ -110,7 +110,7 @@ const EMOJI_ICO={
   "🔔":"bell","📧":"mail","🔑":"key","🔐":"lock","👤":"user","🙋":"user","👥":"users","🧭":"compass","💰":"coins","🤷":"question","🧱":"layers",
   "🖨":"printer","🦵":"leg","🧍":"person","🧬":"dna","🎉":"sparkle","❤":"heart","📲":"install","🗺":"map","🕒":"clock","💧":"drop","👣":"steps",
   "📊":"bars","✅":"check","👌":"check","🔗":"link","🗑":"trash","🌱":"sprout","🎚":"sliders","👋":"_none","😍":"face5","🙂":"face4","😐":"face3",
-  "😕":"face2","😞":"face1","🟢":"dotG","🟡":"dotY","🔴":"dotR","⚪":"dotW","↗":"ext","🧮":"bars","🗒":"doc",
+  "😕":"face2","😞":"face1","🟢":"dotG","🟡":"dotY","🔴":"dotR","⚪":"dotW","↗":"ext","🧮":"bars","🌸":"drop","🩸":"drop","🗒":"doc",
 };
 const ICO_GRP={dumbbell:"train",bolt:"train",leg:"train",arm:"train",run:"train",steps:"train",hourglass:"train",slow:"train",
   apple:"food",bowl:"food",plate:"food",pan:"food",cup:"food",drumstick:"food",bread:"food",drop:"food",pill:"food",
