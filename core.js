@@ -30,6 +30,16 @@ function avg(a){ const x=a.filter(v=>v!==null&&v!==undefined&&!isNaN(v)); return
 function genPass(){ const c="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"; const a=new Uint32Array(10); crypto.getRandomValues(a); return [...a].map(x=>c[x%c.length]).join(""); }
 function initials(p){ return esc(((p?.full_name||p?.email||"?").trim()[0]||"?").toUpperCase()); }
 async function fnErr(error, data){ if(error){ try{ const j=await error.context.json(); return j.error||error.message; }catch{ return error.message; } } return data?.error||null; }
+/* coach-admin edge function call that survives a stale session: refresh first, retry once on 401, then ask to log in again */
+async function adminCall(opts){
+  const call=()=>sb.functions.invoke("coach-admin",opts);
+  const is401=r=>r&&r.error&&r.error.context&&r.error.context.status===401;
+  try{ await sb.auth.refreshSession(); }catch(e){}
+  let r=await call();
+  if(is401(r)){ try{ await sb.auth.refreshSession(); }catch(e){} r=await call(); }
+  if(is401(r)) return { data:null, error:{ message:"سجّل دخول تاني", context:{ json:async()=>({error:"سجّل دخول تاني"}) } } };
+  return r;
+}
 
 /* ---------- calculations (same formulas as the Mofit sheet) ---------- */
 /* Weeks are absolute from start_date (1, 2 … 13, 14 …) and are shown in blocks of 12.
@@ -266,3 +276,4 @@ document.addEventListener("scroll",s,{passive:true,capture:true});document.addEv
     if(left===0){ if(!el._fin){ el._fin=1; try{ burst(); }catch(e){} } } else el._fin=0; };
   startRest=function(){ const r=_s.apply(this,arguments); const el=$("#timer"); if(el){ el._fin=0; el.classList.remove("t-in"); void el.offsetWidth; el.classList.add("t-in"); clearTimeout(el._tin); el._tin=setTimeout(()=>el.classList.remove("t-in"),1000); } return r; };
 })();
+
