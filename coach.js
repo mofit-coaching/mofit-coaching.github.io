@@ -80,6 +80,7 @@ async function viewClients(el){
       <div class="stat"><div class="l">برامج محفوظة</div><div class="v">${S.templates.length}</div></div></div>
     <button class="btn primary block" id="addBtn" style="margin-bottom:14px">+ إضافة عميل جديد</button>
     <div class="card" id="alerts"></div>
+    <div class="card" id="aidg" hidden></div>
     <div class="card" id="wrep"></div>
     <div class="card" id="pgan"></div>
     <div class="card" id="ciov"></div>
@@ -103,7 +104,8 @@ async function viewClients(el){
       <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","لسه مفيش عملاء","ضيف أول عميل وابدأ ابنِ برنامجه: تمرين وأكل ومتابعة من مكان واحد.",{label:"+ إضافة عميل جديد",click:"#addBtn"});
     $("#cl").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); deleteClientFlow(C.find(c=>c.id===b.dataset.del),async()=>{ await loadClients(); viewClients(el); }); });
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
-  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C); checkinOverviewCard($("#ciov"),C); mlStorageMeter($("#mlst"));
+  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C); checkinOverviewCard($("#ciov"),C);
+  if(typeof aiDigestCard==="function") aiDigestCard(C,AL); mlStorageMeter($("#mlst"));
   draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
   $("#tplList").querySelectorAll("[data-tdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف البرنامج المحفوظ؟ (برامج العملاء الحالية مش هتتأثر)")) return; await sb.from("program_templates").delete().eq("id",b.dataset.tdel); await loadCoachTemplates(); viewClients(el); });
@@ -180,7 +182,8 @@ function setupData(el){
       <label class="f">ملاحظات الكوتش (خاصة – العميل مش بيشوفها)<textarea rows="2" data-x="coach_notes" placeholder="بيتحمل…"></textarea></label>
       <button class="btn primary block" id="pSave">حفظ البيانات</button></div>`;
   el.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{ const st=$("#sStart").value||today(); $("#sStart").value=st; const d=new Date(st+"T00:00:00"); d.setMonth(d.getMonth()+(+b.dataset.sm)); d.setDate(d.getDate()-1); $("#sEnd").value=d.toISOString().slice(0,10); $("#sPlan").value=b.dataset.plan; });
-  el.insertAdjacentHTML("afterbegin",healthCard(p)+painCard(p)); fillCoachNote(el,p); el.insertAdjacentHTML("beforeend",assessmentCardHTML(p)); wireAssessment($("#ohsa"),p);
+  el.insertAdjacentHTML("afterbegin",healthCard(p)+painCard(p)+'<div class="card" id="aicH" hidden></div>'); fillCoachNote(el,p); el.insertAdjacentHTML("beforeend",assessmentCardHTML(p)); wireAssessment($("#ohsa"),p);
+  if(typeof aiClientCard==="function") aiClientCard(p);
   el.querySelectorAll("[data-pres]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("client_events").update({resolved_at:new Date().toISOString()}).eq("id",b.dataset.pres); if(error) return toast("تعذر الحفظ"); await loadEvents(); toast("تم ✓"); setupData(el); });
   $("#hClear")&&($("#hClear").onclick=async()=>{ const { error } = await sb.from("health_screens").update({cleared_at:new Date().toISOString()}).eq("client_id",p.id); if(error) return toast("تعذر الحفظ"); await loadHealth(); toast("تم ✓"); setupData(el); });
   $("#sSave").onclick=async()=>{ if($("#sPhone").value.trim()&&!normPhone($("#sPhone").value)) return toast("رقم الواتساب مش صحيح"); const { error } = await sb.from("profiles").update({sub_plan:$("#sPlan").value.trim()||null, sub_price:num($("#sPrice").value), sub_start:$("#sStart").value||null, sub_end:$("#sEnd").value||null, sub_paid:$("#sPaid").checked, sub_notes:$("#sNotes").value.trim()||null, phone:normPhone($("#sPhone").value)}).eq("id",p.id);
