@@ -131,7 +131,8 @@ async function iosCard(box,s){
 }
 async function renderStepsSlot(slot,p,refresh){
   if(platform()==="ios"){
-    try{ await call("status"); }catch(_){ slot.innerHTML=""; return; }   /* dark until function deployed */
+    let st=null; try{ st=await call("status"); }catch(_){ slot.innerHTML=""; return; }
+    if(!st||!st.shortcut_url){ slot.innerHTML=""; return; }   /* hidden until the Shortcut link exists */   /* dark until function deployed */
     let s=null; try{ s=await call("shortcut_code"); }catch(_){}
     if(!slot.isConnected) return;
     slot.innerHTML=`<div class="gh-box off"><b style="font-size:12.5px">🍎 اربط الآيفون — خطواتك تتسجل لوحدها</b><div id="ghIosBody"></div></div>`;
@@ -157,7 +158,8 @@ async function renderStepsSlot(slot,p,refresh){
 /* Client home: prominent card near the top, one press starts the flow. */
 async function renderHomeCard(slot,p,refresh){
   if(platform()==="ios"){
-    try{ await call("status"); }catch(_){ slot.innerHTML=""; return; }
+    let st=null; try{ st=await call("status"); }catch(_){ slot.innerHTML=""; return; }
+    if(!st||!st.shortcut_url){ slot.innerHTML=""; return; }   /* hidden until the Shortcut link exists */
     let s=null; try{ s=await call("shortcut_code"); }catch(_){}
     if(!slot.isConnected||!s) { if(slot.isConnected) slot.innerHTML=""; return; }
     slot.innerHTML=`<div class="gh-hero">
