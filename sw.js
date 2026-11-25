@@ -1,7 +1,7 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-b6e1c4d8";
-const SHELL=["./","index.html","styles.css?v=b6e1c4d8","design.css?v=b6e1c4d8","design.js?v=b6e1c4d8","core.js?v=b6e1c4d8","data.js?v=b6e1c4d8","data-systems2.js?v=b6e1c4d8","data-systems3.js?v=b6e1c4d8",
-"data-rehab2.js?v=b6e1c4d8","media.js?v=b6e1c4d8","pro.js?v=b6e1c4d8","lab.js?v=b6e1c4d8","anatomy.js?v=b6e1c4d8","health.js?v=b6e1c4d8","posing.js?v=b6e1c4d8","minerals.js?v=b6e1c4d8","ghealth.js?v=b6e1c4d8","push.js?v=b6e1c4d8","icons.js?v=b6e1c4d8","supps.js?v=b6e1c4d8","views.js?v=b6e1c4d8","coach.js?v=b6e1c4d8","signup.js?v=b6e1c4d8","qrcode.js?v=b6e1c4d8","invite.js?v=b6e1c4d8","referral.js?v=b6e1c4d8","transform.js?v=b6e1c4d8","chat.js?v=b6e1c4d8","aichat.js?v=b6e1c4d8","ai.js?v=b6e1c4d8","inbox.js?v=b6e1c4d8","screens.js?v=b6e1c4d8","showcase.js?v=b6e1c4d8","flame.js?v=b6e1c4d8","photos.js?v=b6e1c4d8","firstweek.js?v=b6e1c4d8","league.js?v=b6e1c4d8","prices.js?v=b6e1c4d8","training.js?v=b6e1c4d8","sharecard.js?v=b6e1c4d8","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-f85b30c0";
+const SHELL=["./","index.html","styles.css?v=f85b30c0","design.css?v=f85b30c0","design.js?v=f85b30c0","core.js?v=f85b30c0","data.js?v=f85b30c0","data-systems2.js?v=f85b30c0","data-systems3.js?v=f85b30c0",
+"data-rehab2.js?v=f85b30c0","media.js?v=f85b30c0","pro.js?v=f85b30c0","lab.js?v=f85b30c0","anatomy.js?v=f85b30c0","health.js?v=f85b30c0","posing.js?v=f85b30c0","minerals.js?v=f85b30c0","ghealth.js?v=f85b30c0","push.js?v=f85b30c0","icons.js?v=f85b30c0","supps.js?v=f85b30c0","views.js?v=f85b30c0","coach.js?v=f85b30c0","signup.js?v=f85b30c0","qrcode.js?v=f85b30c0","invite.js?v=f85b30c0","referral.js?v=f85b30c0","transform.js?v=f85b30c0","chat.js?v=f85b30c0","aichat.js?v=f85b30c0","ai.js?v=f85b30c0","inbox.js?v=f85b30c0","screens.js?v=f85b30c0","showcase.js?v=f85b30c0","flame.js?v=f85b30c0","photos.js?v=f85b30c0","firstweek.js?v=f85b30c0","league.js?v=f85b30c0","prices.js?v=f85b30c0","training.js?v=f85b30c0","sharecard.js?v=f85b30c0","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","icon-maskable-512.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -31,3 +31,4 @@ self.addEventListener("notificationclick",e=>{
     return clients.openWindow(url);
   }));
 });
+
