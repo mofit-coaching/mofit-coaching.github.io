@@ -14,7 +14,7 @@
   .ml-st .ml-bar i{display:block;height:100%;border-radius:99px;background:#F97316}
   .ml-st .ml-bar.mid i{background:#EA580C}.ml-st .ml-bar.bad i{background:#DC2626}
   .ml-st .ml-big{font-weight:800;font-size:1.05rem}
-  .ml-st .ml-rows{display:flex;gap:14px;flex-wrap:wrap;font-size:.8rem;opacity:.8}
+  .ml-st .ml-rows{display:flex;flex-direction:column;gap:4px;font-size:.8rem;opacity:.8}
   .ml-st .ml-rows b{font-weight:700}
   @media(prefers-reduced-motion:reduce){.ml-del,.ml-mdel{transition:none}}`;
   const s=document.createElement("style"); s.textContent=css; document.head.appendChild(s);
@@ -45,7 +45,8 @@ function mlTwoTap(btn,onGo){
 
 /* Coach dashboard storage meter: static, calm. Missing bucket = 0 (empty buckets return no row). */
 const ML_CAP_MB=1024, ML_BUCKETS=[["checkins","صور ومحادثات"],["posing","فيديوهات"],["archive","الأرشيف"]];
-function mlFmt(b){ return b>=1048576? (b/1048576).toFixed(b>=104857600?0:1)+" MB" : Math.max(0,Math.round(b/1024))+" KB"; }
+function mlFmt(b){ return `<bdi dir="ltr">${mlFmtRaw(b)}</bdi>`; }
+function mlFmtRaw(b){ return b>=1048576? (b/1048576).toFixed(b>=104857600?0:1)+" MB" : Math.max(0,Math.round(b/1024))+" KB"; }
 async function mlStorageMeter(host){
   if(!host) return;
   const { data, error } = await sb.rpc("storage_usage");
@@ -53,8 +54,8 @@ async function mlStorageMeter(host){
   const by=Object.fromEntries(data.map(r=>[r.bucket_id,{f:+r.files||0,b:+r.bytes||0}]));
   const tot=ML_BUCKETS.reduce((s,[k])=>s+(by[k]?.b||0),0), pct=Math.min(100,tot/1048576/ML_CAP_MB*100), tone=pct>=90?"bad":pct>=70?"mid":"";
   host.classList.add("ml-st");
-  host.innerHTML=`<div class="card-h"><div class="ic">💾</div><h2>مساحة التخزين<small>الحد المجاني ${ML_CAP_MB} MB</small></h2></div>
-    <div class="ml-big">${mlFmt(tot)} <span class="muted" style="font-weight:600;font-size:.8rem">من ${ML_CAP_MB} MB · ${pct<1&&tot?"أقل من 1":Math.round(pct)}%</span></div>
+  host.innerHTML=`<div class="card-h"><div class="ic">💾</div><h2>مساحة التخزين<small>الحد المجاني <bdi dir="ltr">${ML_CAP_MB} MB</bdi></small></h2></div>
+    <div class="ml-big">${mlFmt(tot)} <span class="muted" style="font-weight:600;font-size:.8rem">من <bdi dir="ltr">${ML_CAP_MB} MB</bdi> · <bdi dir="ltr">${pct<1&&tot?"<1":Math.round(pct)}%</bdi></span></div>
     <div class="ml-bar ${tone}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(pct)}"><i style="width:${pct}%"></i></div>
-    <div class="ml-rows">${ML_BUCKETS.map(([k,l])=>`<span>${l}: <b>${mlFmt(by[k]?.b||0)}</b> · ${by[k]?.f||0} ملف</span>`).join("")}</div>`;
+    <div class="ml-rows">${ML_BUCKETS.map(([k,l])=>`<span>${l}: <b>${mlFmt(by[k]?.b||0)}</b> · <bdi dir="ltr">${by[k]?.f||0}</bdi> ملف</span>`).join("")}</div>`;
 }
