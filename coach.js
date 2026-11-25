@@ -216,7 +216,7 @@ function setupProgram(el){
       <p class="hint">الدورة 7 أيام وبتبدأ من تاريخ البداية${p.start_date?" ("+esc(p.start_date)+")":""}. المجموعات المسجلة بتفضل مع تمارينها.</p></div>
     <div class="card"><div class="card-h"><div class="ic dark">✏️</div><h2>تعديل البرنامج يدوياً<small>العدات · RIR · الراحة · التمبو · رابط الفيديو</small></h2></div>
       <div class="scroller">${[1,2,3,4,5,6,7].map(d=>`<button class="chip ${S.day===d?"on":""}" data-d="${d}">يوم ${d}${days.includes(d)?" ("+S.program.filter(e=>e.day_no===d).length+")":""}</button>`).join("")}</div>
-      <div class="row" style="margin:10px 0"><input id="dLbl" class="grow" placeholder="اسم اليوم (مثلاً Push / Upper A)" value="${esc(dayLabel(S.day))}"><button class="btn sm" id="dLblSave">حفظ الاسم</button></div>
+      <div class="row" style="margin:10px 0"><input id="dLbl" class="grow" placeholder="اسم اليوم (مثلاً Push)" value="${esc(dayLabel(S.day))}"><button class="btn sm" id="dLblSave">حفظ الاسم</button></div>
       <div id="pList"></div>
       <div class="row"><button class="btn navy grow" id="exAdd">+ تمرين ليوم ${S.day}</button>${S.program.length?`<button class="btn grow" id="tplSave">💾 حفظ كبرنامج كوتش</button>`:""}</div></div>`;
   const getSys=wireSystemPicker($("#sysBox"), p.split_key, p.id);
@@ -243,7 +243,7 @@ function setupProgram(el){
         <label class="f">RIR<input data-e="target_rir" placeholder="1-2" value="${esc(ex.target_rir??"")}"></label>
         <label class="f">الراحة (ثانية)<input inputmode="numeric" data-e="rest_sec" placeholder="90" value="${esc(ex.rest_sec??"")}"></label>
         <label class="f">التمبو<input data-e="tempo" placeholder="3-1-1-0" value="${esc(ex.tempo??"")}"></label></div>
-      <label class="f">🎬 رابط فيديو الأداء (YouTube)<input data-e="video_url" placeholder="${lib?"من المكتبة: "+esc(lib):"https://youtu.be/…"}" value="${esc(ex.video_url??"")}"></label>
+      <label class="f">🎬 رابط فيديو الأداء (YouTube)<input data-e="video_url" placeholder="${lib?"✓ فيديو من المكتبة":"https://youtu.be/…"}" value="${esc(ex.video_url??"")}"></label>
       <label class="f">ملاحظات للعميل<input data-e="notes" value="${esc(ex.notes??"")}"></label>
       <div class="row"><button class="btn sm primary" data-save aria-label="حفظ ${esc(ex.name)}">حفظ</button>${videoFor(ex)?`<button class="btn sm" data-play>▶ معاينة</button>`:""}<span class="grow"></span><button class="btn sm danger" data-del>حذف</button></div>`;
     d.querySelector("[data-save]").onclick=async()=>{
@@ -364,7 +364,7 @@ async function viewVideos(el){
     const list=all.filter(n=>(!q||n.includes(q))&&ok(n)).slice(0,80);
     $("#vl").innerHTML=list.map(n=>`<div class="edit-ex" data-n="${esc(n)}"><div class="between"><b>${map[n]?"🎬":"⚪"} ${esc(n)}${usedBy[n]?` <span class="pill acc-soft">👥 ${usedBy[n].size}</span>`:""}</b><span class="row" style="gap:6px"><a class="btn sm" style="text-decoration:none" target="_blank" rel="noopener" href="https://www.youtube.com/results?search_query=${encodeURIComponent(n.toLowerCase()+" exercise proper form")}" title="بحث يوتيوب">🔎</a>${map[n]?`<button class="btn sm" data-play>▶</button>`:""}</span></div>
       <div class="row" style="margin-top:6px"><input class="grow" data-url placeholder="🎬 https://youtu.be/…" value="${esc(map[n]||"")}"></div>
-      <div class="row" style="margin-top:6px"><input class="grow" data-alts placeholder="⇄ البدائل (افصل بفاصلة) – الافتراضي: ${esc((DEFAULT_ALTS[n]||[]).join("، ")||"لا يوجد")}" value="${esc((altMap[n]||[]).join(", "))}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox(f==="usedno"&&!q?"👌":"🔎",f==="usedno"&&!q?"كل تمارين عملائك ليها فيديو":"مفيش نتائج",f==="usedno"&&!q?"":"جرّب اسم تمرين تاني أو غيّر الفلتر.","","es-sm");
+      <div class="row" style="margin-top:6px"><input class="grow" data-alts placeholder="⇄ بدائل (بفاصلة)" title="الافتراضي: ${esc((DEFAULT_ALTS[n]||[]).join("، ")||"لا يوجد")}" value="${esc((altMap[n]||[]).join(", "))}"><button class="btn sm primary" data-save>حفظ</button></div></div>`).join("")||emptyBox(f==="usedno"&&!q?"👌":"🔎",f==="usedno"&&!q?"كل تمارين عملائك ليها فيديو":"مفيش نتائج",f==="usedno"&&!q?"":"جرّب اسم تمرين تاني أو غيّر الفلتر.","","es-sm");
     $("#vl").querySelectorAll("[data-n]").forEach(r=>{ const n=r.dataset.n;
       r.querySelector("[data-save]").onclick=async()=>{ const url=r.querySelector("[data-url]").value.trim(), alts=r.querySelector("[data-alts]").value.split(/[,،]/).map(x=>x.trim().toUpperCase()).filter(Boolean);
         const { error } = (url||alts.length)? await sb.from("exercise_videos").upsert({name:n,video_url:url||null,alternatives:alts.length?alts:null,updated_at:new Date().toISOString()}) : await sb.from("exercise_videos").delete().eq("name",n);
