@@ -103,7 +103,7 @@ async function viewHome(el){
   const H=hab.data||[];
   $("#hCardio").innerHTML=cardioCardHTML(p,H,wk); wireCardioCard();
   loadCardHTML(p).then(h=>{ const x=$("#hLoad"); if(x) x.innerHTML=h; });
-  if(typeof flameHeroHTML==="function") flameHeroHTML(p).then(h=>{ const x=$("#hFlame"); if(x) x.innerHTML=h; }).catch(()=>{});
+  if(typeof flameHeroHTML==="function") flameHeroHTML(p).then(h=>{ const x=$("#hFlame"); if(x){ x.innerHTML=h; if(window.flameAfter) flameAfter(x,p); } }).catch(()=>{});
   if(typeof streakCardHTML==="function") streakCardHTML(p).then(h=>{ const x=$("#hStreak"); if(x){ x.innerHTML=h; if(window.streakAfter&&S.me.role==="client") streakAfter(p); } }).catch(()=>{});
   $("#hH").innerHTML=`<div class="card-h"><div class="ic">✅</div><h2>الالتزام<small>${H.length} يوم مسجّل</small></h2></div>
     <div class="grid4"><div class="stat"><div class="l">🥗 الدايت</div><div class="v">${pct(avg(H.map(h=>h.diet)))}</div></div>
