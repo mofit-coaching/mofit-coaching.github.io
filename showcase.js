@@ -122,13 +122,25 @@ function league(){return `<div class="sc-podium sc-rv"><div class="sc-pod p2"><d
 function invite(){return `<div class="sc-rgrid sc-rv"><div class="sc-rstep"><div class="ic2">🔗</div><b>شارك لينكك</b><span>لينك وQR خاصين بيك من تبويب الإحالة</span></div><div class="sc-rstep"><div class="ic2">✍️</div><b>صاحبك يسجّل</b><span>يفتح اللينك ويعمل حسابه في دقيقة</span></div><div class="sc-rstep"><div class="ic2">🎁</div><b>الأسبوع علينا</b><span>أول ما الكوتش يفعّله، ليك أسبوع مجاني</span></div></div>`}
 function tagline(){const t="تمرينك وأكلك ومتابعتك كلهم في مكان واحد. ومعاك كوتش حقيقي بيتابعك كل أسبوع ويعدّل معاك على حسب نتيجتك.";const hl=new Set(["كوتش","حقيقي","مكان","واحد."]);
 return `<div class="sc-tg" aria-label="${esc(t)}"><p aria-hidden="true">${t.split(" ").map(w=>`<span class="w${hl.has(w)?" hl":""}">${esc(w)}</span>`).join(" ")}</p></div>`}
-function faq(){const q=[
-["هشترك إزاي؟","من تبويب الأسعار والعروض فوق، بتختار المدة المناسبة وبتكلّم الكوتش على واتساب، وهو بيفعّل حسابك."],
-["البرنامج بيتحسب على إيه؟","التمرين والتغذية بيتحسبوا على جسمك وهدفك، وبتلاقيهم جوه التطبيق."],
-["الكوتش بيتابعني فعلاً؟","أيوه، بيتابعك كل أسبوع ويعدّل معاك على حسب نتيجتك."],
-["خطواتي بتتسجل لوحدها؟","على الآيفون بتضيف اختصار بضغطة وتظبط التشغيل الليلي مرة واحدة، وعلى الأندرويد بتربط حساب جوجل. والكتابة اليدوية شغالة برضه."],
-["الدوري إجباري؟","لا. الكوتش بيبدأ الدوري وانت اللي بتختار تشارك أو لأ."],
-["إزاي آخد أسبوع مجاني؟","شارك لينكك الخاص مع صحابك. كل صاحب يشترك من اللينك وينفعّل حسابه، بيتضاف ليك أسبوع مجاني."]];
+/* FAQ content. Entries with a:null are NOT shown until the coach supplies the real answer (policy items).
+   TODO coach: payment methods, cancellation/refund policy, women clients, program delivery time, when the subscription period starts. */
+const FAQ=[
+["البرنامج ده جاهز ولا معمول ليا أنا؟","معمول ليك انت مخصوص. تمرينك وأكلك بيتحسبوا على جسمك وهدفك وأيام تمرينك، مش نسخة واحدة بتتوزع على الكل. كل عميل عندنا ليه نظامه."],
+["مين اللي هيتابعني، كوتش حقيقي ولا تطبيق؟","كوتش حقيقي. بيتابعك بنفسه كل أسبوع، يشوف نتيجتك ويعدّل معاك. التطبيق بيسهّل عليك التسجيل والمتابعة، بس القرار دايماً لإنسان."],
+["هبدأ إزاي، ومحتاج أعمل إيه؟","اختار العرض اللي يناسبك من تبويب الأسعار والعروض، هيفتحلك واتساب برسالة جاهزة للكوتش. هو اللي بيفعّل حسابك ويكمل معاك الباقي، وانت مش لوحدك في أي خطوة."],
+["لو عندي سؤال في نص الطريق؟","كلّم الكوتش مباشرة من جوه التطبيق. وكمان المساعد الذكي بيرد عليك فوراً على أسئلة برنامجك."],
+["المساعد الذكي بديل عن الكوتش؟","لأ، ده مساعد مش بديل. بيرد على أسئلة برنامجك بسرعة، وأي سؤال طبي أو عن إصابة بيتحوّل للكوتش عشان يقرره بنفسه."],
+["هتنشروا صوري من غير ما أعرف؟","أبداً. مفيش أي صورة ليك بتتنشر على الموقع غير بموافقتك انت. اللي مش عايز يظهر مش هيظهر، والقرار قرارك."],
+["هحس إني مجرد رقم في سيستم؟","العكس. نظامك معمول عليك انت، والكوتش بيراجع تقدمك بنفسه كل أسبوع. تقدر تحس إنك في بيتك من أول يوم."],
+["خطواتي بتتسجل لوحدها؟","أيوه. على الآيفون بتضيف اختصار بضغطة وتظبط التشغيل الليلي مرة واحدة بإرشاد خطوة بخطوة، وعلى الأندرويد بتربط حساب جوجل. ولو حبيت تكتبها بإيدك ده شغال برضه."],
+["الدوري إجباري؟","لأ خالص. الكوتش بيبدأ الدوري وانت اللي بتقرر تشارك ولا لأ، من غير أي ضغط."],
+["إزاي آخد أسبوع مجاني؟","شارك لينكك الخاص مع صحابك. كل صاحب يشترك من اللينك وأول ما الكوتش يفعّله، بيتضاف ليك أسبوع مجاني."],
+["بتدفعوا إزاي؟",null],
+["لو غيرت رأيي، فيه استرجاع أو إلغاء؟",null],
+["الكوتش بيدرّب سيدات؟",null],
+["هستلم برنامجي إمتى؟",null],
+["اشتراكي بيبدأ إمتى؟",null]];
+function faq(){const q=FAQ.filter(x=>x[1]);
 return `<div class="sc-faq sc-rv">${q.map(([a,b])=>`<details><summary>${esc(a)}</summary><p>${esc(b)}</p></details>`).join("")}</div>`}
 const sec=(eb,h,sub,body)=>`<div class="sc-sec"><div class="sc-eyebrow sc-rv">${eb}</div><h2 class="sc-h sc-rv">${h}</h2>${sub?`<p class="sc-sub sc-rv">${sub}</p>`:""}${body}</div>`;
 function bindBA(el){const hd=el.querySelector(".hd");let drag=false;
@@ -141,7 +153,7 @@ hd.addEventListener("keydown",e=>{const v=+hd.getAttribute("aria-valuenow");if(e
 el._hint=()=>{if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;const t0=performance.now();const f=t=>{const k=(t-t0)/1500;if(k>=1||drag){if(!drag)set(50);return}set(50+Math.sin(k*Math.PI*2)*22*(1-k));requestAnimationFrame(f)};requestAnimationFrame(f)}}
 window.drawShowcase=function(){const box=document.getElementById("showcase");if(!box||box.dataset.done)return;box.dataset.done=1;
 const hasR=(SHOWCASE.results||[]).length, hasQ=(SHOWCASE.quotes||[]).length;
-box.innerHTML=tagline()+(hasR?sec("RESULTS",'نتايج <b>حقيقية</b> من متدربينا',"اسحب وقارن قبل وبعد",results()):"")+(SHOWCASE.stats&&SHOWCASE.stats.length?stats().replace('<div class="sc-stats','<div style="margin-top:22px"></div><div class="sc-stats'):"")+(hasQ?sec("VOICES","بيقولوا إيه عننا","",quotes()):"")+sec("HOW IT WORKS","إزاي <b>تبدأ</b>","تلات خطوات وبس",steps())+sec("LEAGUE",'دوري <b>الأسبوع</b>',"الكوتش بيبدأ الدوري وانت بتختار تشارك، نقاطك من تمرينك والتزامك، وأول 3 ليهم المجد",league())+sec("INVITE FRIENDS",'ادعُ صحابك <b>وخد أسبوع هدية</b>',"كل صاحب يشترك من لينكك بيضيفلك أسبوع مجاني",invite())+sec("FAQ","أسئلة <b>بتتسأل كتير</b>","",faq())+`<div class="sc-cta sc-rv"><a class="sc-btn" href="#plans" onclick="loginTab('plans');window.scrollTo({top:0,behavior:'smooth'});return false">ابدأ رحلتك، اشترك دلوقتي</a><p class="sc-note">* النتيجة بتختلف من شخص لآخر.</p></div>`;
+box.innerHTML=tagline()+(hasR?sec("RESULTS",'نتايج <b>حقيقية</b> من متدربينا',"اسحب وقارن قبل وبعد",results()):"")+(SHOWCASE.stats&&SHOWCASE.stats.length?stats().replace('<div class="sc-stats','<div style="margin-top:22px"></div><div class="sc-stats'):"")+(hasQ?sec("VOICES","بيقولوا إيه عننا","",quotes()):"")+sec("HOW IT WORKS","إزاي <b>تبدأ</b>","تلات خطوات وبس",steps())+sec("LEAGUE",'دوري <b>الأسبوع</b>',"الكوتش بيبدأ الدوري وانت بتختار تشارك، نقاطك من تمرينك والتزامك، وأول 3 ليهم المجد",league())+sec("INVITE FRIENDS",'ادعُ صحابك <b>وخد أسبوع هدية</b>',"كل صاحب يشترك من لينكك بيضيفلك أسبوع مجاني",invite())+sec("FAQ","أسئلة <b>ممكن تكون في بالك</b>","هنا عشان تحس إنك في بيتك من أول يوم",faq())+`<div class="sc-cta sc-rv"><a class="sc-btn" href="#plans" onclick="loginTab('plans');window.scrollTo({top:0,behavior:'smooth'});return false">ابدأ رحلتك، اشترك دلوقتي</a><p class="sc-note">* النتيجة بتختلف من شخص لآخر.</p></div>`;
 box.querySelectorAll(".sc-ba").forEach(bindBA);
 const io="IntersectionObserver" in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");const b=e.target.querySelector(".sc-ba");if(b&&b._hint&&!b._h){b._h=1;setTimeout(b._hint,350)}io.unobserve(e.target)}}),{threshold:.15}):null;
 box.querySelectorAll(".sc-rv").forEach(n=>io?io.observe(n):n.classList.add("in"));
