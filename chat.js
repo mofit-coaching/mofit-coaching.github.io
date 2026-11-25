@@ -71,6 +71,12 @@ function chatBubble(m){
     b.onclick=async()=>{ if(!a){ const u=await chatUrl(m.media_path); if(!u) return toast("تعذر تشغيل الصوت"); a=new Audio(u); a.onended=()=>{b.textContent="▶";w.classList.remove("on");}; a.onpause=()=>{b.textContent="▶";w.classList.remove("on");}; a.onplay=()=>{b.textContent="❚❚";w.classList.add("on");}; }
       if(a.paused){ document.querySelectorAll(".cvoice.on .cplay").forEach(x=>x!==b&&x.click()); a.play().catch(()=>toast("تعذر تشغيل الصوت")); } else a.pause(); };
   } else { const p=document.createElement("p"); p.textContent=m.body; d.append(p); }
+  if(m.media_path && S.me?.role==="coach"){ const x=document.createElement("button"); x.type="button"; x.className="ml-mdel"; x.textContent="✕"; x.setAttribute("aria-label","حذف الملف نهائياً"); x.title="حذف الملف من كل مكان";
+    x.onclick=()=>mlTwoTap(x,async()=>{
+      const { error } = await sb.from("messages").delete().eq("id",m.id);
+      if(error){ toast("تعذر الحذف"); x.disabled=false; x.classList.remove("ml-arm"); x.textContent="✕"; return; }
+      await mlPurge("checkins",[m.media_path],true); delete CHAT_URLS[m.media_path]; d.remove(); });
+    d.append(x); }
   d.append(sm); chatTick(d,m); return d;
 }
 function chatAppend(m){
@@ -126,8 +132,7 @@ async function openChat(clientId, title){
   const upload=async(blob,ext,ct)=>{ const path=`${clientId}/chat/${Date.now()}.${ext}`; const { error } = await sb.storage.from("checkins").upload(path,blob,{contentType:ct,upsert:false}); if(error){ toast("تعذر رفع الملف"); return null; } return path; };
   $("#chatCam").onclick=()=>$("#chatFile").click();
   $("#chatFile").onchange=async e=>{ const f=e.target.files[0]; e.target.value=""; if(!f) return; toast("⏳ بيرفع الصورة…");
-    try{ const bmp=await createImageBitmap(f); const r=Math.min(1,1280/Math.max(bmp.width,bmp.height)); const c=document.createElement("canvas"); c.width=Math.round(bmp.width*r); c.height=Math.round(bmp.height*r); c.getContext("2d").drawImage(bmp,0,0,c.width,c.height);
-      const blob=await new Promise(ok=>c.toBlob(ok,"image/jpeg",.82)); const path=await upload(blob,"jpg","image/jpeg"); if(path) await send({kind:"image",media_path:path,body:"📷 صورة"}); }catch(_){ toast("الصورة دي مش مدعومة"); } };
+    try{ const blob=await mlCompressImage(f); const path=await upload(blob,"jpg","image/jpeg"); if(path) await send({kind:"image",media_path:path,body:"📷 صورة"}); }catch(_){ toast("الصورة دي مش مدعومة"); } };
   let rec=null, chunks=[], t0=0, tick=0, cancelled=false;
   const stopUi=()=>{ clearInterval(tick); $("#chatRec")?.classList.add("hidden"); $("#chatF")?.classList.remove("hide"); const mb=$("#chatMic"); if(mb) mb.innerHTML=`<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#F97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>`; };
   $("#recX").onclick=()=>{ cancelled=true; try{rec.stop();}catch(_){} };
@@ -242,3 +247,4 @@ async function viewChats(el){
 }
 (function(){ const _c=closeSheet; closeSheet=function(){ $("#sheet").classList.remove("msgr"); _c.apply(this,arguments); if(S.me?.role==="coach"&&!S.client&&S.tab==="chats"){ try{ render(); }catch(e){} } };
   const _i=chatIncoming; chatIncoming=function(m){ _i.apply(this,arguments); if(S.me?.role==="coach"&&!S.client&&S.tab==="chats"&&$("#sheet").classList.contains("hidden")){ try{ render(); }catch(e){} } }; })();
+
