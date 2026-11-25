@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-00b606ae";
-const SHELL=["./","index.html","styles.css?v=00b606ae","design.css?v=00b606ae","design.js?v=00b606ae","core.js?v=00b606ae","data.js?v=00b606ae","pro.js?v=00b606ae","lab.js?v=00b606ae","anatomy.js?v=00b606ae","health.js?v=00b606ae","posing.js?v=00b606ae","minerals.js?v=00b606ae","icons.js?v=00b606ae","supps.js?v=00b606ae","views.js?v=00b606ae","coach.js?v=00b606ae","signup.js?v=00b606ae","qrcode.js?v=00b606ae","invite.js?v=00b606ae","referral.js?v=00b606ae","transform.js?v=00b606ae","chat.js?v=00b606ae","inbox.js?v=00b606ae","screens.js?v=00b606ae","showcase.js?v=00b606ae","flame.js?v=00b606ae","firstweek.js?v=00b606ae","prices.js?v=00b606ae","training.js?v=00b606ae","sharecard.js?v=00b606ae","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-2391ac99";
+const SHELL=["./","index.html","styles.css?v=2391ac99","design.css?v=2391ac99","design.js?v=2391ac99","core.js?v=2391ac99","data.js?v=2391ac99","media.js?v=2391ac99","pro.js?v=2391ac99","lab.js?v=2391ac99","anatomy.js?v=2391ac99","health.js?v=2391ac99","posing.js?v=2391ac99","minerals.js?v=2391ac99","icons.js?v=2391ac99","supps.js?v=2391ac99","views.js?v=2391ac99","coach.js?v=2391ac99","signup.js?v=2391ac99","qrcode.js?v=2391ac99","invite.js?v=2391ac99","referral.js?v=2391ac99","transform.js?v=2391ac99","chat.js?v=2391ac99","inbox.js?v=2391ac99","screens.js?v=2391ac99","showcase.js?v=2391ac99","flame.js?v=2391ac99","photos.js?v=2391ac99","firstweek.js?v=2391ac99","league.js?v=2391ac99","prices.js?v=2391ac99","training.js?v=2391ac99","sharecard.js?v=2391ac99","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -12,7 +12,6 @@ self.addEventListener("fetch",e=>{
     e.respondWith(caches.match(e.request).then(hit=>{ const net=fetch(e.request).then(r=>{ if(r.ok||r.type==="opaque"){ const cp=r.clone(); caches.open(C).then(c=>c.put(e.request,cp)); } return r; }).catch(()=>hit); return hit||net; }));
   }
 });
-
 
 
 
