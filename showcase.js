@@ -23,7 +23,7 @@ const css=`
 .sc-h{font:800 24px/1.25 var(--disp);text-align:center;margin:10px 0 6px;color:#fff}
 .sc-h b{background:linear-gradient(90deg,#FF6B1A,#FFC46B);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sc-sub{text-align:center;color:#9AA6BA;font-size:13px;margin:0 0 16px}
-.sc-rv{opacity:0;transform:translateY(18px);transition:opacity .6s ease,transform .6s cubic-bezier(.2,.8,.2,1)}
+.sc-rv{opacity:0;transform:translateY(32px);transition:opacity .7s cubic-bezier(.22,1,.36,1),transform .7s cubic-bezier(.22,1,.36,1)}
 .sc-rv.in{opacity:1;transform:none}
 .sc-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:6px}
 .sc-stat{position:relative;border-radius:18px;padding:16px 6px 13px;text-align:center;background:linear-gradient(180deg,rgba(255,255,255,.08),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.1);overflow:hidden}
@@ -85,6 +85,21 @@ const css=`
 .sc-rstep .ic2{font-size:24px;line-height:1}
 .sc-rstep b{display:block;font-size:12.5px;margin-top:7px}
 .sc-rstep span{display:block;font-size:11px;color:#A9B4C8;margin-top:3px;line-height:1.55}
+.sc-tg{margin-top:44px;padding:8px 4px;text-align:center}
+.sc-tg p{max-width:680px;margin:0 auto;font:800 28px/1.45 var(--disp);text-wrap:balance}
+.sc-tg .w{color:rgba(255,255,255,.3);transition:color .6s cubic-bezier(.22,1,.36,1)}
+.sc-tg .w.on{color:#fff}.sc-tg .w.on.hl{color:#FFB070}
+.sc-faq{display:grid;gap:8px}
+.sc-faq details{border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);padding:0 14px;transition:background .3s cubic-bezier(.22,1,.36,1)}
+.sc-faq details[open]{background:rgba(255,255,255,.08)}
+.sc-faq summary{list-style:none;cursor:pointer;padding:14px 0;font:700 14px/1.5 var(--disp);color:#fff;display:flex;justify-content:space-between;align-items:center;gap:10px}
+.sc-faq summary::-webkit-details-marker{display:none}
+.sc-faq summary:after{content:"+";flex:none;width:24px;height:24px;border-radius:50%;background:rgba(255,107,26,.18);color:#FF9248;text-align:center;font:800 16px/24px system-ui;transition:transform .5s cubic-bezier(.22,1,.36,1)}
+.sc-faq details[open] summary:after{transform:rotate(45deg)}
+.sc-faq summary:focus-visible,.sc-btn:focus-visible{outline:3px solid #FFB070;outline-offset:3px;border-radius:12px}
+.sc-faq p{margin:0 0 14px;color:#B6C0D2;font-size:13.5px;line-height:1.8;text-wrap:pretty}
+.sc-btn:active{transform:scale(.98)}
+@media(prefers-reduced-motion:reduce){.sc-tg .w{transition:none;color:#fff}.sc-faq summary:after,.sc-faq details{transition:none}}
 @media(prefers-reduced-motion:reduce){.sc-rv{opacity:1;transform:none;transition:none}.sc-btn:after{animation:none;display:none}}
 `;
 const st=document.createElement("style");st.textContent=css;document.head.appendChild(st);
@@ -105,6 +120,16 @@ return `<div class="sc-rv"><div class="sc-q" id="scq">${list.map(q=>`<div class=
 function steps(){return `<div class="sc-steps">${(SHOWCASE.steps||[]).map((s,i)=>`<div class="sc-step sc-rv"><div class="no">${i+1}</div><div><b>${esc(s.t)}</b><span>${esc(s.d)}</span></div></div>`).join("")}</div>`}
 function league(){return `<div class="sc-podium sc-rv"><div class="sc-pod p2"><div class="tr">🥈</div><div class="bk">التاني</div></div><div class="sc-pod p1"><div class="tr">🥇</div><div class="bk">الأول</div></div><div class="sc-pod p3"><div class="tr">🥉</div><div class="bk">التالت</div></div></div><div class="sc-chips sc-rv"><span class="sc-chip2">🏆 مكافآت لأول 3</span><span class="sc-chip2">📊 ترتيب بيتحدث أول بأول</span><span class="sc-chip2">🎯 المشاركة اختيارية</span></div>`}
 function invite(){return `<div class="sc-rgrid sc-rv"><div class="sc-rstep"><div class="ic2">🔗</div><b>شارك لينكك</b><span>لينك وQR خاصين بيك من تبويب الإحالة</span></div><div class="sc-rstep"><div class="ic2">✍️</div><b>صاحبك يسجّل</b><span>يفتح اللينك ويعمل حسابه في دقيقة</span></div><div class="sc-rstep"><div class="ic2">🎁</div><b>الأسبوع علينا</b><span>أول ما الكوتش يفعّله، ليك أسبوع مجاني</span></div></div>`}
+function tagline(){const t="تمرينك وأكلك ومتابعتك كلهم في مكان واحد. ومعاك كوتش حقيقي بيتابعك كل أسبوع ويعدّل معاك على حسب نتيجتك.";const hl=new Set(["كوتش","حقيقي","مكان","واحد."]);
+return `<div class="sc-tg" aria-label="${esc(t)}"><p aria-hidden="true">${t.split(" ").map(w=>`<span class="w${hl.has(w)?" hl":""}">${esc(w)}</span>`).join(" ")}</p></div>`}
+function faq(){const q=[
+["هشترك إزاي؟","من تبويب الأسعار والعروض فوق، بتختار المدة المناسبة وبتكلّم الكوتش على واتساب، وهو بيفعّل حسابك."],
+["البرنامج بيتحسب على إيه؟","التمرين والتغذية بيتحسبوا على جسمك وهدفك، وبتلاقيهم جوه التطبيق."],
+["الكوتش بيتابعني فعلاً؟","أيوه، بيتابعك كل أسبوع ويعدّل معاك على حسب نتيجتك."],
+["خطواتي بتتسجل لوحدها؟","على الآيفون بتضيف اختصار بضغطة وتظبط التشغيل الليلي مرة واحدة، وعلى الأندرويد بتربط حساب جوجل. والكتابة اليدوية شغالة برضه."],
+["الدوري إجباري؟","لا. الكوتش بيبدأ الدوري وانت اللي بتختار تشارك أو لأ."],
+["إزاي آخد أسبوع مجاني؟","شارك لينكك الخاص مع صحابك. كل صاحب يشترك من اللينك وينفعّل حسابه، بيتضاف ليك أسبوع مجاني."]];
+return `<div class="sc-faq sc-rv">${q.map(([a,b])=>`<details><summary>${esc(a)}</summary><p>${esc(b)}</p></details>`).join("")}</div>`}
 const sec=(eb,h,sub,body)=>`<div class="sc-sec"><div class="sc-eyebrow sc-rv">${eb}</div><h2 class="sc-h sc-rv">${h}</h2>${sub?`<p class="sc-sub sc-rv">${sub}</p>`:""}${body}</div>`;
 function bindBA(el){const hd=el.querySelector(".hd");let drag=false;
 const set=p=>{p=Math.max(4,Math.min(96,p));el.style.setProperty("--p",p+"%");hd.setAttribute("aria-valuenow",Math.round(p))};
@@ -115,10 +140,13 @@ el.addEventListener("pointermove",e=>{if(drag)at(e)});
 hd.addEventListener("keydown",e=>{const v=+hd.getAttribute("aria-valuenow");if(e.key==="ArrowLeft"){set(v-5);e.preventDefault()}if(e.key==="ArrowRight"){set(v+5);e.preventDefault()}});
 el._hint=()=>{if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;const t0=performance.now();const f=t=>{const k=(t-t0)/1500;if(k>=1||drag){if(!drag)set(50);return}set(50+Math.sin(k*Math.PI*2)*22*(1-k));requestAnimationFrame(f)};requestAnimationFrame(f)}}
 window.drawShowcase=function(){const box=document.getElementById("showcase");if(!box||box.dataset.done)return;box.dataset.done=1;
-box.innerHTML=sec("RESULTS",'نتايج <b>حقيقية</b> من متدربينا',"اسحب وقارن قبل وبعد",results())+stats().replace('<div class="sc-stats','<div style="margin-top:22px"></div><div class="sc-stats')+sec("VOICES","بيقولوا إيه عننا","",quotes())+sec("HOW IT WORKS","إزاي <b>تبدأ</b>","تلات خطوات وبس",steps())+sec("LEAGUE",'دوري <b>الأسبوع</b>',"الكوتش بيبدأ الدوري وانت بتختار تشارك — نقاطك من تمرينك والتزامك، وأول 3 ليهم المجد",league())+sec("INVITE FRIENDS",'ادعُ صحابك <b>وخد أسبوع هدية</b>',"كل صاحب يشترك من لينكك بيضيفلك أسبوع مجاني",invite())+`<div class="sc-cta sc-rv"><a class="sc-btn" href="#plans" onclick="loginTab('plans');window.scrollTo({top:0,behavior:'smooth'});return false">ابدأ رحلتك، اشترك دلوقتي</a><p class="sc-note">* النتايج والآراء بتتنشر بموافقة العملاء، والنتيجة بتختلف من شخص لآخر.</p></div>`;
+const hasR=(SHOWCASE.results||[]).length, hasQ=(SHOWCASE.quotes||[]).length;
+box.innerHTML=tagline()+(hasR?sec("RESULTS",'نتايج <b>حقيقية</b> من متدربينا',"اسحب وقارن قبل وبعد",results()):"")+(SHOWCASE.stats&&SHOWCASE.stats.length?stats().replace('<div class="sc-stats','<div style="margin-top:22px"></div><div class="sc-stats'):"")+(hasQ?sec("VOICES","بيقولوا إيه عننا","",quotes()):"")+sec("HOW IT WORKS","إزاي <b>تبدأ</b>","تلات خطوات وبس",steps())+sec("LEAGUE",'دوري <b>الأسبوع</b>',"الكوتش بيبدأ الدوري وانت بتختار تشارك، نقاطك من تمرينك والتزامك، وأول 3 ليهم المجد",league())+sec("INVITE FRIENDS",'ادعُ صحابك <b>وخد أسبوع هدية</b>',"كل صاحب يشترك من لينكك بيضيفلك أسبوع مجاني",invite())+sec("FAQ","أسئلة <b>بتتسأل كتير</b>","",faq())+`<div class="sc-cta sc-rv"><a class="sc-btn" href="#plans" onclick="loginTab('plans');window.scrollTo({top:0,behavior:'smooth'});return false">ابدأ رحلتك، اشترك دلوقتي</a><p class="sc-note">* النتيجة بتختلف من شخص لآخر.</p></div>`;
 box.querySelectorAll(".sc-ba").forEach(bindBA);
 const io="IntersectionObserver" in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");const b=e.target.querySelector(".sc-ba");if(b&&b._hint&&!b._h){b._h=1;setTimeout(b._hint,350)}io.unobserve(e.target)}}),{threshold:.15}):null;
 box.querySelectorAll(".sc-rv").forEach(n=>io?io.observe(n):n.classList.add("in"));
+const ws=[...box.querySelectorAll(".sc-tg .w")];if(ws.length){if(!("IntersectionObserver" in window)||matchMedia("(prefers-reduced-motion:reduce)").matches)ws.forEach(w=>w.classList.add("on"));else{const wo=new IntersectionObserver(es=>{let k=0;es.filter(e=>e.isIntersecting).sort((a,b)=>ws.indexOf(a.target)-ws.indexOf(b.target)).forEach(e=>{setTimeout(()=>e.target.classList.add("on"),Math.min(k++*70,500));wo.unobserve(e.target)})},{rootMargin:"0px 0px -38% 0px"});ws.forEach(w=>wo.observe(w));}}
+
 const q=document.getElementById("scq"),d=document.querySelectorAll("#scd i");if(q)q.addEventListener("scroll",()=>{const c=q.children;let best=0,bd=1e9;const mid=q.getBoundingClientRect().left+q.clientWidth/2;[...c].forEach((x,i)=>{const r=x.getBoundingClientRect();const dd=Math.abs(r.left+r.width/2-mid);if(dd<bd){bd=dd;best=i}});d.forEach((x,i)=>x.classList.toggle("on",i===best))},{passive:true})};
 if(document.readyState!=="loading")drawShowcase();else document.addEventListener("DOMContentLoaded",drawShowcase);
 })();
