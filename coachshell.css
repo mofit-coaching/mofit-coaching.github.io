@@ -1,0 +1,43 @@
+/* Coach shell: right-side icon rail on wide screens, coach role only (body.coach-shell is set by coachshell.js). */
+@media(min-width:900px){
+  body.coach-shell #nav{position:fixed;top:0;bottom:0;right:0;left:auto;width:88px;height:auto;margin:0;z-index:40;flex-direction:column;justify-content:flex-start;align-items:stretch;gap:6px;padding:18px 8px;border-radius:0;border:0;background:linear-gradient(180deg,#0B1220,#162036);box-shadow:-8px 0 30px -12px rgba(11,18,32,.5);overflow-y:auto}
+  body.coach-shell #nav button{flex:none;width:100%;padding:10px 2px 8px;border-radius:16px;color:#94A3B8;gap:4px;font-size:.78rem;line-height:1.2;text-align:center;position:relative}
+  body.coach-shell #nav button svg{width:24px;height:24px}
+  body.coach-shell #nav button:hover{background:rgba(255,255,255,.07);color:#fff}
+  body.coach-shell #nav button.on{background:none;color:#fff;box-shadow:none}
+  body.coach-shell #nav button.on svg{color:#FB923C}
+  body.coach-shell #top,body.coach-shell #main{margin-right:88px;margin-left:0}
+  body.coach-shell #main{max-width:none;padding:22px max(28px,calc((100% - 1180px)/2)) 48px}
+  body.coach-shell #top{border-radius:0 0 28px 28px}
+  body.coach-shell #main.inb-grid{display:grid;grid-template-columns:minmax(0,1.5fr) minmax(0,1fr);gap:16px;align-items:start}
+  body.coach-shell #main.inb-grid>.inbst{grid-column:1/-1;margin-bottom:0!important}
+  body.coach-shell #main.inb-grid>.card{margin:0}
+  body.coach-shell #main.inb-grid>#inbAll{grid-column:2}
+  body.coach-shell .toast,body.coach-shell #timer{margin-right:88px}
+}
+/* stat row: 4 cards, one hero (the 10% accent) */
+.inbst.grid3.cs4{grid-template-columns:repeat(2,1fr)}
+@media(min-width:900px){.inbst.grid3.cs4{grid-template-columns:repeat(4,1fr)}}
+html .inbst.grid3>.stat.acc{background:linear-gradient(135deg,#BF400B,#CC4A0B 55%,#E2540A)!important;border-color:transparent;color:#fff;box-shadow:0 18px 34px -14px rgba(234,88,12,.75)}
+.inbst .stat.acc .l,.inbst .stat.acc .v{color:#fff}
+.inbst .stat .v{font-size:2rem}
+/* page transition */
+body.coach-shell #main>*{animation:csIn .3s ease both}
+@keyframes csIn{from{opacity:0;transform:translateY(8px)}}
+@media(prefers-reduced-motion:reduce){body.coach-shell #main>*{animation:none}}
+
+/* sliding active pill (one element, glides between nav buttons; positioned by coachshell.js) */
+#csPill{position:fixed;z-index:41;pointer-events:none;border-radius:16px;background:rgba(249,115,22,.2);box-shadow:inset 0 0 0 1px rgba(249,115,22,.45),0 8px 24px -8px rgba(249,115,22,.55);opacity:0;transition:top .45s cubic-bezier(.65,0,.35,1),left .45s cubic-bezier(.65,0,.35,1),width .45s cubic-bezier(.65,0,.35,1),height .45s cubic-bezier(.65,0,.35,1),opacity .2s}
+body.coach-shell #csPill.on{opacity:1}
+body:not(.coach-shell) #csPill{display:none}
+@media(max-width:899px){body.coach-shell #nav button.on{background:none;box-shadow:none}}
+/* staggered entrance */
+body.coach-shell #main>*:nth-child(2){animation-delay:.06s}body.coach-shell #main>*:nth-child(3){animation-delay:.12s}body.coach-shell #main>*:nth-child(4){animation-delay:.18s}
+body.coach-shell .inbst .stat{animation:csPop .5s cubic-bezier(.2,.8,.2,1) both}
+body.coach-shell .inbst .stat:nth-child(2){animation-delay:.07s}body.coach-shell .inbst .stat:nth-child(3){animation-delay:.14s}body.coach-shell .inbst .stat:nth-child(4){animation-delay:.21s}
+body.coach-shell .inb{animation:csIn .4s ease both}
+body.coach-shell .inb:nth-child(2){animation-delay:.1s}body.coach-shell .inb:nth-child(3){animation-delay:.16s}body.coach-shell .inb:nth-child(4){animation-delay:.22s}body.coach-shell .inb:nth-child(n+5){animation-delay:.28s}
+@keyframes csPop{from{opacity:0;transform:translateY(14px) scale(.96)}}
+body.coach-shell .inbst .stat{transition:transform .25s,box-shadow .25s}
+body.coach-shell .inbst .stat:hover{transform:translateY(-3px);box-shadow:0 18px 34px -16px rgba(11,18,32,.45)}
+@media(prefers-reduced-motion:reduce){#csPill{transition:none}body.coach-shell .inbst .stat,body.coach-shell .inb{animation:none}}
