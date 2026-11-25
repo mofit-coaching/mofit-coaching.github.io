@@ -99,7 +99,7 @@ function chatBadge(){
 }
 function chatFabUpdate(){
   let fab=document.getElementById("chatFab");
-  const show = !!S.me && !document.getElementById("appView").classList.contains("hidden") && (S.me.role!=="coach" || !!S.client);
+  const show = !!S.me && !document.getElementById("appView").classList.contains("hidden") && (S.me.role!=="coach" || !!S.client) && S.tab!=="ai";
   if(!show){ fab?.remove(); return; }
   if(!fab){ fab=document.createElement("button"); fab.id="chatFab"; fab.type="button"; fab.textContent="💬"; fab.setAttribute("aria-label","محادثة الكوتش");
     fab.onclick=()=> S.me.role==="coach" ? openChat(S.client.id, S.client.full_name||"العميل") : openChat(S.me.id,"الكوتش"); document.body.append(fab); }
@@ -110,7 +110,7 @@ async function openChat(clientId, title){
   chatStart(); CHAT.open=clientId;
   const wa = S.me.role!=="coach" && typeof waLink==="function" ? `<a class="btn" target="_blank" rel="noopener" href="${esc(waLink("السلام عليكم كوتش 👋"))}">واتساب</a>` : "";
   openSheet(`<div class="chat"><div class="chat-h"><button class="mback" type="button" id="chatX" aria-label="رجوع"><svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button><div class="av mav">${esc(String(title).trim().charAt(0)||"👤")}</div><div class="mt"><b>${esc(title)}</b><small>${S.me.role==="coach"?"عميل":"الكوتش"}</small></div>${wa}</div>
-    <div class="chat-l" id="chatL" aria-live="polite"><div class="chat-empty">⏳ بيتحمل…</div></div>
+    <div class="chat-l" id="chatL" aria-live="polite"><div class="chat-empty"><div class="sk-wrap" role="status" aria-label="بيتحمل"><i class="sk sk-b"></i><i class="sk sk-l m"></i><i class="sk sk-l s"></i></div></div></div>
     <div class="chat-q" id="chatQ"></div><div class="chat-rec hidden" id="chatRec"><span class="recdot"></span><b id="recT">0:00</b><span class="recs">بيسجّل… دوس ■ للإرسال</span><button class="btn" type="button" id="recX">إلغاء</button></div>
     <form class="chat-f" id="chatF" autocomplete="off"><button class="cb" type="button" id="chatCam" aria-label="صورة">📷</button><input type="file" id="chatFile" accept="image/*" hidden><input id="chatI" maxlength="2000" placeholder="اكتب رسالتك…" aria-label="رسالة"><button class="cb" type="button" id="chatMic" aria-label="تسجيل صوتي"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#F97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg></button><button class="btn primary" type="submit" id="chatSend">إرسال</button></form></div>`);
   $("#sheet").classList.add("msgr");   $("#chatX").onclick=closeSheet;
