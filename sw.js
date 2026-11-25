@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-3ad7f419";
-const SHELL=["./","index.html","styles.css?v=3ad7f419","design.css?v=3ad7f419","design.js?v=3ad7f419","core.js?v=3ad7f419","data.js?v=3ad7f419","media.js?v=3ad7f419","pro.js?v=3ad7f419","lab.js?v=3ad7f419","anatomy.js?v=3ad7f419","health.js?v=3ad7f419","posing.js?v=3ad7f419","minerals.js?v=3ad7f419","icons.js?v=3ad7f419","supps.js?v=3ad7f419","views.js?v=3ad7f419","coach.js?v=3ad7f419","signup.js?v=3ad7f419","qrcode.js?v=3ad7f419","invite.js?v=3ad7f419","referral.js?v=3ad7f419","transform.js?v=3ad7f419","chat.js?v=3ad7f419","aichat.js?v=3ad7f419","ai.js?v=3ad7f419","inbox.js?v=3ad7f419","screens.js?v=3ad7f419","showcase.js?v=3ad7f419","flame.js?v=3ad7f419","photos.js?v=3ad7f419","firstweek.js?v=3ad7f419","league.js?v=3ad7f419","prices.js?v=3ad7f419","training.js?v=3ad7f419","sharecard.js?v=3ad7f419","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-d8b3f6a2";
+const SHELL=["./","index.html","styles.css?v=d8b3f6a2","design.css?v=d8b3f6a2","design.js?v=d8b3f6a2","core.js?v=d8b3f6a2","data.js?v=d8b3f6a2","media.js?v=d8b3f6a2","pro.js?v=d8b3f6a2","lab.js?v=d8b3f6a2","anatomy.js?v=d8b3f6a2","health.js?v=d8b3f6a2","posing.js?v=d8b3f6a2","minerals.js?v=d8b3f6a2","icons.js?v=d8b3f6a2","supps.js?v=d8b3f6a2","views.js?v=d8b3f6a2","coach.js?v=d8b3f6a2","signup.js?v=d8b3f6a2","qrcode.js?v=d8b3f6a2","invite.js?v=d8b3f6a2","referral.js?v=d8b3f6a2","transform.js?v=d8b3f6a2","chat.js?v=d8b3f6a2","aichat.js?v=d8b3f6a2","ai.js?v=d8b3f6a2","inbox.js?v=d8b3f6a2","screens.js?v=d8b3f6a2","showcase.js?v=d8b3f6a2","flame.js?v=d8b3f6a2","photos.js?v=d8b3f6a2","firstweek.js?v=d8b3f6a2","league.js?v=d8b3f6a2","prices.js?v=d8b3f6a2","training.js?v=d8b3f6a2","sharecard.js?v=d8b3f6a2","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -12,7 +12,6 @@ self.addEventListener("fetch",e=>{
     e.respondWith(caches.match(e.request).then(hit=>{ const net=fetch(e.request).then(r=>{ if(r.ok||r.type==="opaque"){ const cp=r.clone(); caches.open(C).then(c=>c.put(e.request,cp)); } return r; }).catch(()=>hit); return hit||net; }));
   }
 });
-
 
 
 
