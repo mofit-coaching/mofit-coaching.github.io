@@ -46,7 +46,7 @@ async function viewPosing(el){
 }
 function poseCard(r,coach){
   const d=new Date(r.created_at).toLocaleDateString("ar-EG",{day:"numeric",month:"long"});
-  return `<div class="card"><div class="card-h"><div class="ic">🎬</div><h2>${d}<small>${r.reviewed_at?"✅ الكوتش راجع":"⏳ مستني مراجعة الكوتش"}</small></h2>${coach?"":`<button class="btn sm danger" data-pdel="${r.id}">حذف</button>`}</div>
+  return `<div class="card"><div class="card-h"><div class="ic">🎬</div><h2>${d}<small>${r.reviewed_at?"✅ الكوتش راجع":"⏳ مستني مراجعة الكوتش"}</small></h2><button class="btn sm danger" data-pdel="${r.id}" title="حذف الفيديو من كل مكان">حذف</button></div>
     ${r.video_path?`<video data-pv="${esc(r.video_path)}" controls playsinline preload="metadata" style="width:100%;border-radius:14px;background:#000;max-height:60vh"></video>`:""}
     ${r.note?`<p class="hint">📝 ${esc(r.note)}</p>`:""}
     ${coach?`<label class="f">ملاحظاتك للعميل<textarea data-pft="${r.id}" rows="3" placeholder="رأيك في البوزات، التحسينات…">${esc(r.coach_feedback||"")}</textarea></label><button class="btn primary block" data-pfb="${r.id}">حفظ وإرسال للعميل</button>`
@@ -84,3 +84,4 @@ function dayView(d){
     ${vals.length?`<div class="grid3">${vals.map(([k,l,u])=>`<div class="zone"><b>${l}</b><span class="num">${esc(d[k])} ${u}</span></div>`).join("")}</div>`:""}
     ${d.training?`<p style="margin:8px 0 0">🏋️ ${esc(d.training)}</p>`:""}${d.notes?`<p class="hint" style="white-space:pre-wrap">📝 ${esc(d.notes)}</p>`:""}</div>`;
 }
+
