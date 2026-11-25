@@ -89,9 +89,10 @@ function bodyCompCard(p, m){
 }
 
 /* ---------- 3) safe rate of change + goal projection ---------- */
-function trend(B){ const P=B.filter(b=>b.weight).map(b=>[+b.week,+b.weight]).slice(-4); if(P.length<2) return null;
+const wOk=w=>w>=25&&w<=350;
+function trend(B){ const P=B.filter(b=>b.weight&&wOk(+b.weight)).map(b=>[+b.week,+b.weight]).slice(-4); if(P.length<2||Math.max(...P.map(x=>x[0]))-Math.min(...P.map(x=>x[0]))<1) return null;
   const n=P.length, mx=avg(P.map(x=>x[0])), my=avg(P.map(x=>x[1])); const s=P.reduce((a,[x,y])=>a+(x-mx)*(y-my),0)/P.reduce((a,[x])=>a+(x-mx)**2,0)||0;
-  return {kg:s, pct:s/P[n-1][1]*100, cur:P[n-1][1]}; }
+  const pct=s/P[n-1][1]*100; return {kg:s, pct, cur:P[n-1][1], odd:Math.abs(pct)>5}; }
 const wksAr=n=>n===1?"أسبوع":n===2?"أسبوعين":n<=10?n+" أسابيع":n+" أسبوع";
 function rateVerdict(goal,pct){
   if(/تنشيف/.test(goal||"")) return pct<-1?["bad","⚠ سريع جداً – غالباً بتخسر عضل. زوّد السعرات 100-200"]:pct<=-0.4?["good","✅ مثالي لخسارة الدهون مع الحفاظ على العضل"]:pct<0?["mid","🐢 بطيء – راجع الالتزام أو قلل 100-150 سعر"]:["bad","⛔ الوزن مش بينزل – محتاج مراجعة الدايت"];
@@ -101,15 +102,16 @@ function rateVerdict(goal,pct){
 function goalCardHTML(p,B){
   const t=trend(B||[]), tw=+p.target_weight||null;
   if(!t&&!tw) return "";
-  const v=t?rateVerdict(p.goal,t.pct):null;
+  const v=t&&!t.odd?rateVerdict(p.goal,t.pct):null;
   let eta="";
-  if(t&&tw){ const left=tw-t.cur; if(Math.abs(left)<0.3) eta="🎉 وصلت لهدفك!"; else if(Math.sign(left)===Math.sign(t.kg)&&Math.abs(t.kg)>0.05){ const wks=Math.ceil(left/t.kg); eta=`🎯 بالمعدل ده هتوصل ${fmt(tw,1)} كجم بعد ~${wksAr(wks)} (${niceDate(addDays(today(),wks*7))})`; } else eta=`🎯 الهدف ${fmt(tw,1)} كجم – الاتجاه الحالي مش رايح ناحيته`; }
+  if(t&&!t.odd&&tw){ const left=tw-t.cur; if(Math.abs(left)<0.3) eta="🎉 وصلت لهدفك!"; else if(Math.sign(left)===Math.sign(t.kg)&&Math.abs(t.kg)>0.05){ const wks=Math.ceil(left/t.kg); eta=`🎯 بالمعدل ده هتوصل ${fmt(tw,1)} كجم بعد ~${wksAr(wks)} (${niceDate(addDays(today(),wks*7))})`; } else eta=`🎯 الهدف ${fmt(tw,1)} كجم – الاتجاه الحالي مش رايح ناحيته`; }
   return `<div class="card goal ${v?v[0]:""}"><div class="card-h"><div class="ic acc">🎯</div><h2>معدل التغيّر والهدف<small>متوسط آخر ${Math.min(4,(B||[]).filter(b=>b.weight).length)} قياسات</small></h2></div>
-    ${t?`<div class="grid2"><div class="stat dark"><div class="l">في الأسبوع</div><div class="v num">${t.kg>0?"+":""}${fmt(t.kg,2)}</div><div class="s">كجم</div></div><div class="stat"><div class="l">من وزن الجسم</div><div class="v num">${t.pct>0?"+":""}${fmt(t.pct,2)}%</div><div class="s">المثالي: ${/تنشيف/.test(p.goal||"")?"-0.5 → -1%":/زيادة/.test(p.goal||"")?"+0.25 → +0.5%":"±0.25%"}</div></div></div><p class="verdict">${v[1]}</p>`:""}
+    ${t&&t.odd?`<p class="verdict">⚠ أرقام الوزن المسجلة مش منطقية، راجع القياسات قبل ما نحسب المعدل.</p>`:""}
+    ${t&&!t.odd?`<div class="grid2"><div class="stat dark"><div class="l">في الأسبوع</div><div class="v num">${t.kg>0?"+":""}${fmt(t.kg,2)}</div><div class="s">كجم</div></div><div class="stat"><div class="l">من وزن الجسم</div><div class="v num">${t.pct>0?"+":""}${fmt(t.pct,2)}%</div><div class="s">المثالي: ${/تنشيف/.test(p.goal||"")?"-0.5 → -1%":/زيادة/.test(p.goal||"")?"+0.25 → +0.5%":"±0.25%"}</div></div></div><p class="verdict">${v[1]}</p>`:""}
     ${eta?`<p class="hint" style="margin:6px 0 0">${eta}</p>`:""}</div>`;
 }
 function rateAlert(c){
-  const W=(S.overview?.[c.id]?.weights||[]).map(([week,weight])=>({week,weight})); const t=trend(W); if(!t) return null;
+  const W=(S.overview?.[c.id]?.weights||[]).map(([week,weight])=>({week,weight})); const t=trend(W); if(!t||t.odd) return null;
   if(/تنشيف/.test(c.goal||"")&&t.pct<-1.2) return {p:2,icon:"📉",text:`بيخسر ${fmt(Math.abs(t.pct),1)}%/أسبوع – خطر خسارة عضل`};
   if(/زيادة/.test(c.goal||"")&&t.pct>0.8) return {p:2,icon:"📈",text:`بيزيد ${fmt(t.pct,1)}%/أسبوع – غالباً دهون`};
   return null;
