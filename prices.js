@@ -12,9 +12,9 @@ const COACH_WA = "201093047225";
    10% (3 شهور) · 15% (6 شهور) · 25% (12 شهر). old_price = سعر الشهري × المدة عشان يظهر "وفّر".
    المستوى بيتحدد من أول حرف في الـid (b/s/v) عشان يفضل شغال حتى بعد ما الكوتش يحفظ من التطبيق. */
 const TIER_DEFS = {
-  b:{name:"البرنامج",        tag:"نظامك كامل جوه التطبيق",              feats:["برنامج تمرين مخصوص ليك","نظام غذائي محسوب على هدفك","المساعد الذكي بيرد على أسئلتك فوراً","تسجيل الخطوات والتقدم في التطبيق","الدوري والتحديات"]},
+  b:{name:"البرنامج",        tag:"برنامجك كامل جوه التطبيق، من غير متابعة", feats:["برنامج تمرين مخصوص ليك","نظام غذائي محسوب على هدفك","المساعد الذكي بيرد على أسئلتك فوراً","تسجيل الخطوات والتقدم في التطبيق","الدوري والتحديات"]},
   s:{name:"المتابعة",        tag:"برنامجك + متابعة الكوتش أسبوعياً",    feats:["كل اللي في باقة البرنامج","متابعة أسبوعية مع الكوتش","شات مباشر مع الكوتش جوه التطبيق","تعديل البرنامج على حسب نتيجتك"]},
-  v:{name:"واحد لواحد VIP",  tag:"أعلى مستوى متابعة شخصية",            feats:["كل اللي في باقة المتابعة","متابعة يومية ورد خلال ٢٤ ساعة","مراجعة فيديوهات تمارينك وتصحيح الأداء","مكالمة شهرية مع الكوتش"]},
+  v:{name:"واحد لواحد VIP",  tag:"أعلى مستوى متابعة شخصية",            feats:["كل اللي في باقة المتابعة","متابعة يومية ورد بأولوية خلال ٢٤ ساعة","مراجعة فيديوهات تمارينك وتصحيح الأداء","مكالمة شهرية مع الكوتش"]},
 };
 const PLAN_DEFAULTS = [
   {id:"b1",  tier:"b", position:0,  months:1,  free_months:0, price:300,  old_price:null,  currency:"ج.م", badge:null,          note:null, active:true},
@@ -59,7 +59,7 @@ function plansHTML(plans, who){
     return `<a class="plan ${p.badge||p===best?"hot":""}" href="${esc(waLink(planMsg(p,who)))}" target="_blank" rel="noopener">
       ${p.badge?`<span class="plan-badge">${esc(p.badge)}</span>`:p===best?`<span class="plan-badge">⭐ الأفضل قيمة</span>`:""}${save>0?`<span class="plan-save">وفّر ${save}%</span>`:""}
       <div class="plan-top"><b>${esc(monthsAr(p.months))}</b>${p.free_months?`<span class="plan-free">+ ${esc(monthsAr(p.free_months))} هدية 🎁</span>`:""}</div>
-      <div class="plan-total">إجمالي ${esc(monthsAr(total))} متابعة</div>
+      <div class="plan-total">إجمالي ${esc(monthsAr(total))} ${planTier(p)===TIER_DEFS.b?"برنامج":"متابعة"}</div>
       <div class="plan-price">${planPrice(p)?`${p.old_price?`<s class="num">${fmt(p.old_price)}</s> `:""}<b class="num">${fmt(p.price)}</b> <small>${esc(p.currency||"ج.م")}</small>`:`<small>تواصل لمعرفة السعر</small>`}</div>
       ${pm?`<div class="plan-pm">يعني <span class="num">${fmt(pm)}</span> ${esc(p.currency||"ج.م")} في الشهر · <b class="num">${fmt(pd,1)}</b> في اليوم</div>`:""}
       ${p.note?`<div class="plan-note">${esc(p.note)}</div>`:""}
