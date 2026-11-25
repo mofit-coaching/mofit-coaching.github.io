@@ -165,7 +165,7 @@ async function viewCheckin(el){
     ${coach?`<div class="card"><div class="card-h"><div class="ic acc">💬</div><h2>ردك على المتابعة</h2></div>
       <textarea rows="4" id="ciReply" placeholder="ملاحظاتك وتعديلات الأسبوع الجاي…">${esc(cur.coach_reply??"")}</textarea>
       <button class="btn navy block" id="ciReplySave" style="margin-top:8px" ${cur.id?"":"disabled"}>حفظ الرد ✓✓</button></div>`:""}
-    ${first&&cur.id&&first.week!==cur.week?`<div class="card"><div class="card-h"><div class="ic">🔁</div><h2>قبل وبعد<small>أسبوع ${first.week} ← أسبوع ${cur.week}</small></h2></div><div id="cmp" class="ba-grid"></div></div>`:""}`;
+    ${first&&cur.id&&first.week!==cur.week?`<div class="card"><div class="card-h"><div class="ic">🔁</div><h2>قبل وبعد<small>أسبوع ${first.week} ← أسبوع ${cur.week}</small></h2></div><div id="cmp" class="ba-grid"></div></div>`:""}<div id="cArchive"></div>`;
   el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ S.ciWeek=+b.dataset.w; viewCheckin(el); });
   el.querySelectorAll("[data-rate]").forEach(g=>g.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{ g.querySelectorAll("[data-v]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); rec[g.dataset.rate]=+b.dataset.v; }));
   const files={};
@@ -192,6 +192,7 @@ async function viewCheckin(el){
   if($("#cmp")){ const box=$("#cmp"); for(const [k,l] of POSES){ const a=first["photo_"+k], b=cur["photo_"+k]; if(!a||!b) continue;
       const [ua,ub]=await Promise.all([photoUrl(a),photoUrl(b)]); box.insertAdjacentHTML("beforeend", baPair(ua,ub,l,first.week,cur.week)); }
     if(!box.innerHTML) box.outerHTML=`<p class="hint">الصور بتظهر جنب بعض لما تتسجل نفس الزاوية في الأسبوعين.</p>`; }
+  if(window.fillPhotoArchive) fillPhotoArchive(el.querySelector("#cArchive"),p);
 }
 
 /* ---------- 5) diet templates ---------- */
