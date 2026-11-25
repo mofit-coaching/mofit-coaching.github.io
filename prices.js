@@ -69,14 +69,19 @@ function plansHTML(plans, who){
   const uid="pq"+Math.random().toString(36).slice(2,8); PQ[uid]={plans,who,durs};
   return `<div class="pq" id="${uid}">${pqInner(uid,def)}</div>`;
 }
-const PQ={}, PQ_TAG={1:"تجربة",3:"بداية",6:"الأكثر طلباً",12:"أوفر سعر"};
+/* PQ_NEUTRAL=true بيبدّل كلام المبيعات (الأكثر طلباً / أماكن محدودة) بصياغة محايدة. سطر واحد. */
+const PQ_NEUTRAL=false;
+const PQ_WORDS=PQ_NEUTRAL
+  ? {tag6:"اختيار الكوتش", flagS:"اختيار الكوتش", flagV:"متابعة فردية"}
+  : {tag6:"الأكثر طلباً",   flagS:"الأكثر طلباً · متابعة الكوتش", flagV:"VIP · أماكن محدودة"};
+const PQ={}, PQ_TAG={1:"تجربة",3:"بداية",6:PQ_WORDS.tag6,12:"أوفر سعر"};
 function pqInner(uid,m){
   const { plans, who, durs } = PQ[uid];
   const pick=(k,mm)=>plans.find(p=>planTier(p)===TIER_DEFS[k]&&+p.months===mm);
   const saveOf=p=>p&&p.old_price&&planPrice(p)&&+p.old_price>+p.price?Math.round((1-(+p.price)/(+p.old_price))*100):0;
   const seg=`<div class="pq-seg" role="tablist">${durs.map(d=>`<button type="button" role="tab" class="pq-d${d===m?" on":""}${d===6?" rec":""}" data-uid="${uid}" data-m="${d}"><b>${esc(monthsAr(d))}</b><small>${PQ_TAG[d]||"&nbsp;"}</small></button>`).join("")}</div>`;
   const eyebrow={b:"باقة البرنامج",s:"متابعة مباشرة مع الكوتش",v:"أعلى مستوى متابعة"};
-  const flag={b:"",s:"الأكثر طلباً · متابعة الكوتش",v:"VIP · أماكن محدودة"};
+  const flag={b:"",s:PQ_WORDS.flagS,v:PQ_WORDS.flagV};
   const cta={b:"اختار البرنامج",s:"اختار المتابعة",v:"اختار VIP"};
   const cards=Object.keys(TIER_DEFS).map(k=>{ const t=TIER_DEFS[k], p=pick(k,m); if(!p) return "";
     const total=(+p.months)+(+p.free_months||0), pm=planPrice(p)?(+p.price)/total:null, sv=saveOf(p), cur=esc(p.currency||"ج.م");
