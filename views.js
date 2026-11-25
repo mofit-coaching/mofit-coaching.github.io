@@ -73,13 +73,14 @@ function render(){
 async function viewHome(el){
   const p=S.client, t=targets(p), wk=currentWeek(p), dn=todayDayNo();
   const todayEx=S.program.filter(e=>e.day_no===dn);
-  el.innerHTML=`${S.me.role==="client"?installCardHTML():""}
-    <div id="ghHome"></div><div id="hSteps"></div><div id="hFlame"></div><div id="hFirst"></div>
-    <div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
+  el.innerHTML=`<div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
       ${dn?`<div class="hero-body">${anatomySVG(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<div>${muscleLegend(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<small class="hero-sub">${todayEx.length} تمارين · ${todayEx.reduce((a,e)=>a+(+e.sets||0),0)} مجموعة</small></div></div><button class="btn primary block" style="margin-top:10px" id="goTrain">ابدأ التمرين ←</button>`
           :`<p class="hint">😴 الراحة جزء من التطور. سجّل نومك ومياهك وخطواتك في العادات.</p>`}</div>
-    <div id="hStreak"></div><div id="hToday"></div><div id="hMiss"></div><div id="hCI"></div><div id="hCardio"></div>
+    <div id="hToday"></div><div id="hMiss"></div>
     <div class="card" id="hN"><div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2></div><p class="muted">جارٍ التحميل…</p></div>
+    <div id="hSteps"></div><div id="hCI"></div><div id="hCardio"></div>
+    <div id="hFlame"></div><div id="hStreak"></div><div id="hFirst"></div>
+    <div id="ghHome"></div>${S.me.role==="client"?installCardHTML():""}
     ${tipCardHTML()}
     <div class="card" id="hF"></div>
     <div class="card" id="hH"></div>
