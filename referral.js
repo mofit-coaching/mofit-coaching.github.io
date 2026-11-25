@@ -5,7 +5,7 @@
      and the friends list with status (signed up / activated / week granted).
    - Data: sb.rpc("my_referrals") — security-definer function; the client
      sees only name + masked phone + status of signups tagged with their
-     own phone as the referral code. Coach grants the week from the
+     profile id as the referral code. Coach grants the week from the
      pending-requests card (signup.js).
    ====================================================================== */
 (function(){
@@ -35,7 +35,7 @@ viewHome = async function(el){
   t.querySelector("#refOpen").onclick=()=>{ renderReferral(el); window.scrollTo(0,0); };
 };
 async function renderReferral(el){
-  const me=S.me||{}, code=me.phone||"", url=refUrl(code);
+  const me=S.me||{}, code=me.id||"", url=refUrl(code);
   el.innerHTML=`<div class="card" id="refCard"><div class="card-h"><div class="ic acc">🎁</div><h2>ادعُ صاحبك<small>كل صاحب يتفعّل = أسبوع هدية ليك</small></h2></div>
     <div style="text-align:center"><canvas id="refQr" width="172" height="172" style="border-radius:14px;background:#fff;padding:8px;width:172px;height:172px"></canvas>
     <p class="hint" style="margin:8px 0 4px;font-size:12px">ابعت لينكك الشخصي لصاحبك — يسجّل منه، وأول ما الكوتش يفعّل اشتراكه تتضافلك <b style="color:var(--acc)">أسبوع مجاناً</b> على اشتراكك</p>
