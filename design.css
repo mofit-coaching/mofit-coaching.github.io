@@ -67,3 +67,13 @@ nav button.on{background:linear-gradient(180deg,rgba(255,255,255,.12),rgba(255,2
 html,body{max-width:100%;overflow-x:clip}
 
 
+
+/* check-in overview */
+.ciov-row{display:flex;align-items:center;gap:10px;padding:10px;border-radius:14px;cursor:pointer;border-bottom:1px solid var(--soft2)}
+.ciov-row:hover{background:var(--soft2)}
+.ciov-row .av{width:38px;height:38px;font-size:.9rem;border-radius:12px}
+.ciov-row .nm{flex:1;min-width:0}.ciov-row .nm small{display:block;color:var(--muted,#64748B)}
+.ciov-dots{display:flex;gap:4px;direction:ltr}
+.ciov-dots .d{width:11px;height:11px;border-radius:50%;background:#CBD5E1}
+.ciov-dots .d.good{background:var(--good)}.ciov-dots .d.mid{background:#F59E0B}.ciov-dots .d.bad{background:var(--bad)}
+.ciov-w{min-width:52px;text-align:center}

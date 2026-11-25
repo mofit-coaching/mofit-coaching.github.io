@@ -82,6 +82,7 @@ async function viewClients(el){
     <div class="card" id="alerts"></div>
     <div class="card" id="wrep"></div>
     <div class="card" id="pgan"></div>
+    <div class="card" id="ciov"></div>
     <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
       ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
     <div class="card" id="bk"></div>
@@ -101,7 +102,7 @@ async function viewClients(el){
       <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","لسه مفيش عملاء","ضيف أول عميل وابدأ ابنِ برنامجه: تمرين وأكل ومتابعة من مكان واحد.",{label:"+ إضافة عميل جديد",click:"#addBtn"});
     $("#cl").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); deleteClientFlow(C.find(c=>c.id===b.dataset.del),async()=>{ await loadClients(); viewClients(el); }); });
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
-  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C);
+  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C); checkinOverviewCard($("#ciov"),C);
   draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
   $("#tplList").querySelectorAll("[data-tdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف البرنامج المحفوظ؟ (برامج العملاء الحالية مش هتتأثر)")) return; await sb.from("program_templates").delete().eq("id",b.dataset.tdel); await loadCoachTemplates(); viewClients(el); });
@@ -423,3 +424,22 @@ function deleteClientFlow(c,done){
   };
 }
 
+
+/* ---------- check-in overview: all active clients at a glance (latest check-in, 5 ratings as dots, weight change) ---------- */
+function ciTone(k,v){ if(v==null) return "na"; const bad=k==="stress"||k==="hunger"?v>=4:v<=2, good=k==="stress"||k==="hunger"?v<=2:v>=4; return bad?"bad":good?"good":"mid"; }
+async function checkinOverviewCard(host,C){
+  if(!host) return; const act=C.filter(c=>c.active); if(!act.length){ host.innerHTML=""; return; }
+  const head=n=>`<div class="card-h"><div class="ic acc">📋</div><h2>متابعات العملاء<small>${n}</small></h2></div>`;
+  host.innerHTML=head("بيحمّل…");
+  const { data } = await sb.from("checkins").select("client_id,week,checkin_date,weight,energy,hunger,sleep,stress,adherence,reviewed_at").in("client_id",act.map(c=>c.id)).order("week",{ascending:false}).range(0,2999);
+  const by={}; (data||[]).forEach(r=>(by[r.client_id]=by[r.client_id]||[]).push(r));
+  const rows=act.map(c=>{ const L=by[c.id]||[], last=L[0], prev=L.find(r=>r.weight!=null&&last&&r.week<last.week&&last.weight!=null), wk=currentWeek(c), due=wk>1&&(!last||last.week<wk-1);
+    const bad=last?["energy","sleep","adherence","stress","hunger"].filter(k=>ciTone(k,last[k])==="bad").length:0;
+    return {c,last,wk,due,bad,dw:last&&prev?last.weight-prev.weight:null,score:(due?10:0)+bad*2+(last&&!last.reviewed_at?1:0)}; }).sort((a,b)=>b.score-a.score);
+  const late=rows.filter(r=>r.due).length;
+  host.innerHTML=head(late?late+" عميل متابعته ناقصة":"كله سلّم متابعته 👌")+rows.map(({c,last,wk,due,dw})=>`<div class="ciov-row" data-id="${c.id}"><div class="av">${initials(c)}</div>
+    <div class="nm"><b>${esc(c.full_name||c.email)}</b><small>${last?`آخر متابعة: أسبوع ${last.week}${last.reviewed_at?"":" · مستنية ردك"}`:"لسه ما بعتش متابعة"}</small></div>
+    <div class="ciov-dots" title="الطاقة · الجوع · النوم · التوتر · الالتزام">${last?["energy","hunger","sleep","stress","adherence"].map(k=>`<i class="d ${ciTone(k,last[k])}"></i>`).join(""):""}</div>
+    <div class="ciov-w">${due?`<span class="pill acc-soft">ناقصة</span>`:dw==null?`<span class="muted">—</span>`:`<b class="num">${dw>0?"+":""}${fmt(dw,1)}</b>`}</div></div>`).join("");
+  host.querySelectorAll("[data-id]").forEach(r=>r.onclick=async()=>{ const c=C.find(x=>x.id===r.dataset.id); await openClient(c); S.tab="body"; S.bodySeg="c"; S.ciWeek=Math.max(1,(by[c.id]?.[0]?.week)||currentWeek(c)); render(); window.scrollTo(0,0); });
+}
