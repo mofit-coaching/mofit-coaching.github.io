@@ -1,12 +1,13 @@
 // Supabase Edge Function: ai-assist
-// Secret needed: GROQ_API_KEY.  Optional: GROQ_MODEL (default below).
-// Privacy bar: client names/emails/phones NEVER go to Groq.
+// Secret needed: GEMINI_API_KEY.  Optional: GEMINI_MODEL (default below).
+// Provider: Google Gemini API via its OpenAI-compatible endpoint (free tier).
+// Privacy bar: client names/emails/phones NEVER go to the model provider.
 //   - Coach actions (digest/reply) receive pseudonyms (C1, C2...) from the app.
 //   - Client action (ask) builds context server-side from the caller's uid and
 //     never selects name/email/phone.
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const MODEL_DEFAULT = "openai/gpt-oss-120b";
+const MODEL_DEFAULT = "gemini-3.5-flash";
 const ASK_DAILY_CAP = 15;
 
 const cors = {
@@ -47,15 +48,16 @@ const EN_RE = String.raw`\b(?:pain\w*|hurt\w*|injur\w*|fracture\w*|sprain\w*|diz
 const AR_PRE = String.raw`(?:[وبلفك]{0,2})?(?:ال)?`;
 const RISK_RE = new RegExp(AR_B + AR_PRE + "(?:" + AR_ROOTS.join("|") + ")|" + AR_B + AR_PRE + "دوا(?=$|[\\s,.!?؟،؛:;\"'()\\-])|" + EN_RE, "i");
 
-// Strip anything that looks like a phone number or email before text goes to Groq.
+// Strip anything that looks like a phone number or email before text goes to the model provider.
 const scrub = (s: string) => s.replace(/[\w.+-]+@[\w-]+\.[\w.]+/g, "[إيميل محذوف]").replace(/\d{7,}/g, "[رقم محذوف]");
 
-async function groq(key: string, model: string, system: string, user: string, maxTokens: number) {
-  const r = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+async function llm(key: string, model: string, system: string, user: string, maxTokens: number) {
+  const r = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
     method: "POST",
     headers: { "Authorization": `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model, temperature: 0.4, max_tokens: maxTokens,
+      model, temperature: 0.4, max_tokens: Math.max(maxTokens * 3, 1500),
+      reasoning_effort: "low",
       response_format: { type: "json_object" },
       messages: [{ role: "system", content: system }, { role: "user", content: user }],
     }),
@@ -104,8 +106,8 @@ Deno.serve(async (req) => {
     const { data: u, error: ue } = await admin.auth.getUser(token);
     if (ue || !u?.user) return out({ error: "غير مصرّح" }, 401);
 
-    const key = Deno.env.get("GROQ_API_KEY") || "";
-    const model = Deno.env.get("GROQ_MODEL") || MODEL_DEFAULT;
+    const key = Deno.env.get("GEMINI_API_KEY") || "";
+    const model = Deno.env.get("GEMINI_MODEL") || MODEL_DEFAULT;
     const b = await req.json();
 
     // Status ping: any authenticated user may ask (the client UI hides until this says configured).
@@ -146,7 +148,7 @@ Deno.serve(async (req) => {
 
       const ctx = await clientContext(admin, u.user.id);
       const user = `سؤال العميل: ${scrub(q)}\n\nبيانات العميل (من غير اسم):\n${JSON.stringify(ctx)}`;
-      const r: any = await groq(key, model, ASK_SYS, user, 500);
+      const r: any = await llm(key, model, ASK_SYS, user, 500);
       if (r.error) return out({ error: r.error }, r.status);
 
       if (r.data.escalate === true || !r.data.answer) {
@@ -170,7 +172,7 @@ Deno.serve(async (req) => {
       }));
       if (!cl.length) return out({ error: "no_clients" }, 400);
       const user = `ده ملخص عملاء الكوتش الاسبوع ده (JSON). اكتب ملخص اسبوعي للكوتش.\nرجّع JSON بالشكل ده بس: {"summary":"٢-٣ جمل عن الصورة العامة","items":[{"id":"C1","note":"جملة واحدة بتقول ايه الوضع","action":"اقتراح خطوة واحدة للكوتش"}]}\nرتّب items بالأهم الاول، وحط بس العملاء اللي محتاجين اهتمام او اللي عملوا تقدم يستاهل الشكر (حد اقصى ١٠).\n${JSON.stringify(cl)}`;
-      const r: any = await groq(key, model, SYS, user, 1400);
+      const r: any = await llm(key, model, SYS, user, 1400);
       if (r.error) return out({ error: r.error }, r.status);
       const items = (Array.isArray(r.data.items) ? r.data.items : []).slice(0, 10).map((i: any) => ({ id: clip(i.id, 8), note: clip(i.note, 300), action: clip(i.action, 300) }));
       return out({ summary: clip(r.data.summary, 600), items });
@@ -181,7 +183,7 @@ Deno.serve(async (req) => {
       const ctx = clip(b.context, 500);
       if (!msgs.length && !ctx) return out({ error: "no_context" }, 400);
       const user = `اكتب مسودتين مختلفتين لرد الكوتش على العميل (جملة الى ٣ جمل، لهجة الكوتش الودودة، سؤال واحد كحد اقصى، ماتحطش اسم).\nرجّع JSON بالشكل ده بس: {"drafts":["...","..."]}\nسياق: ${ctx || "—"}\nآخر الرسايل (قديم لجديد): ${JSON.stringify(msgs)}`;
-      const r: any = await groq(key, model, SYS, user, 500);
+      const r: any = await llm(key, model, SYS, user, 500);
       if (r.error) return out({ error: r.error }, r.status);
       const drafts = (Array.isArray(r.data.drafts) ? r.data.drafts : []).slice(0, 2).map((d: unknown) => clip(d, 600)).filter(Boolean);
       return out({ drafts });
