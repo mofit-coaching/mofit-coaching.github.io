@@ -86,7 +86,7 @@ async function viewClients(el){
     <div class="card" id="ciov"></div>
     <div class="card" id="mlst"></div>
     <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
-      ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
+      ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cfl" class="qr-row" role="group" aria-label="فلتر العملاء" style="display:flex;gap:6px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px"></div><div id="cl"></div></div>
     <div class="card" id="bk"></div>
     <div class="card" id="prices"></div>
     <div class="card"><div class="card-h"><div class="ic acc">✍</div><h2>برامج الكوتش المحفوظة<small>بتظهر في قائمة "برنامج الكوتش" عند اختيار النظام</small></h2></div><div id="tplList"></div></div>`;
@@ -98,7 +98,10 @@ async function viewClients(el){
   $("#alerts").querySelectorAll("[data-id]").forEach(r=>r.onclick=async()=>{ const c=C.find(x=>x.id===r.dataset.id), a=AL[c.id][0]; await openClient(c);
     if(/متابعة/.test(a.text)){ S.tab="body"; S.bodySeg="c"; const o=S.overview?.[c.id]; S.ciWeek=/ناقصة/.test(a.text)?currentWeek(c)-1:(o?.last_checkin_week||currentWeek(c)); } else if(/البلوك/.test(a.text)){ S.tab="setup"; S.setupTab="program"; } else if(/اشتراك|مدفوع/.test(a.text)){ S.tab="setup"; S.setupTab="data"; } else S.tab="home";
     render(); window.scrollTo(0,0); });
-  const draw=q=>{ const list=C.filter(c=>!q||(c.full_name||"").includes(q)||(c.email||"").includes(q));
+  let CF="all", CQ="";
+  const FIL=[["all","الكل",()=>true],["attn","محتاج اهتمام",c=>(AL[c.id]||[]).length>0],["sub","اشتراك",c=>{ const x=subStatus(c); return !!x&&x.cls!=="good"; }],["off","غير مفعّل",c=>!c.active]];
+  const drawF=()=>{ const h=$("#cfl"); if(!h) return; h.innerHTML=FIL.map(([k,t,f])=>`<button type="button" class="qr" data-f="${k}" aria-pressed="${CF===k}" style="flex:none;min-height:36px;${CF===k?"background:var(--c30-tint);border-color:var(--c30);font-weight:700":""}">${t}${k==="all"?"":" · "+C.filter(f).length}</button>`).join(""); h.querySelectorAll("[data-f]").forEach(b=>b.onclick=()=>{ CF=b.dataset.f; drawF(); draw(CQ); }); };
+  const draw=q=>{ CQ=q||""; const FF=FIL.find(x=>x[0]===CF)[2]; const list=C.filter(c=>FF(c)&&(!q||(c.full_name||"").includes(q)||(c.email||"").includes(q)));
     $("#cl").innerHTML=list.length?list.map(c=>{ const wk=currentWeek(c); return `<div class="client" data-id="${c.id}"><div class="av">${initials(c)}${(()=>{ if(!c.active) return ""; const a=AL[c.id]||[], m=a.length?a[0].p:0, lv=m>=3?"bad":m==2?"mid":"good"; return `<i class="risk ${lv}" title="${esc(a.length?a.slice(0,2).map(x=>x.text).join(" · "):"تمام")}"></i>`; })()}</div>
       <div class="nm"><b>${esc(c.full_name||"—")}</b><small>${seenHTML(c)}${(s=>s?s.icon+" "+esc(s.text)+" · ":"")(subStatus(c))}${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small>
       <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","لسه مفيش عملاء","ضيف أول عميل وابدأ ابنِ برنامجه: تمرين وأكل ومتابعة من مكان واحد.",{label:"+ إضافة عميل جديد",click:"#addBtn"});
@@ -106,7 +109,7 @@ async function viewClients(el){
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
   weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C); checkinOverviewCard($("#ciov"),C);
   if(typeof aiDigestCard==="function") aiDigestCard(C,AL); mlStorageMeter($("#mlst"));
-  draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
+  drawF(); draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
   $("#tplList").querySelectorAll("[data-tdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف البرنامج المحفوظ؟ (برامج العملاء الحالية مش هتتأثر)")) return; await sb.from("program_templates").delete().eq("id",b.dataset.tdel); await loadCoachTemplates(); viewClients(el); });
   $("#addBtn").onclick=()=>addClientSheet(el);
@@ -241,7 +244,7 @@ function setupProgram(el){
         <label class="f">التمبو<input data-e="tempo" placeholder="3-1-1-0" value="${esc(ex.tempo??"")}"></label></div>
       <label class="f">🎬 رابط فيديو الأداء (YouTube)<input data-e="video_url" placeholder="${lib?"من المكتبة: "+esc(lib):"https://youtu.be/…"}" value="${esc(ex.video_url??"")}"></label>
       <label class="f">ملاحظات للعميل<input data-e="notes" value="${esc(ex.notes??"")}"></label>
-      <div class="row"><button class="btn sm primary" data-save>حفظ</button>${videoFor(ex)?`<button class="btn sm" data-play>▶ معاينة</button>`:""}<span class="grow"></span><button class="btn sm danger" data-del>حذف</button></div>`;
+      <div class="row"><button class="btn sm primary" data-save aria-label="حفظ ${esc(ex.name)}">حفظ</button>${videoFor(ex)?`<button class="btn sm" data-play>▶ معاينة</button>`:""}<span class="grow"></span><button class="btn sm danger" data-del>حذف</button></div>`;
     d.querySelector("[data-save]").onclick=async()=>{
       const v=k=>d.querySelector(`[data-e="${k}"]`).value.trim();
       const upd={name:(v("name")||ex.name).toUpperCase(),sets:Math.min(Math.max(num(v("sets"))||3,1),10),target_reps:v("target_reps")||null,target_rir:v("target_rir")||null,rest_sec:num(v("rest_sec")),tempo:v("tempo")||null,video_url:v("video_url")||null,notes:v("notes")||null};

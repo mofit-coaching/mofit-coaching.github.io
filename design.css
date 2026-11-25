@@ -176,3 +176,12 @@ html .pp-chip.on{background:var(--c30-tint);border-color:var(--c30);color:var(--
 html .av{background:linear-gradient(145deg,#1E2B47,#0B1220);box-shadow:0 8px 18px -8px rgba(11,18,32,.6);color:#fff}
 html .hello .av{background:linear-gradient(145deg,#D04A0A,#E2540A);box-shadow:0 14px 30px -8px rgba(255,107,26,.6)}
 html .client .pill.acc,html .inb .pill.acc{background:var(--c30-tint);color:var(--c30-tint-ink)}
+
+/* ===== polish batch 2 ===== */
+html .alert-row .pill.acc,html .alert-row .pill.acc-soft{background:var(--c30-tint);color:var(--c30-tint-ink);border:1px solid rgba(11,18,32,.08)}
+html .nudge-mini{width:44px;height:44px;min-width:44px}
+html .grid3>.stat{min-width:0}
+@media(max-width:460px){html .grid3:has(>.stat:nth-child(3):last-child){grid-template-columns:repeat(3,1fr)}}
+@media(max-width:460px){html .inbst.grid3{grid-template-columns:repeat(2,minmax(0,1fr))!important}}
+@media(min-width:461px){html .inbst.grid3{grid-template-columns:repeat(4,minmax(0,1fr))!important}}
+html .qr-row{scrollbar-width:none}html .qr-row::-webkit-scrollbar{display:none}
