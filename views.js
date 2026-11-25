@@ -26,6 +26,7 @@ async function openClient(p){
   S.client=p; S.week=currentWeek(p); S.date=today(); S.bodyWeek=null;
   const { data, error } = await sb.from("program_exercises").select("*").eq("client_id",p.id).order("day_no").order("position");
   S.program=error? (cacheGet("prog_"+p.id)||[]) : (data||[]); if(!error) cacheSet("prog_"+p.id,S.program);
+  S.progPending=!!p.program_pending&&S.me?.role!=="coach"; if(S.progPending) S.program=[];
   const days=[...new Set(S.program.map(e=>e.day_no))];
   S.day = todayDayNo() || days[0] || 1;
   S.supps=[]; if(S.me?.role!=="coach") await loadSupps(p);
@@ -33,7 +34,7 @@ async function openClient(p){
 async function refreshClient(){ const { data } = await sb.from("profiles").select("*").eq("id",S.client.id).single(); const tab=S.tab, day=S.day, wk=S.week; await openClient(data); S.tab=tab; S.day=day; S.week=wk; }
 function tabs(){
   if(S.me.role==="coach" && !S.client) return [["clients","العملاء"],["videos","التمارين"],["foods","الأطعمة"]];
-  const t=[["home","الرئيسية"],["train","التمرين"],["food","التغذية"],["habits","العادات"],["body","التقدم"]];
+  const t=[["home","الرئيسية"],...(S.progPending?[]:[["train","التمرين"]]),["food","التغذية"],["habits","العادات"],["body","التقدم"]];
   if(S.me.role!=="coach" && S.supps?.length) t.push(["supps","المكملات"]);
   if(S.me.role==="coach") t.push(["setup","التحكم"]);
   if(S.me.role!=="coach" && S.aiOn) t.push(["ai","المساعد"]);
@@ -73,9 +74,9 @@ function render(){
 async function viewHome(el){
   const p=S.client, t=targets(p), wk=currentWeek(p), dn=todayDayNo();
   const todayEx=S.program.filter(e=>e.day_no===dn);
-  el.innerHTML=`<div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
+  el.innerHTML=`${S.progPending?"":`<div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
       ${dn?`<div class="hero-body">${anatomySVG(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<div>${muscleLegend(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<small class="hero-sub">${todayEx.length} تمارين · ${todayEx.reduce((a,e)=>a+(+e.sets||0),0)} مجموعة</small></div></div><button class="btn primary block" style="margin-top:10px" id="goTrain">ابدأ التمرين ←</button>`
-          :`<p class="hint">😴 الراحة جزء من التطور. سجّل نومك ومياهك وخطواتك في العادات.</p>`}</div>
+          :`<p class="hint">😴 الراحة جزء من التطور. سجّل نومك ومياهك وخطواتك في العادات.</p>`}</div>`}
     <div id="hToday"></div><div id="hMiss"></div>
     <div class="card" id="hN"><div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2></div><p class="muted">جارٍ التحميل…</p></div>
     <div id="hSteps"></div><div id="hCI"></div><div id="hCardio"></div>
@@ -160,6 +161,7 @@ function failureSummary(sets){
    TRAINING
    ====================================================================== */
 async function viewTrain(el){
+  if(S.progPending){ S.tab="home"; return viewHome(el); }
   const p=S.client, wkNow=currentWeek(p), tdn=todayDayNo();
   const days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
   if(!days.length){ el.innerHTML=`<div class="card">${S.me.role==="coach"?emptyBox("📋","العميل ده لسه مالوش برنامج","حط برنامج التمرين من تبويب التحكم وهيظهرله هنا.",{label:"⚙️ روح للتحكم",go:"setup"}):emptyBox("📋","برنامجك بيتجهّز","الكوتش لسه ما حطش برنامج التمرين – هيظهر هنا أول ما يخلص.")}</div>`; return; }

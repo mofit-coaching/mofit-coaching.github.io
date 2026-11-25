@@ -198,7 +198,7 @@ function setupData(el){
 function setupProgram(el){
   const p=S.client, days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
   if(!days.includes(S.day)&&days.length) S.day=days[0];
-  el.innerHTML=`<div id="brHost"></div><div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
+  el.innerHTML=`<div id="brHost"></div><div class="card" style="${p.program_pending?"border:1.5px solid var(--acc-line,#FDBA74)":""}"><label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="progPend" ${p.program_pending?"checked":""} style="width:22px;height:22px;min-height:0;margin-top:2px"><span><b>البرنامج لسه متعملش</b><br><small class="muted">لما تفعّلها، العميل مبيشوفش أي حاجة من التمرين (التبويب والكارت اتشالوا). البرنامج بتاعك محفوظ زي ما هو.</small></span></label></div><div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
       <div id="sysBox">${systemFields(p.training_days||3, p.level||"متوسط")}</div>
       <button class="btn primary block" id="sysApply" style="margin-top:10px">تطبيق على ${esc(p.full_name||"العميل")}</button>
       <p class="hint">⚠ التطبيق بيستبدل البرنامج الحالي ويمسح المجموعات المسجلة على التمارين القديمة.</p></div>
@@ -220,6 +220,7 @@ function setupProgram(el){
   blockReviewHTML(p).then(h=>{ const x=$("#brHost"); if(x){ x.innerHTML=h; wireBlockReview(p,el); } });
   el.querySelectorAll("[data-dw]").forEach(b=>b.onclick=()=>b.classList.toggle("on"));
   $("#dlSave").onclick=async()=>{ const w=[...el.querySelectorAll("[data-dw].on")].map(b=>+b.dataset.dw); const { error } = await sb.from("profiles").update({deload_weeks:w}).eq("id",p.id); if(error) return toast(error.message); await refreshClient(); toast("✓ اتحفظ"); };
+  $("#progPend").onchange=async e=>{ const v=e.target.checked; const { error } = await sb.from("profiles").update({program_pending:v}).eq("id",p.id); if(error){ e.target.checked=!v; return toast(error.message); } await refreshClient(); S.tab="setup"; toast(v?"✓ التمرين مخفي عن العميل لحد ما تلغي الخيار":"✓ التمرين ظاهر للعميل"); render(); };
   $("#sysApply").onclick=async()=>{
     const {sys,level}=getSys(); if(!sys) return toast("اختار نظام");
     if(S.program.length && !confirm(`استبدال برنامج ${p.full_name||""} الحالي بـ "${sys.name}" (${level})؟`)) return;
