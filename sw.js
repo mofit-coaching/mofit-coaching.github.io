@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-2c9f6a15";
-const SHELL=["./","index.html","styles.css?v=2c9f6a15","design.css?v=2c9f6a15","design.js?v=2c9f6a15","core.js?v=2c9f6a15","data.js?v=2c9f6a15","media.js?v=2c9f6a15","pro.js?v=2c9f6a15","lab.js?v=2c9f6a15","anatomy.js?v=2c9f6a15","health.js?v=2c9f6a15","posing.js?v=2c9f6a15","minerals.js?v=2c9f6a15","icons.js?v=2c9f6a15","supps.js?v=2c9f6a15","views.js?v=2c9f6a15","coach.js?v=2c9f6a15","signup.js?v=2c9f6a15","qrcode.js?v=2c9f6a15","invite.js?v=2c9f6a15","referral.js?v=2c9f6a15","transform.js?v=2c9f6a15","chat.js?v=2c9f6a15","inbox.js?v=2c9f6a15","screens.js?v=2c9f6a15","showcase.js?v=2c9f6a15","flame.js?v=2c9f6a15","photos.js?v=2c9f6a15","firstweek.js?v=2c9f6a15","league.js?v=2c9f6a15","prices.js?v=2c9f6a15","training.js?v=2c9f6a15","sharecard.js?v=2c9f6a15","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-9d3e7a1f";
+const SHELL=["./","index.html","styles.css?v=9d3e7a1f","design.css?v=9d3e7a1f","design.js?v=9d3e7a1f","core.js?v=9d3e7a1f","data.js?v=9d3e7a1f","media.js?v=9d3e7a1f","pro.js?v=9d3e7a1f","lab.js?v=9d3e7a1f","anatomy.js?v=9d3e7a1f","health.js?v=9d3e7a1f","posing.js?v=9d3e7a1f","minerals.js?v=9d3e7a1f","icons.js?v=9d3e7a1f","supps.js?v=9d3e7a1f","views.js?v=9d3e7a1f","coach.js?v=9d3e7a1f","signup.js?v=9d3e7a1f","qrcode.js?v=9d3e7a1f","invite.js?v=9d3e7a1f","referral.js?v=9d3e7a1f","transform.js?v=9d3e7a1f","chat.js?v=9d3e7a1f","inbox.js?v=9d3e7a1f","screens.js?v=9d3e7a1f","showcase.js?v=9d3e7a1f","flame.js?v=9d3e7a1f","photos.js?v=9d3e7a1f","firstweek.js?v=9d3e7a1f","league.js?v=9d3e7a1f","prices.js?v=9d3e7a1f","training.js?v=9d3e7a1f","sharecard.js?v=9d3e7a1f","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -12,7 +12,6 @@ self.addEventListener("fetch",e=>{
     e.respondWith(caches.match(e.request).then(hit=>{ const net=fetch(e.request).then(r=>{ if(r.ok||r.type==="opaque"){ const cp=r.clone(); caches.open(C).then(c=>c.put(e.request,cp)); } return r; }).catch(()=>hit); return hit||net; }));
   }
 });
-
 
 
 
