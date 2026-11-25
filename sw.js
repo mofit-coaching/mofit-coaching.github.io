@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-9a3c5e17";
-const SHELL=["./","index.html","styles.css?v=9a3c5e17","design.css?v=9a3c5e17","design.js?v=9a3c5e17","core.js?v=9a3c5e17","data.js?v=9a3c5e17","media.js?v=9a3c5e17","pro.js?v=9a3c5e17","lab.js?v=9a3c5e17","anatomy.js?v=9a3c5e17","health.js?v=9a3c5e17","posing.js?v=9a3c5e17","minerals.js?v=9a3c5e17","ghealth.js?v=9a3c5e17","icons.js?v=9a3c5e17","supps.js?v=9a3c5e17","views.js?v=9a3c5e17","coach.js?v=9a3c5e17","signup.js?v=9a3c5e17","qrcode.js?v=9a3c5e17","invite.js?v=9a3c5e17","referral.js?v=9a3c5e17","transform.js?v=9a3c5e17","chat.js?v=9a3c5e17","aichat.js?v=9a3c5e17","ai.js?v=9a3c5e17","inbox.js?v=9a3c5e17","screens.js?v=9a3c5e17","showcase.js?v=9a3c5e17","flame.js?v=9a3c5e17","photos.js?v=9a3c5e17","firstweek.js?v=9a3c5e17","league.js?v=9a3c5e17","prices.js?v=9a3c5e17","training.js?v=9a3c5e17","sharecard.js?v=9a3c5e17","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-b6e1f9c4";
+const SHELL=["./","index.html","styles.css?v=b6e1f9c4","design.css?v=b6e1f9c4","design.js?v=b6e1f9c4","core.js?v=b6e1f9c4","data.js?v=b6e1f9c4","media.js?v=b6e1f9c4","pro.js?v=b6e1f9c4","lab.js?v=b6e1f9c4","anatomy.js?v=b6e1f9c4","health.js?v=b6e1f9c4","posing.js?v=b6e1f9c4","minerals.js?v=b6e1f9c4","ghealth.js?v=b6e1f9c4","push.js?v=b6e1f9c4","icons.js?v=b6e1f9c4","supps.js?v=b6e1f9c4","views.js?v=b6e1f9c4","coach.js?v=b6e1f9c4","signup.js?v=b6e1f9c4","qrcode.js?v=b6e1f9c4","invite.js?v=b6e1f9c4","referral.js?v=b6e1f9c4","transform.js?v=b6e1f9c4","chat.js?v=b6e1f9c4","aichat.js?v=b6e1f9c4","ai.js?v=b6e1f9c4","inbox.js?v=b6e1f9c4","screens.js?v=b6e1f9c4","showcase.js?v=b6e1f9c4","flame.js?v=b6e1f9c4","photos.js?v=b6e1f9c4","firstweek.js?v=b6e1f9c4","league.js?v=b6e1f9c4","prices.js?v=b6e1f9c4","training.js?v=b6e1f9c4","sharecard.js?v=b6e1f9c4","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -13,6 +13,20 @@ self.addEventListener("fetch",e=>{
   }
 });
 
-
-
-
+/* web push: show the notification, then focus/open the app on tap */
+self.addEventListener("push",e=>{
+  let d={}; try{ d=e.data?e.data.json():{}; }catch(_){ }
+  e.waitUntil(self.registration.showNotification(d.title||"Mofit",{
+    body:d.body||"", icon:"icon-192.png", badge:"icon-192.png",
+    tag:d.tag||"mofit", dir:"rtl", lang:"ar",
+    data:{url:(d.url||"./")}
+  }));
+});
+self.addEventListener("notificationclick",e=>{
+  e.notification.close();
+  const url=(e.notification.data&&e.notification.data.url)||"./";
+  e.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(list=>{
+    for(const c of list){ if("focus" in c) return c.focus(); }
+    return clients.openWindow(url);
+  }));
+});
