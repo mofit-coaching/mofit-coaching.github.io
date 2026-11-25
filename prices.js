@@ -54,23 +54,30 @@ async function loadPlans(all=false){
 function plansHTML(plans, who){
   if(!plans.length) return `<p class="hint">العروض هتنزل قريب – كلم الكوتش على واتساب.</p>`;
   const perMonth=p=> planPrice(p) ? (+p.price)/((+p.months)+(+p.free_months||0)) : null;
-  const best=null; // كروت موحّدة: مفيش كارت مميز غامق ولا شارة تلقائية
-  const card=p=>{ const total=(+p.months)+(+p.free_months||0), pm=perMonth(p), pd=pm?pm/30:null, save=p.old_price&&planPrice(p)&&+p.old_price>+p.price?Math.round((1-(+p.price)/(+p.old_price))*100):0;
-    return `<a class="plan ${p.badge||p===best?"hot":""}" href="${esc(waLink(planMsg(p,who)))}" target="_blank" rel="noopener">
-      ${p.badge?`<span class="plan-badge">${esc(p.badge)}</span>`:p===best?`<span class="plan-badge">⭐ الأفضل قيمة</span>`:""}${save>0?`<span class="plan-save">وفّر ${save}%</span>`:""}
+  const card=(p,hot,hidden)=>{ const total=(+p.months)+(+p.free_months||0), pm=perMonth(p), pd=pm?pm/30:null, save=p.old_price&&planPrice(p)&&+p.old_price>+p.price?Math.round((1-(+p.price)/(+p.old_price))*100):0;
+    return `<a class="plan ptier-card ${hot?"hot":""}${hidden?" hidden":""}" href="${esc(waLink(planMsg(p,who)))}" target="_blank" rel="noopener">
+      ${save>0?`<span class="plan-save">وفّر ${save}%</span>`:""}
       <div class="plan-top"><b>${esc(monthsAr(p.months))}</b>${p.free_months?`<span class="plan-free">+ ${esc(monthsAr(p.free_months))} هدية 🎁</span>`:""}</div>
       <div class="plan-total">إجمالي ${esc(monthsAr(total))} ${planTier(p)===TIER_DEFS.b?"برنامج":"متابعة"}</div>
       <div class="plan-price">${planPrice(p)?`${p.old_price?`<s class="num">${fmt(p.old_price)}</s> `:""}<b class="num">${fmt(p.price)}</b> <small>${esc(p.currency||"ج.م")}</small>`:`<small>تواصل لمعرفة السعر</small>`}</div>
       ${pm?`<div class="plan-pm">يعني <span class="num">${fmt(pm)}</span> ${esc(p.currency||"ج.م")} في الشهر · <b class="num">${fmt(pd,1)}</b> في اليوم</div>`:""}
       ${p.note?`<div class="plan-note">${esc(p.note)}</div>`:""}
       <span class="plan-cta">اشترك عن طريق واتساب ›</span></a>`; };
-  if(!plans.every(planTier)) return `<div class="plans">${plans.map(card).join("")}</div>`;
-  return Object.keys(TIER_DEFS).map(k=>{ const t=TIER_DEFS[k], ps=plans.filter(p=>planTier(p)===t);
-    return ps.length?`<div class="ptier"><div class="ptier-h"><b>${esc(t.name)}</b><span>${esc(t.tag)}</span></div>
+  if(!plans.every(planTier)) return `<div class="plans">${plans.map(p=>card(p,false,false)).join("")}</div>`;
+  return Object.keys(TIER_DEFS).map(k=>{ const t=TIER_DEFS[k], ps=plans.filter(p=>planTier(p)===t); if(!ps.length) return "";
+    const def=ps.length>2?2:0, hot=k==="s";
+    return `<div class="ptier"><div class="ptier-h"><b>${esc(t.name)}</b><span>${esc(t.tag)}</span></div>
       <ul class="plan-feats">${t.feats.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>
-      <div class="plans ptier-grid">${ps.map(card).join("")}</div></div>`:""; }).join("")
+      <div class="pdur">${ps.map((p,i)=>`<button type="button" class="pdur-chip${i===def?" on":""}" data-i="${i}">${esc(monthsAr(p.months))}</button>`).join("")}</div>
+      ${ps.map((p,i)=>card(p,hot,i!==def)).join("")}</div>`; }).join("")
     + `<p class="plan-pay">💳 الدفع بإنستاباي · واشتراكك بيبدأ يوم استلام برنامجك مش يوم الدفع</p>`;
 }
+/* duration chips: تبديل المدة جوه نفس الباقة */
+document.addEventListener("click",e=>{ const c=e.target.closest(".pdur-chip"); if(!c) return;
+  const w=c.closest(".ptier"); if(!w) return;
+  w.querySelectorAll(".pdur-chip").forEach(x=>x.classList.toggle("on",x===c));
+  w.querySelectorAll(".ptier-card").forEach(x=>x.classList.toggle("hidden",x!==w.querySelectorAll(".ptier-card")[+c.dataset.i]));
+});
 
 /* ---------- public: tab next to login ---------- */
 function loginTab(t){
