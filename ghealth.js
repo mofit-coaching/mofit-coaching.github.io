@@ -54,11 +54,18 @@ const css=`
 .gh-hero-btn:active{transform:scale(.98)}
 .gh-hero-btn .g{display:inline-grid;place-items:center;width:20px;height:20px}
 .gh-strip{margin-bottom:14px;border-radius:14px;padding:10px 12px;border:1px solid rgba(34,197,94,.4);background:linear-gradient(135deg,#F0FDF4,#ECFDF5)}
+.gh-re{display:inline-flex;align-items:center;gap:5px;flex:none;border:1px solid rgba(34,197,94,.45);background:#fff;color:#15803D;font:800 11px/1 inherit;padding:6px 10px;border-radius:9px;cursor:pointer;transition:.2s}
+.gh-re:active{transform:scale(.96)}
+.gh-re:disabled{opacity:.55;cursor:default}
+.gh-re svg{width:12px;height:12px}
+.gh-re.spin svg{animation:ghspin .8s linear infinite}
+@keyframes ghspin{to{transform:rotate(360deg)}}
 `;
 const st=document.createElement('style');st.textContent=css;document.head.appendChild(st);
 
 const FN=()=>SUPABASE_URL+"/functions/v1/health-sync";
 const G_SVG='<svg class="g" viewBox="0 0 24 24"><path fill="#4285F4" d="M23.5 12.3c0-.9-.1-1.5-.3-2.2H12v4.2h6.5c-.1 1.1-.8 2.7-2.4 3.8l3.7 2.9c2.2-2 3.7-5 3.7-8.7z"/><path fill="#34A853" d="M12 24c3.2 0 6-1.1 7.9-2.9l-3.7-2.9c-1 .7-2.4 1.2-4.2 1.2-3.2 0-6-2.2-7-5.1l-3.9 3C3.2 21.3 7.3 24 12 24z"/><path fill="#FBBC05" d="M5 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3l-3.9-3C.4 8.2 0 10 0 12s.4 3.8 1.1 5.3l3.9-3z"/><path fill="#EA4335" d="M12 4.7c1.8 0 3 .8 3.7 1.4l3.3-3.2C17.9 1.1 15.2 0 12 0 7.3 0 3.2 2.7 1.1 6.7l3.9 3c1-2.9 3.8-5 7-5z"/></svg>';
+const RE_SVG='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><polyline points="21 3 21 9 15 9"/></svg>';
 const SCOPE="https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly";
 
 function platform(){
@@ -123,6 +130,19 @@ async function doDisconnect(p,rerender){
   catch(e){ window.toast&&toast("تعذر الفصل — جرب تاني"); }
 }
 
+async function doResync(p,btn,refresh,rerender){
+  btn.disabled=true; btn.classList.add("spin");
+  try{
+    const r=await call("sync_me");
+    window.toast&&toast(r.today!=null?`\u2713 \u0627\u062a\u062d\u062f\u062b\u062a \u2014 \u062e\u0637\u0648\u0627\u062a\u0643 \u0627\u0644\u0646\u0647\u0627\u0631\u062f\u0647: ${r.today.toLocaleString("en-US")}`:"\u2713 \u0627\u062a\u062d\u062f\u062b\u062a \u0627\u0644\u0645\u0632\u0627\u0645\u0646\u0629");
+    refresh&&refresh();      /* rebuilds the view: steps field + last-sync line */
+    rerender&&rerender();
+  }catch(e){
+    btn.disabled=false; btn.classList.remove("spin");
+    window.toast&&toast(e.code==="not_connected"?"\u062c\u0648\u062c\u0644 \u0645\u0634 \u0645\u062a\u0635\u0644 \u2014 \u0627\u0631\u0628\u0637\u0647 \u0627\u0644\u0623\u0648\u0644":"\u062a\u0639\u0630\u0631 \u0627\u0644\u062a\u062d\u062f\u064a\u062b \u2014 \u062c\u0631\u0628 \u062a\u0627\u0646\u064a");
+  }
+}
+
 function lastSyncLine(conn){
   const d=new Date(conn.last_sync_at);
   const last=conn.last_sync_at?d.toLocaleDateString("ar-EG",{day:"numeric",month:"short"})+", "+d.toLocaleTimeString("ar-EG",{hour:"numeric",minute:"2-digit"}):"لسه أول مزامنة";
@@ -179,9 +199,10 @@ async function renderStepsSlot(slot,p,refresh){
   const {cfg,conn}=s;
   const rerender=()=>renderStepsSlot(slot,p,refresh);
   if(conn){
-    slot.innerHTML=`<div class="gh-box on"><div class="gh-row"><span class="dot"></span><b>جوجل متصل — خطواتك بتتسجل لوحدها كل يوم</b><button type="button" class="gh-un" id="ghOff">فصل</button></div>
-      <span class="gh-sync">آخر مزامنة: ${lastSyncLine(conn)} · الكتابة اليدوية شغالة برضه</span></div>`;
+    slot.innerHTML=`<div class="gh-box on"><div class="gh-row"><span class="dot"></span><b>جوجل متصل — خطواتك بتتسجل لوحدها كل يوم</b><button type="button" class="gh-re" id="ghRe">${RE_SVG} تحديث</button><button type="button" class="gh-un" id="ghOff">فصل</button></div>
+      <span class="gh-sync">آخر مزامنة: ${lastSyncLine(conn)} · دوس تحديث لو عاوز أحدث رقم دلوقتي</span></div>`;
     slot.querySelector("#ghOff").onclick=()=>doDisconnect(p,rerender);
+    slot.querySelector("#ghRe").onclick=ev=>doResync(p,ev.currentTarget,refresh,rerender);
     return;
   }
   slot.innerHTML=`<div class="gh-box off">
@@ -211,8 +232,9 @@ async function renderHomeCard(slot,p,refresh){
   const {cfg,conn}=s;
   const rerender=()=>renderHomeCard(slot,p,refresh);
   if(conn){
-    slot.innerHTML=`<div class="gh-strip"><div class="gh-row"><span class="dot"></span><b>جوجل متصل — خطواتك بتتسجل لوحدها</b><button type="button" class="gh-un" id="ghOffH">فصل</button></div></div>`;
+    slot.innerHTML=`<div class="gh-strip"><div class="gh-row"><span class="dot"></span><b>جوجل متصل — خطواتك بتتسجل لوحدها</b><button type="button" class="gh-re" id="ghReH">${RE_SVG} تحديث</button><button type="button" class="gh-un" id="ghOffH">فصل</button></div></div>`;
     slot.querySelector("#ghOffH").onclick=()=>doDisconnect(p,rerender);
+    slot.querySelector("#ghReH").onclick=ev=>doResync(p,ev.currentTarget,refresh,rerender);
     return;
   }
   slot.innerHTML=`<div class="gh-hero">
