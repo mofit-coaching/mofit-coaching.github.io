@@ -75,19 +75,21 @@ function pqInner(uid,m){
   const pick=(k,mm)=>plans.find(p=>planTier(p)===TIER_DEFS[k]&&+p.months===mm);
   const saveOf=p=>p&&p.old_price&&planPrice(p)&&+p.old_price>+p.price?Math.round((1-(+p.price)/(+p.old_price))*100):0;
   const seg=`<div class="pq-seg" role="tablist">${durs.map(d=>`<button type="button" role="tab" class="pq-d${d===m?" on":""}${d===6?" rec":""}" data-uid="${uid}" data-m="${d}"><b>${esc(monthsAr(d))}</b><small>${PQ_TAG[d]||"&nbsp;"}</small></button>`).join("")}</div>`;
-  const lbl={b:"للي عايز يمشي لوحده",s:"الأكثر طلباً · متابعة الكوتش",v:"متابعة شخصية كاملة"};
+  const eyebrow={b:"باقة البرنامج",s:"متابعة مباشرة مع الكوتش",v:"أعلى مستوى متابعة"};
+  const flag={b:"",s:"الأكثر طلباً · متابعة الكوتش",v:"VIP · أماكن محدودة"};
+  const cta={b:"اختار البرنامج",s:"اختار المتابعة",v:"اختار VIP"};
   const cards=Object.keys(TIER_DEFS).map(k=>{ const t=TIER_DEFS[k], p=pick(k,m); if(!p) return "";
-    const total=(+p.months)+(+p.free_months||0), pm=planPrice(p)?(+p.price)/total:null, sv=saveOf(p);
+    const total=(+p.months)+(+p.free_months||0), pm=planPrice(p)?(+p.price)/total:null, sv=saveOf(p), cur=esc(p.currency||"ج.م");
     return `<div class="pq-card t-${k}">
-      <span class="pq-flag">${esc(p.badge||(k==="s"?"الأكثر طلباً":k==="v"?"أماكن محدودة":""))}</span>
-      <small class="pq-k">${esc(lbl[k])}</small>
+      ${(p.badge||flag[k])?`<span class="pq-flag">${esc(p.badge||flag[k])}</span>`:""}
+      <small class="pq-k">${esc(eyebrow[k])}</small>
       <div class="pq-h"><b>${esc(t.name)}</b></div><p class="pq-tag">${esc(t.tag)}</p>
-      <div class="pq-price">${planPrice(p)?`<b class="num">${fmt(p.price)}</b><span>${esc(p.currency||"ج.م")}<em> / ${esc(planTitle(p))}</em></span>`:`<span>تواصل لمعرفة السعر</span>`}</div>
-      <div class="pq-sub">${sv?`<s class="num">${fmt(p.old_price)}</s><i>وفّر <bdi dir="ltr">${sv}%</bdi></i>`:""}${pm?`<span><b class="num">${fmt(pm)}</b> ${esc(p.currency||"ج.م")} في الشهر</span>`:""}</div>
+      <div class="pq-price">${planPrice(p)?`<span class="cur">${cur}</span><b class="num">${fmt(p.price)}</b><span class="per">/ ${esc(planTitle(p))}</span>`:`<span class="per">تواصل لمعرفة السعر</span>`}</div>
+      <div class="pq-sub">${pm?`<span><b class="num">${fmt(pm)}</b> ${cur} في الشهر</span>`:""}${sv?`<s class="num">${fmt(p.old_price)}</s><i>وفّر <bdi dir="ltr">${sv}%</bdi></i>`:""}</div>
       ${p.note?`<div class="pq-note">${esc(p.note)}</div>`:""}
       <ul class="pq-ul">${t.feats.map((f,i)=>`<li${(k==="v"&&i>=1)||(k==="s"&&i>=1&&i<=2)?` class="hl"`:""}>${esc(f)}</li>`).join("")}</ul>
-      <a class="pq-cta" href="${esc(waLink(planMsg(p,who)))}" target="_blank" rel="noopener">اشترك في ${esc(t.name)} ›</a></div>`; }).join("");
-  return seg+cards+`<p class="pq-pay">💳 الدفع بإنستاباي · واشتراكك بيبدأ يوم استلام برنامجك مش يوم الدفع</p>`;
+      <a class="pq-cta" href="${esc(waLink(planMsg(p,who)))}" target="_blank" rel="noopener">${cta[k]} ←</a></div>`; }).join("");
+  return seg+`<div class="pq-cards">${cards}</div><p class="pq-pay">💳 الدفع بإنستاباي · واشتراكك بيبدأ يوم استلام برنامجك مش يوم الدفع</p>`;
 }
 document.addEventListener("click",e=>{ const c=e.target.closest(".pq-d"); if(!c||!PQ[c.dataset.uid]) return;
   const w=document.getElementById(c.dataset.uid); if(w) w.innerHTML=pqInner(c.dataset.uid,+c.dataset.m); });
