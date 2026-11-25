@@ -14,13 +14,5 @@ create policy cycle_coach_read on public.cycle_logs for select to authenticated 
 revoke all on public.cycle_logs from public, anon;
 grant select, insert, update, delete on public.cycle_logs to authenticated;
 
-create or replace function public.set_my_sex(p_sex text) returns void
-language plpgsql security definer set search_path = public as $$
-begin
-  if auth.uid() is null then raise exception 'not signed in'; end if;
-  if p_sex not in ('ذكر','أنثى') then raise exception 'invalid value'; end if;
-  update public.profiles set sex = p_sex where id = auth.uid();
-end $$;
-revoke all on function public.set_my_sex(text) from public, anon;
-grant execute on function public.set_my_sex(text) to authenticated;
+drop function if exists public.set_my_sex(text);
 commit;
