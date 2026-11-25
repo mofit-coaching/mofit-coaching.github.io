@@ -1,5 +1,5 @@
 // Supabase Edge Function: health-sync
-// Google Health connect + steps sync (last 10 days) into habits.steps.
+// Google Health connect + steps sync (last 10 days) into habits.steps, and sleep hours (last 10 nights) into habits.sleep_hours.
 // Secrets needed: GHEALTH_CLIENT_ID, GHEALTH_CLIENT_SECRET, CRON_SECRET (for the scheduled sync).
 // Verify JWT: ON (connect/disconnect/status run as the user; sync runs with x-cron-secret).
 // Identity deploy note: schedule action=sync 2-3x per evening (see ghealth.sql cron block).
@@ -17,6 +17,8 @@ const TOKEN_URL = "https://oauth2.googleapis.com/token";
 const REVOKE_URL = "https://oauth2.googleapis.com/revoke";
 const GH_BASE = "https://health.googleapis.com/v4/users/me/dataTypes/steps/dataPoints:dailyRollUp";
 const SCOPE = "https://www.googleapis.com/auth/googlehealth.activity_and_fitness.readonly";
+const SLEEP_SCOPE = "https://www.googleapis.com/auth/googlehealth.sleep.readonly";
+const SLEEP_URL = "https://health.googleapis.com/v4/users/me/dataTypes/sleep/dataPoints:reconcile";
 
 // Civil date (YYYY-MM-DD) in the client's timezone. The roster is Egypt-based.
 const TZ = "Africa/Cairo";
@@ -71,6 +73,59 @@ async function stepsForRange(accessToken: string, startYmd: string, endYmdExclus
   return Object.keys(days).length ? { days } : { days, reason: "no_data" };
 }
 
+// Sleep for the last days, as hours per wake-up day (the civil date the session ends on).
+// Uses reconcile (no double counting across sources), pageSize 25 is the max for sleep, so we page.
+// Never throws and never blocks steps: users who connected before the sleep permission existed just get "scope_missing".
+type SleepResult = { days: Record<string, number>; reason?: "no_data" | "scope_missing" | "api_error" };
+async function sleepForRange(accessToken: string, startYmd: string, endYmdExclusive: string): Promise<SleepResult> {
+  const mins: Record<string, number> = {};
+  let pageToken = "";
+  try {
+    for (let page = 0; page < 5; page++) {
+      const qs = new URLSearchParams({
+        filter: `sleep.interval.civil_end_time >= "${startYmd}T00:00:00" AND sleep.interval.civil_end_time < "${endYmdExclusive}T00:00:00"`,
+        pageSize: "25",
+      });
+      if (pageToken) qs.set("pageToken", pageToken);
+      const r = await fetch(`${SLEEP_URL}?${qs}`, { headers: { "Authorization": `Bearer ${accessToken}`, "Accept": "application/json" } });
+      if (!r.ok) {
+        let msg = "";
+        try { const t = await r.text(); const ej = JSON.parse(t); msg = String(ej?.error?.message || ej?.error?.status || t.slice(0, 200)); } catch { /* keep "" */ }
+        console.log("health-sync sleep upstream error:", r.status, msg.slice(0, 300));
+        return { days: {}, reason: r.status === 401 || r.status === 403 ? "scope_missing" : "api_error" };
+      }
+      const j = await r.json().catch(() => ({}));
+      for (const dp of Array.isArray(j?.dataPoints) ? j.dataPoints : []) {
+        const sl = dp?.sleep;
+        const m = parseInt(String(sl?.summary?.minutesAsleep ?? "0"), 10) || 0;
+        const end = String(sl?.interval?.endTime || "");
+        if (!m || !end) continue;
+        // Day the user woke up, in the client's timezone.
+        const ymd = civilDate(new Date(end));
+        mins[ymd] = (mins[ymd] || 0) + m;
+      }
+      pageToken = String(j?.nextPageToken || "");
+      if (!pageToken) break;
+    }
+  } catch (e) {
+    console.log("health-sync sleep error:", String(e).slice(0, 200));
+    return { days: {}, reason: "api_error" };
+  }
+  const days: Record<string, number> = {};
+  for (const [d, m] of Object.entries(mins)) days[d] = Math.round((m / 60) * 10) / 10;
+  return Object.keys(days).length ? { days } : { days, reason: "no_data" };
+}
+
+// Write sleep hours without touching any other habit field.
+async function writeSleep(admin: any, userId: string, ymd: string, hours: number) {
+  const { data: row } = await admin.from("habits").select("client_id").eq("client_id", userId).eq("log_date", ymd).maybeSingle();
+  if (row) {
+    await admin.from("habits").update({ sleep_hours: hours, updated_at: new Date().toISOString() }).eq("client_id", userId).eq("log_date", ymd);
+  } else {
+    await admin.from("habits").insert({ client_id: userId, log_date: ymd, sleep_hours: hours, updated_at: new Date().toISOString() });
+  }
+}
+
 // Write steps without touching any other habit field.
 async function writeSteps(admin: any, userId: string, ymd: string, steps: number) {
   const { data: row } = await admin.from("habits").select("client_id").eq("client_id", userId).eq("log_date", ymd).maybeSingle();
@@ -115,6 +170,14 @@ async function syncOne(admin: any, cid: string, secret: string, userId: string, 
   res.yesterday = s.days[yesterday] ?? null;
   res.days = Object.keys(s.days).length;
   if (res.today == null) { res.reason = s.reason ?? "no_data"; if (s.upstream) res.upstream = s.upstream; }   // surfaced to the client so it can say why nothing changed
+  // Sleep is best effort: a failure here never changes the steps result above.
+  const sl = await sleepForRange(access, first, nextDay(today));
+  for (const [day, hours] of Object.entries(sl.days)) {
+    if (day > today || day < first || !(hours > 0)) continue;
+    await writeSleep(admin, userId, day, hours);
+  }
+  res.sleep_days = Object.keys(sl.days).length;
+  res.sleep = sl.reason ? sl.reason : "ok";
   await admin.from("health_connections").update({ last_sync_at: new Date().toISOString() }).eq("user_id", userId);
   return res;
 }
@@ -184,14 +247,16 @@ Deno.serve(async (req) => {
       if (!tj.refresh_token) return out({ error: "no_refresh" }, 409); // user must re-consent (frontend uses prompt:'consent')
       // Google's consent screen lets people untick the steps permission and still return a token.
       if (!String(tj.scope || "").split(" ").includes(SCOPE)) return out({ error: "scope_missing" }, 409);
+      // Sleep permission is optional: steps still work if the user unticks it.
+      const hasSleep = String(tj.scope || "").split(" ").includes(SLEEP_SCOPE);
       let sub = "";
       try { sub = JSON.parse(atob(String(tj.id_token || "").split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub || ""; } catch { /* sub optional */ }
       await admin.from("health_connections").upsert({
         user_id: u.user.id, provider: "google", google_sub: sub || null,
-        refresh_token: tj.refresh_token, scope: SCOPE, connected_at: new Date().toISOString(),
+        refresh_token: tj.refresh_token, scope: hasSleep ? `${SCOPE} ${SLEEP_SCOPE}` : SCOPE, connected_at: new Date().toISOString(),
       });
       const r = await syncOne(admin, cid, secret, u.user.id, tj.refresh_token, tj.access_token);
-      return out({ connected: true, today: r.today ?? null, yesterday: r.yesterday ?? null });
+      return out({ connected: true, today: r.today ?? null, yesterday: r.yesterday ?? null, sleep: hasSleep ? (r.sleep ?? null) : "scope_missing" });
     }
 
     if (b.action === "shortcut_code") {
@@ -210,7 +275,7 @@ Deno.serve(async (req) => {
       if (!cid || !secret) return out({ error: "not_configured" }, 503);
       const r = await syncOne(admin, cid, secret, u.user.id, row.refresh_token);
       if (r.error) return out({ error: "sync_failed" }, 502);
-      return out({ today: r.today ?? null, yesterday: r.yesterday ?? null, reason: r.today == null ? (r.reason ?? "no_data") : null, detail: r.upstream ?? null });
+      return out({ today: r.today ?? null, yesterday: r.yesterday ?? null, reason: r.today == null ? (r.reason ?? "no_data") : null, detail: r.upstream ?? null, sleep: r.sleep ?? null, sleep_days: r.sleep_days ?? 0 });
     }
 
     if (b.action === "disconnect") {
