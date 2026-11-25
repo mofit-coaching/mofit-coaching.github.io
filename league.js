@@ -135,10 +135,36 @@ const st=document.createElement("style"); st.textContent=`
   padding:11px;border-radius:14px;background:linear-gradient(135deg,#FF5A0A,#FF8A3D 60%,#FFB347);
   box-shadow:0 12px 24px -8px rgba(255,90,10,.85),inset 0 1px 0 rgba(255,255,255,.35)}
 .lg-save:active{transform:scale(.98)}
+.lg-days{display:flex;gap:4px;margin-top:4px}
+.lg-day{flex:1;min-width:0;cursor:pointer;text-align:center;padding:8px 2px;border-radius:12px;font-family:"Cairo",sans-serif;
+  font-size:.64rem;font-weight:700;color:#94A3B8;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.11)}
+.lg-day.on{color:#FFE680;border-color:rgba(255,194,26,.5);background:rgba(255,179,0,.10)}
+.lg-prizes{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+.lg-pz-in{display:flex;align-items:center;gap:8px}
+.lg-pz-in span{flex:none;width:26px;text-align:center;font-size:1.05rem}
+.lg-pz-in input{flex:1;min-width:0;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);color:#FFE680;font-family:"Cairo",sans-serif;font-size:.8rem;font-weight:700;outline:none}
+.lg-pz-in input::placeholder{color:#64748B;font-weight:400}
+.lg-pz-in input:focus{border-color:rgba(255,194,26,.55)}
+.lg-pz{margin-top:12px;padding:10px 12px;border-radius:14px;text-align:center;
+  background:rgba(255,179,0,.07);border:1px solid rgba(255,194,26,.30);
+  font-family:"Cairo",sans-serif;font-size:.76rem;font-weight:700;color:#FFE680;line-height:1.9}
 .lg-open{margin-top:12px;width:100%;border:0;cursor:pointer;color:#0B1220;font-weight:800;font-size:.82rem;font-family:"Cairo",sans-serif;
   padding:11px;border-radius:14px;background:linear-gradient(135deg,#FFE680,#FFC21A);
   box-shadow:0 12px 24px -10px rgba(255,194,26,.8),inset 0 1px 0 rgba(255,255,255,.5)}
 .lg-open:active{transform:scale(.98)}
+.lg-chips{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;margin-inline-start:34px}
+.lg-chip{cursor:pointer;padding:5px 10px;border-radius:999px;font-size:.66rem;font-weight:700;font-family:"Cairo",sans-serif;
+  color:#C7D2E0;background:rgba(255,255,255,.05);border:1px dashed rgba(255,194,26,.38)}
+.lg-chip:active{transform:scale(.95)}
+.lg-ovl{position:fixed;inset:0;z-index:999;display:flex;align-items:center;justify-content:center;padding:22px;
+  background:rgba(5,10,20,.78);backdrop-filter:blur(4px);animation:lgFade .3s ease both}
+.lg-ovl .lg-card{width:100%;max-width:400px;max-height:88vh;overflow-y:auto;margin-bottom:0;animation:lgPop .5s cubic-bezier(.2,1.4,.4,1) both}
+.lg-x{position:absolute;top:12px;inset-inline-end:12px;z-index:2;width:32px;height:32px;border-radius:10px;border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);color:#94A3B8;font-size:.9rem;cursor:pointer;display:grid;place-items:center;font-family:"Cairo",sans-serif}
+@keyframes lgFade{from{opacity:0}to{opacity:1}}
+@keyframes lgPop{0%{transform:scale(.8) translateY(20px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
+@media(prefers-reduced-motion:reduce){.lg-ovl,.lg-ovl .lg-card{animation:none!important}}
 .lg-meta{margin-top:10px;text-align:center;font-family:"Cairo",sans-serif;font-size:.7rem;color:#64748B}
 @keyframes lgIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 @keyframes lgCrown{0%{transform:scale(.4) rotate(-14deg);opacity:0}100%{transform:scale(1) rotate(0);opacity:1}}
@@ -198,6 +224,18 @@ function trophyHTML(trophies){
       <span class="p">${byWeek[w].sort((a,b)=>a.rank-b.rank).map(t=>`${MEDALS[t.rank-1]||"🏅"} <b>${escAr(t.nickname)}</b>`).join(" · ")}</span></div>`).join("")}
   </div>`;
 }
+const PRIZE_PRESETS=[
+  ["أسبوع مجاني","جلسة ١ لـ ١ مجانية","ترقية الباقة لشهر"],
+  ["خصم ٥٠٪ على الشهر الجاي","جلسة ١ لـ ١ مجانية"],
+  ["خصم ٢٥٪ على الشهر الجاي","خصم ١٠٪ على الشهر الجاي"]
+];
+const DAYS=["الأحد","الاثنين","الثلاثاء","الأربعاء","الخميس","الجمعة","السبت"];
+function prizeLineHTML(board){
+  const p=[board.prize_1,board.prize_2,board.prize_3].map(x=>(x||"").trim());
+  if(!p[0]&&!p[1]&&!p[2]) return "";
+  const parts=p.map((t,i)=>t?MEDALS[i]+" "+escAr(t):null).filter(Boolean);
+  return `<div class="lg-pz">🎁 جوائز الأسبوع ده: ${parts.join(" · ")}</div>`;
+}
 function headHTML(board,isCoach){
   const cd=countdown(board.ends_at);
   return `<div class="lg-h">
@@ -220,7 +258,8 @@ function inviteHTML(board){
     <b>🔥 الكوتش بدأ الليج الأسبوعي!</b>
     <p>نافس زمايلك على التمارين والالتزام طول الأسبوع. اسمك بيظهر بلقب مستعار ومرتب بس - محدش يعرف مين انت. أول 3 بياخدوا 🥇🥈🥉 كل أسبوع.<br>${escAr(rewardText(board.reward_mode,board.reward_note))}</p>
     <div class="lg-cta"><button class="lg-btn" id="lgYes">اشترك في الليج 🔥</button><button class="lg-ghost" id="lgNo">مش دلوقتي</button></div>
-  </div>`;
+  </div>
+  ${prizeLineHTML(board)}`;
 }
 /* ------- client: compact teaser on home (joined) ------- */
 function teaserHTML(board){
@@ -246,6 +285,7 @@ function tabHTML(board){
     <div class="lg-win-t"><b>${firstIsMe?"انت بطل الأسبوع اللي فات يا وحش! 🏆":"أبطال الأسبوع اللي فات"}</b>
     <small>${escAr(rewardText(board.reward_mode,board.reward_note))}</small></div></div>`:""}
   ${podHTML(pod,{},false)}
+  ${prizeLineHTML(board)}
   <div class="lg-rows">${rows.map((r,i)=>rowHTML(r,i,false,null,leaderPts)).join("")}
     ${!rows.length?`<p style="text-align:center;font-family:Cairo;font-size:.78rem;color:#64748B;margin:8px 0">لسه محدش سجّل - كون أول واحد 🔥</p>`:""}</div>
   ${trophyHTML(board.trophies)}
@@ -269,6 +309,7 @@ function coachHTML(board,names){
     <small>${first.points} نقطة من ${first.workouts} تمرين · ${escAr(rewardText(board.reward_mode,board.reward_note))}</small></div>
     <button class="lg-grant" id="lgGrant" data-id="${first.winner_id}" ${first.reward_granted?"disabled":""}>${first.reward_granted?"اتكرم ✅":"✓ سجّل التكريم"}</button></div>`:""}
   ${podHTML(pod,names,true)}
+  ${prizeLineHTML(board)}
   <div class="lg-rows">${rows.map((r,i)=>rowHTML(r,i,true,names,leaderPts)).join("")}
     ${!rows.length?`<p style="text-align:center;font-family:Cairo;font-size:.78rem;color:#64748B;margin:8px 0">مفيش مشتركين سجّلوا لسه</p>`:""}</div>
   <div class="lg-meta">الموسم ${board.season} · ${board.members} مشترك</div>
@@ -278,31 +319,101 @@ function coachHTML(board,names){
   ${cfgHTML(board)}`;
 }
 function cfgHTML(board){
+  const wsd=board.week_start_day??0;
   return `<div class="lg-cfg"><h4>🎁 مكافأة البطل الأسبوعية</h4>
     <div class="lg-opts" id="lgOpts">
       <div class="lg-opt${(!board.reward_mode||board.reward_mode==="manual")?" on":""}" data-m="manual">🎖 الكوتش يكرّم يدوياً</div>
       <div class="lg-opt${board.reward_mode==="free_week"?" on":""}" data-m="free_week">🎁 أسبوع مجاني</div>
       <div class="lg-opt${board.reward_mode==="plan_upgrade"?" on":""}" data-m="plan_upgrade">⭐ ترقية الباقة</div>
     </div>
-    <button class="lg-save" id="lgSave">حفظ نوع المكافأة</button></div>`;
+    <h4 style="margin-top:12px">📅 الليج بيبدأ يوم إيه؟ <small style="font-weight:400;color:#64748B">(الأسبوع بيقفل آخر اليوم السابع)</small></h4>
+    <div class="lg-days" id="lgDays">${DAYS.map((d,i)=>`<div class="lg-day${i===wsd?" on":""}" data-d="${i}">${d}</div>`).join("")}</div>
+    <h4 style="margin-top:12px">🏆 جوائز الأسبوع <small style="font-weight:400;color:#64748B">(بتظهر للمشتركين في تبويب الليج)</small></h4>
+    <div class="lg-prizes">
+      <div class="lg-pz-in"><span>🥇</span><input id="lgP1" type="text" maxlength="80" placeholder="جائزة المركز الأول - اكتبها أو اختر من الاقتراحات" value="${escAr(board.prize_1||"")}"></div>
+      <div class="lg-chips" data-for="lgP1">${PRIZE_PRESETS[0].map(p=>`<span class="lg-chip">${p}</span>`).join("")}</div>
+      <div class="lg-pz-in"><span>🥈</span><input id="lgP2" type="text" maxlength="80" placeholder="جائزة المركز التاني" value="${escAr(board.prize_2||"")}"></div>
+      <div class="lg-chips" data-for="lgP2">${PRIZE_PRESETS[1].map(p=>`<span class="lg-chip">${p}</span>`).join("")}</div>
+      <div class="lg-pz-in"><span>🥉</span><input id="lgP3" type="text" maxlength="80" placeholder="جائزة المركز التالت" value="${escAr(board.prize_3||"")}"></div>
+      <div class="lg-chips" data-for="lgP3">${PRIZE_PRESETS[2].map(p=>`<span class="lg-chip">${p}</span>`).join("")}</div>
+    </div>
+    <button class="lg-save" id="lgSave">حفظ الإعدادات</button></div>`;
+}
+
+/* ------- one-time "league started" center modal (per season, per device) ------- */
+function startModalHTML(board){
+  const joined=board.me&&board.me.status==="joined";
+  return `<div class="lg-ovl" id="lgOvl"><div class="lg-card">
+    <button class="lg-x" id="lgX" aria-label="إغلاق">✕</button>
+    ${headHTML(board,false)}
+    <div class="lg-inv"><b>🏆 الليج بدأ رسمي!</b>
+      <p>الموسم ${board.season} بدأ - النقاط بتتسجل من دلوقتي. ${joined?"انت مشترك.. يلا نولّعها 🔥":"اشترك ونافس - اسمك بيظهر بلقب مستعار بس."}</p>
+      <div class="lg-cta">${joined?`<button class="lg-btn" id="lgGo">افتح تبويب الليج 🏆</button>`:`<button class="lg-btn" id="lgYesM">اشترك في الليج 🔥</button><button class="lg-ghost" id="lgNoM">مش دلوقتي</button>`}</div>
+    </div>
+    ${prizeLineHTML(board)}
+  </div></div>`;
+}
+function maybeShowStartModal(board){
+  try{
+    if(!board||!board.started||!board.me) return;
+    const st=board.me.status;
+    if(st!=="pending"&&st!=="joined") return;
+    const key="mofit_league_start_seen_s"+board.season;
+    if(localStorage.getItem(key)) return;
+    localStorage.setItem(key,"1");
+    const wrap=document.createElement("div");
+    wrap.innerHTML=startModalHTML(board);
+    document.body.appendChild(wrap.firstElementChild);
+    const ovl=document.getElementById("lgOvl"); if(!ovl) return;
+    const close=()=>ovl.remove();
+    const x=ovl.querySelector("#lgX"); if(x) x.onclick=close;
+    const go=ovl.querySelector("#lgGo");
+    if(go) go.onclick=()=>{ close(); S.tab="league"; render(); window.scrollTo(0,0); };
+    const yes=ovl.querySelector("#lgYesM");
+    if(yes) yes.onclick=async()=>{
+      yes.disabled=true; yes.textContent="…";
+      try{
+        const { data, error }=await sb.rpc("league_respond",{p_join:true});
+        if(error||!data||!data.ok) throw error||new Error("fail");
+        toast("🔥 اتسجلت في الليج - بالتوفيق يا بطل");
+        if(typeof burst==="function") burst();
+        close(); render();
+      }catch(err){ yes.disabled=false; yes.textContent="اشترك في الليج 🔥"; toast("تعذر الحفظ - جرب تاني"); }
+    };
+    const no=ovl.querySelector("#lgNoM");
+    if(no) no.onclick=close;
+  }catch(e){}
 }
 
 /* ------- wiring ------- */
 function wireCfg(host,board){
   const optsBox=host.querySelector("#lgOpts"), save=host.querySelector("#lgSave");
   if(!optsBox||!save) return;
-  let mode=board.reward_mode||"manual";
+  let mode=board.reward_mode||"manual", wsd=board.week_start_day??0;
   optsBox.querySelectorAll(".lg-opt").forEach(o=>o.onclick=()=>{
     optsBox.querySelectorAll(".lg-opt").forEach(x=>x.classList.remove("on"));
     o.classList.add("on"); mode=o.dataset.m;
   });
+  const daysBox=host.querySelector("#lgDays");
+  if(daysBox) daysBox.querySelectorAll(".lg-day").forEach(o=>o.onclick=()=>{
+    daysBox.querySelectorAll(".lg-day").forEach(x=>x.classList.remove("on"));
+    o.classList.add("on"); wsd=+o.dataset.d;
+  });
+  const val=id=>{ const el=host.querySelector(id); return el?el.value.trim():""; };
+  host.querySelectorAll(".lg-chips").forEach(box=>{
+    box.querySelectorAll(".lg-chip").forEach(ch=>ch.onclick=()=>{
+      const inp=host.querySelector("#"+box.dataset.for);
+      if(inp){ inp.value=ch.textContent; box.querySelectorAll(".lg-chip").forEach(x=>x.style.borderStyle="dashed"); ch.style.borderStyle="solid"; }
+    });
+  });
   save.onclick=async e=>{
     const b=e.currentTarget; b.disabled=true; b.textContent="…";
     try{
-      const { error }=await sb.rpc("league_set_config",{p_mode:mode});
+      const { error }=await sb.rpc("league_set_config",{p_mode:mode,p_week_start_day:wsd,
+        p_prize_1:val("#lgP1"),p_prize_2:val("#lgP2"),p_prize_3:val("#lgP3")});
       if(error) throw error;
-      b.textContent="✅ اتحفظ"; setTimeout(()=>{ b.textContent="حفظ نوع المكافأة"; b.disabled=false; },1600);
-    }catch(err){ b.textContent="حفظ نوع المكافأة"; b.disabled=false; toast("تعذر الحفظ - جرب تاني"); }
+      b.textContent="✅ اتحفظ"; setTimeout(()=>{ b.textContent="حفظ الإعدادات"; b.disabled=false; },1600);
+    }catch(err){ b.textContent="حفظ الإعدادات"; b.disabled=false; toast("تعذر الحفظ - جرب تاني"); }
   };
 }
 function wireStart(host,btnId,after){
@@ -400,6 +511,7 @@ if(typeof viewHome==="function"&&!viewHome._lg){
     if(anchor&&anchor.parentNode) anchor.after(host); else el.prepend(host);
     LG=await fetchBoard();
     const st=LG&&LG.started?LG.me.status:null;
+    maybeShowStartModal(LG);
     if(st==="pending"){
       host.innerHTML=`<div class="lg-card">${inviteHTML(LG)}</div>`;
       wireRespond(host,()=>{ host.remove(); render(); });
@@ -445,4 +557,5 @@ window.leagueHTML=function(board,opts){
   return teaserHTML(board);
 };
 window.leagueAfter=function(host){};
+window.leagueStartModal=function(board){ document.body.insertAdjacentHTML("beforeend",startModalHTML(board)); };
 })();
