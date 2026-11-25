@@ -64,20 +64,33 @@ function plansHTML(plans, who){
       ${p.note?`<div class="plan-note">${esc(p.note)}</div>`:""}
       <span class="plan-cta">اشترك عن طريق واتساب ›</span></a>`; };
   if(!plans.every(planTier)) return `<div class="plans">${plans.map(p=>card(p,false,false)).join("")}</div>`;
-  return Object.keys(TIER_DEFS).map(k=>{ const t=TIER_DEFS[k], ps=plans.filter(p=>planTier(p)===t); if(!ps.length) return "";
-    const def=ps.length>2?2:0, hot=k==="s";
-    return `<div class="ptier"><div class="ptier-h"><b>${esc(t.name)}</b><span>${esc(t.tag)}</span></div>
-      <ul class="plan-feats">${t.feats.map(f=>`<li>${esc(f)}</li>`).join("")}</ul>
-      <div class="pdur">${ps.map((p,i)=>`<button type="button" class="pdur-chip${i===def?" on":""}" data-i="${i}">${esc(monthsAr(p.months))}</button>`).join("")}</div>
-      ${ps.map((p,i)=>card(p,hot,i!==def)).join("")}</div>`; }).join("")
-    + `<p class="plan-pay">💳 الدفع بإنستاباي · واشتراكك بيبدأ يوم استلام برنامجك مش يوم الدفع</p>`;
+  /* مدة واحدة فوق (بتغيّر كل الباقات) + 3 كروت: البرنامج · المتابعة (الأكثر طلباً) · VIP */
+  const durs=[...new Set(plans.map(p=>+p.months))].sort((x,y)=>x-y), def=durs.includes(6)?6:durs[durs.length-1];
+  const uid="pq"+Math.random().toString(36).slice(2,8); PQ[uid]={plans,who,durs};
+  return `<div class="pq" id="${uid}">${pqInner(uid,def)}</div>`;
 }
-/* duration chips: تبديل المدة جوه نفس الباقة */
-document.addEventListener("click",e=>{ const c=e.target.closest(".pdur-chip"); if(!c) return;
-  const w=c.closest(".ptier"); if(!w) return;
-  w.querySelectorAll(".pdur-chip").forEach(x=>x.classList.toggle("on",x===c));
-  w.querySelectorAll(".ptier-card").forEach(x=>x.classList.toggle("hidden",x!==w.querySelectorAll(".ptier-card")[+c.dataset.i]));
-});
+const PQ={}, PQ_TAG={1:"تجربة",3:"بداية",6:"الأكثر طلباً",12:"أوفر سعر"};
+function pqInner(uid,m){
+  const { plans, who, durs } = PQ[uid];
+  const pick=(k,mm)=>plans.find(p=>planTier(p)===TIER_DEFS[k]&&+p.months===mm);
+  const saveOf=p=>p&&p.old_price&&planPrice(p)&&+p.old_price>+p.price?Math.round((1-(+p.price)/(+p.old_price))*100):0;
+  const seg=`<div class="pq-seg" role="tablist">${durs.map(d=>`<button type="button" role="tab" class="pq-d${d===m?" on":""}${d===6?" rec":""}" data-uid="${uid}" data-m="${d}"><b>${esc(monthsAr(d))}</b><small>${PQ_TAG[d]||"&nbsp;"}</small></button>`).join("")}</div>`;
+  const lbl={b:"للي عايز يمشي لوحده",s:"الأكثر طلباً · متابعة الكوتش",v:"متابعة شخصية كاملة"};
+  const cards=Object.keys(TIER_DEFS).map(k=>{ const t=TIER_DEFS[k], p=pick(k,m); if(!p) return "";
+    const total=(+p.months)+(+p.free_months||0), pm=planPrice(p)?(+p.price)/total:null, sv=saveOf(p);
+    return `<div class="pq-card t-${k}">
+      <span class="pq-flag">${esc(p.badge||(k==="s"?"الأكثر طلباً":k==="v"?"أماكن محدودة":""))}</span>
+      <small class="pq-k">${esc(lbl[k])}</small>
+      <div class="pq-h"><b>${esc(t.name)}</b></div><p class="pq-tag">${esc(t.tag)}</p>
+      <div class="pq-price">${planPrice(p)?`<b class="num">${fmt(p.price)}</b><span>${esc(p.currency||"ج.م")}<em> / ${esc(planTitle(p))}</em></span>`:`<span>تواصل لمعرفة السعر</span>`}</div>
+      <div class="pq-sub">${sv?`<s class="num">${fmt(p.old_price)}</s><i>وفّر <bdi dir="ltr">${sv}%</bdi></i>`:""}${pm?`<span><b class="num">${fmt(pm)}</b> ${esc(p.currency||"ج.م")} في الشهر</span>`:""}</div>
+      ${p.note?`<div class="pq-note">${esc(p.note)}</div>`:""}
+      <ul class="pq-ul">${t.feats.map((f,i)=>`<li${(k==="v"&&i>=1)||(k==="s"&&i>=1&&i<=2)?` class="hl"`:""}>${esc(f)}</li>`).join("")}</ul>
+      <a class="pq-cta" href="${esc(waLink(planMsg(p,who)))}" target="_blank" rel="noopener">اشترك في ${esc(t.name)} ›</a></div>`; }).join("");
+  return seg+cards+`<p class="pq-pay">💳 الدفع بإنستاباي · واشتراكك بيبدأ يوم استلام برنامجك مش يوم الدفع</p>`;
+}
+document.addEventListener("click",e=>{ const c=e.target.closest(".pq-d"); if(!c||!PQ[c.dataset.uid]) return;
+  const w=document.getElementById(c.dataset.uid); if(w) w.innerHTML=pqInner(c.dataset.uid,+c.dataset.m); });
 
 /* ---------- public: tab next to login ---------- */
 function loginTab(t){
