@@ -109,6 +109,18 @@ Deno.serve(async (req) => {
       return out({ synced: results.filter((r) => !r.error).length, failed: results.filter((r) => r.error).length });
     }
 
+    // iPhone Shortcut ingest: a per-client code that can ONLY write that client's own steps.
+    if (b.action === "shortcut_sync") {
+      const code = String(b.code || "").trim();
+      const steps = Math.max(0, Math.min(100000, parseInt(String(b.steps ?? ""), 10) || 0));
+      const day = /^\d{4}-\d{2}-\d{2}$/.test(String(b.date || "")) ? String(b.date) : civilDate(new Date());
+      if (!code || !steps) return out({ error: "bad_input" }, 400);
+      const { data: prof } = await admin.from("profiles").select("id").eq("steps_code", code).maybeSingle();
+      if (!prof) return out({ error: "bad_code" }, 404);
+      await writeSteps(admin, prof.id, day, steps);
+      return out({ ok: true, date: day, steps });
+    }
+
     // All other actions run as the authed user.
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     if (!token) return out({ error: "غير مصرّح" }, 401);
@@ -116,7 +128,7 @@ Deno.serve(async (req) => {
     if (ue || !u?.user) return out({ error: "غير مصرّح" }, 401);
 
     // The client UI hides the feature until this returns a client id.
-    if (b.action === "status") return out({ configured: !!cid && !!secret, client_id: cid || null });
+    if (b.action === "status") return out({ configured: !!cid && !!secret, client_id: cid || null, shortcut_url: Deno.env.get("SHORTCUT_URL") || null });
 
     if (b.action === "connect") {
       if (!cid || !secret) return out({ error: "not_configured" }, 503);
@@ -138,6 +150,16 @@ Deno.serve(async (req) => {
       });
       const r = await syncOne(admin, cid, secret, u.user.id, tj.refresh_token, tj.access_token);
       return out({ connected: true, today: r.today ?? null, yesterday: r.yesterday ?? null });
+    }
+
+    if (b.action === "shortcut_code") {
+      const { data: prof } = await admin.from("profiles").select("steps_code").eq("id", u.user.id).single();
+      let code = prof?.steps_code;
+      if (!code) {
+        code = crypto.randomUUID().replace(/-/g, "").slice(0, 10);
+        await admin.from("profiles").update({ steps_code: code }).eq("id", u.user.id);
+      }
+      return out({ code, shortcut_url: Deno.env.get("SHORTCUT_URL") || null });
     }
 
     if (b.action === "sync_me") {
