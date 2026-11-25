@@ -20,6 +20,15 @@ const css=`
 .gh-row b{flex:1;font-size:12.5px;color:#14532D}
 .gh-un{border:0;background:none;color:var(--slate);font:700 11px/1 inherit;text-decoration:underline;cursor:pointer;padding:4px}
 .gh-sync{display:block;margin-top:4px;font-size:10.5px;color:#166534}
+.gh-code{display:inline-flex;align-items:center;gap:8px;margin:8px 0;padding:7px 12px;border-radius:10px;background:#0F172A;color:#fff;font:800 14px/1.2 "SF Mono",monospace;letter-spacing:1px;cursor:pointer;border:0}
+.gh-code small{font:700 10px/1 Cairo,sans-serif;color:#94A3B8;letter-spacing:0}
+.gh-ios-steps{margin:10px 0 0;padding:0;list-style:none;counter-reset:gh}
+.gh-ios-steps li{counter-increment:gh;position:relative;padding:6px 30px 6px 0;font-size:12.5px;line-height:1.7;color:var(--navy)}
+.gh-ios-steps li:before{content:counter(gh);position:absolute;inset-inline-start:0;top:7px;width:20px;height:20px;border-radius:50%;background:#F97316;color:#fff;font:800 11px/20px inherit;text-align:center}
+.gh-ios-steps.on li{color:#E2E8F0}
+.gh-link-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;border-radius:11px;border:0;background:#F97316;color:#fff;font:800 12.5px/1 inherit;cursor:pointer;text-decoration:none}
+.gh-note{font-size:10.5px;color:var(--slate);margin-top:8px}
+.gh-hero .gh-note{color:#94A3B8}
 .gh-hero{margin-bottom:14px;border-radius:18px;padding:16px;color:#fff;background:linear-gradient(135deg,#0F172A,#1E293B);position:relative;overflow:hidden}
 .gh-hero:before{content:"";position:absolute;inset-inline-end:-40px;top:-40px;width:150px;height:150px;border-radius:50%;background:radial-gradient(circle,rgba(249,115,22,.35),transparent 70%)}
 .gh-hero h3{margin:0 0 4px;font-size:15px;font-weight:900}
@@ -104,8 +113,31 @@ function lastSyncLine(conn){
 }
 
 /* Habits view: small slot right under the steps field. */
+async function iosCard(box,s){
+  /* s = {code, shortcut_url} from shortcut_code action; null = not deployed yet */
+  if(!s){ box.innerHTML=""; return; }
+  const link=s.shortcut_url
+    ?`<a class="gh-link-btn" href="${s.shortcut_url}" target="_blank" rel="noopener">تحميل الاختصار ←</a>`
+    :`<span class="gh-note">الكوتش لسه بيجهز رابط الاختصار — كودك جاهز تحت.</span>`;
+  box.innerHTML=`<ol class="gh-ios-steps">
+    <li>${link} دوس تحميل — الآيفون هيضيف الاختصار لوحده</li>
+    <li>شغّل الاختصار أول مرة، ولما يطلب الكود الصق ده: <button type="button" class="gh-code" id="ghCode">${s.code} <small>نسخ</small></button></li>
+    <li>من تطبيق الاختصارات فعّل "أتمتة" للتشغيل اليومي — Apple بتطلب تأكيدها مرة واحدة وبعدها بيبعت لوحده كل يوم</li></ol>
+    <div class="gh-note">خطواتك بتتشارك مع التطبيق ده بس، والكتابة اليدوية شغالة برضه.</div>`;
+  box.querySelector("#ghCode").onclick=async ev=>{
+    try{ await navigator.clipboard.writeText(s.code); ev.currentTarget.querySelector("small").textContent="✓ اتنسخ"; }
+    catch(_){ window.toast&&toast("الكود: "+s.code); }
+  };
+}
 async function renderStepsSlot(slot,p,refresh){
-  if(platform()==="ios"){ slot.innerHTML=""; return; }   /* iPhone card lands with the Shortcut phase */
+  if(platform()==="ios"){
+    try{ await call("status"); }catch(_){ slot.innerHTML=""; return; }   /* dark until function deployed */
+    let s=null; try{ s=await call("shortcut_code"); }catch(_){}
+    if(!slot.isConnected) return;
+    slot.innerHTML=`<div class="gh-box off"><b style="font-size:12.5px">🍎 اربط الآيفون — خطواتك تتسجل لوحدها</b><div id="ghIosBody"></div></div>`;
+    iosCard(slot.querySelector("#ghIosBody"),s);
+    return;
+  }
   const s=await state(p); if(!s){ slot.innerHTML=""; return; }
   if(!slot.isConnected) return;
   const {cfg,conn}=s;
@@ -124,7 +156,19 @@ async function renderStepsSlot(slot,p,refresh){
 
 /* Client home: prominent card near the top, one press starts the flow. */
 async function renderHomeCard(slot,p,refresh){
-  if(platform()==="ios"){ slot.innerHTML=""; return; }   /* Shortcut phase adds the iPhone card here */
+  if(platform()==="ios"){
+    try{ await call("status"); }catch(_){ slot.innerHTML=""; return; }
+    let s=null; try{ s=await call("shortcut_code"); }catch(_){}
+    if(!slot.isConnected||!s) { if(slot.isConnected) slot.innerHTML=""; return; }
+    slot.innerHTML=`<div class="gh-hero">
+      <h3>👣 خطواتك من الآيفون من غير كتابة</h3>
+      <p>اختصار بسيط بيسحب خطواتك من تطبيق صحة آبل ويبعتها للتطبيق كل يوم لوحده — دوس تحميل، الصق كودك مرة واحدة، وخلاص.</p>
+      <div id="ghIosHome"></div></div>`;
+    const body=slot.querySelector("#ghIosHome");
+    iosCard(body,s);
+    body.querySelector(".gh-ios-steps")?.classList.add("on");
+    return;
+  }
   const s=await state(p); if(!s){ slot.innerHTML=""; return; }
   if(!slot.isConnected) return;
   const {cfg,conn}=s;
