@@ -50,6 +50,7 @@ Deno.serve(async (req) => {
     const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!, { auth: { persistSession: false } });
     const token = (req.headers.get("Authorization") || "").replace(/^Bearer\s+/i, "");
     const b = await req.json().catch(() => ({}));
+    if (!b.action && b.kind) b.action = b.kind; // DB triggers send {kind: ...}
 
     const vapid = {
       subject: Deno.env.get("VAPID_SUBJECT") || "mailto:coach@mofit.com",
@@ -82,7 +83,11 @@ Deno.serve(async (req) => {
     }
 
     // everything below is service-role only (DB triggers + pg_cron)
-    if (!token || token !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) {
+    // Verify JWT is ON at the gateway, so the signature is already checked; here we only read the role claim.
+    // (SUPABASE_SERVICE_ROLE_KEY may be the new sb_secret key, so an exact string compare would reject the legacy JWT that the DB trigger sends.)
+    let role = "";
+    try { role = JSON.parse(atob(token.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).role || ""; } catch { /* not a jwt */ }
+    if (!token || (token !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") && role !== "service_role")) {
       return out({ error: "غير مصرّح" }, 401);
     }
 
