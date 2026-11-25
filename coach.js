@@ -83,6 +83,7 @@ async function viewClients(el){
     <div class="card" id="wrep"></div>
     <div class="card" id="pgan"></div>
     <div class="card" id="ciov"></div>
+    <div class="card" id="mlst"></div>
     <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
       ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cl"></div></div>
     <div class="card" id="bk"></div>
@@ -102,7 +103,7 @@ async function viewClients(el){
       <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","لسه مفيش عملاء","ضيف أول عميل وابدأ ابنِ برنامجه: تمرين وأكل ومتابعة من مكان واحد.",{label:"+ إضافة عميل جديد",click:"#addBtn"});
     $("#cl").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); deleteClientFlow(C.find(c=>c.id===b.dataset.del),async()=>{ await loadClients(); viewClients(el); }); });
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
-  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C); checkinOverviewCard($("#ciov"),C);
+  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C); checkinOverviewCard($("#ciov"),C); mlStorageMeter($("#mlst"));
   draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
   $("#tplList").querySelectorAll("[data-tdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف البرنامج المحفوظ؟ (برامج العملاء الحالية مش هتتأثر)")) return; await sb.from("program_templates").delete().eq("id",b.dataset.tdel); await loadCoachTemplates(); viewClients(el); });
