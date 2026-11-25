@@ -82,9 +82,10 @@ function renderPending(el){
       toast("✓ اتفعّل – ابعت له رسالة ترحيب"); await loadClients(); render();
     } else {
       if(!confirm(`رفض طلب ${c.full_name||""} وحذف الحساب؟`)) return;
-      const { data, error } = await sb.functions.invoke("coach-admin",{ body:{ action:"delete_client", user_id:id } });
+      const { data, error } = await adminCall({ body:{ action:"delete_client", user_id:id } });
       if(error) return toast("تعذر الحذف"); toast("اتحذف الطلب"); await loadClients(); render();
     }
   };
 }
+
 
