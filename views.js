@@ -372,6 +372,47 @@ async function renderMeals(el,{mode}){
    HABITS
    ====================================================================== */
 function dayScore(h){ return avg([h.diet,h.training,h.cardio,h.sleep_quality].map(v=>v===undefined?null:v)); }
+
+/* ======================================================================
+   CYCLE (private: only the client + coach; never in league or shared views)
+   ====================================================================== */
+function cycleStarts(rows){ const per=new Set(rows.filter(r=>r.kind==="period").map(r=>r.log_date)); return [...per].filter(d=>!per.has(addDays(d,-1))).sort(); }
+function cycleInfo(rows,date){
+  const all=cycleStarts(rows), st=all.filter(d=>d<=date); if(!st.length) return null;
+  const last=st[st.length-1], day=Math.round((new Date(date)-new Date(last))/864e5)+1;
+  const gaps=all.slice(1).map((d,i)=>(new Date(d)-new Date(all[i]))/864e5).filter(g=>g>=18&&g<=45);
+  const len=gaps.length?Math.round(gaps.reduce((a,b)=>a+b,0)/gaps.length):28, mid=Math.round(len/2);
+  if(day>len+10) return {stale:true,last};
+  return {day,len,last,phase:day<=5?"فترة الدورة":day<=mid-2?"بعد الدورة":day<=mid+1?"منتصف الدورة":"قبل الدورة"};
+}
+async function cycleCard(host,p,rerender){
+  if(!host||!p) return;
+  const coach=S.me&&S.me.role==="coach";
+  if(p.sex!=="أنثى"){ host.innerHTML=""; return; }
+  if(!coach&&localStorage.getItem("cyc_hide")==="1"){
+    host.innerHTML=`<div class="muted" style="text-align:center;margin:4px 0 12px;font-size:.8rem">🌸 كارد الدورة مخفي · <a href="#" id="cycShow" style="color:var(--acc,#ff6a13);font-weight:700">إظهار</a></div>`;
+    $("#cycShow").onclick=e=>{ e.preventDefault(); localStorage.removeItem("cyc_hide"); rerender&&rerender(); }; return;
+  }
+  const { data }=await sb.from("cycle_logs").select("log_date,kind").eq("client_id",p.id).gte("log_date",addDays(S.date,-120)).order("log_date");
+  const rows=data||[], by={}; rows.forEach(r=>by[r.log_date]=r.kind);
+  const info=cycleInfo(rows,S.date), cur=by[S.date];
+  const K=[["period","🩸","فترة الدورة"],["pms","🌙","قبل الدورة"]];
+  const strip=Array.from({length:28},(_,i)=>{ const d=addDays(S.date,i-27), k=by[d]; return `<i title="${d}" style="aspect-ratio:1/1;border-radius:6px;display:block;background:${k==="period"?"#e0507a":"rgba(128,128,150,.2)"};${k==="pms"?"box-shadow:inset 0 0 0 2px #f0a24b;":""}${d===S.date?"outline:2px solid var(--acc,#ff8a2b);outline-offset:1px;":""}"></i>`; }).join("");
+  const line=info?(info.stale?`آخر دورة سجلتيها كانت ${niceDate(info.last)}`:`النهارده يوم ${info.day} من دورتك تقريباً · ${info.phase}`):(coach?"مفيش دورة متسجلة لسه":"سجّلي أول يوم دورة وهنحسبلك باقي الأيام");
+  host.innerHTML=`<div class="card"><div class="card-h"><div class="ic" style="background:rgba(224,80,122,.18)">🌸</div><h2>دورتك<small>اختياري · ${coach?"للقراءة فقط":"خاص بيكي وبالكوتش بس"}</small></h2></div>
+    ${coach?"":`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">${K.map(([k,e,t])=>`<button class="chip ${cur===k?"on":""}" data-ck="${k}" style="min-height:44px">${e} ${t}</button>`).join("")}</div>`}
+    <div style="font-weight:700;margin-bottom:8px">${line}</div>
+    <div style="display:grid;grid-template-columns:repeat(14,1fr);gap:4px;margin-bottom:10px" dir="ltr">${strip}</div>
+    <div class="muted" style="font-size:.78rem;line-height:1.7">${coach?"تقدير تقريبي من الأيام المسجلة، بيساعدك تفسّر تغيّر الوزن وتظبط البرنامج بنفسك.":"الكوتش بيشوفها عشان يفهم تغيّر وزنك ويظبط برنامجك بنفسه. التطبيق مش بيغيّر حاجة لوحده ومش بيدّي نصايح طبية. مش هتظهر لأي حد تاني، ولا في الدوري."}${coach?"":` <a href="#" id="cycHide" style="color:var(--acc,#ff6a13);font-weight:700">إخفاء الكارد</a>`}</div></div>`;
+  if(coach) return;
+  host.querySelectorAll("[data-ck]").forEach(b=>b.onclick=async()=>{
+    const k=b.dataset.ck; let r;
+    if(cur===k) r=await sb.from("cycle_logs").delete().eq("client_id",p.id).eq("log_date",S.date);
+    else r=await sb.from("cycle_logs").upsert({client_id:p.id,log_date:S.date,kind:k},{onConflict:"client_id,log_date"});
+    if(r.error) return toast("مقدرتش أحفظ، جرّب تاني"); toast("✓ اتحفظ"); cycleCard(host,p,rerender);
+  });
+  const h=$("#cycHide"); if(h) h.onclick=e=>{ e.preventDefault(); localStorage.setItem("cyc_hide","1"); rerender&&rerender(); };
+}
 async function viewHabits(el){
   const p=S.client;
   const { data:all } = await sb.from("habits").select("*").eq("client_id",p.id).order("log_date");
@@ -385,22 +426,24 @@ async function viewHabits(el){
        <label class="f">💧 المياه (لتر)<input inputmode="decimal" data-k="water_l" value="${esc(cur.water_l??"")}"></label>
        <label class="f">👣 الخطوات${p.steps_goal?` <small>(الهدف ${fmt(p.steps_goal)})</small>`:""}<input inputmode="numeric" data-k="steps" value="${esc(cur.steps??"")}"></label>
        <label class="f">🏃 دقايق الكارديو${p.cardio_plan?.minutes?` <small>(المطلوب ${fmt(p.cardio_plan.minutes)})</small>`:""}<input inputmode="numeric" data-k="cardio_min" value="${esc(cur.cardio_min??"")}"></label>
-       ${p.sex==="أنثى"?`<label class="f">الدورة الشهرية<select data-k="cycle"><option value=""></option>${CYCLE.map(s=>`<option ${cur.cycle===s?"selected":""}>${s}</option>`).join("")}</select></label>`:""}</div>
+</div>
       <div id="ghSlot"></div>
       <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
       <button class="btn primary block" id="hSave">حفظ اليوم</button></div>
+    <div id="cycSlot"></div>
     <div class="card"><div class="card-h"><div class="ic">🗓</div><h2>خريطة الالتزام<small>كل مربع = يوم</small></h2></div>${heatmap(p,H)}</div>
     <div class="card" id="hWeeks"></div>`;
   $("#dPrev").onclick=()=>{S.date=addDays(S.date,-1); viewHabits(el);};
   $("#dNext").onclick=()=>{S.date=addDays(S.date,1); viewHabits(el);};
   window.ghRenderStepsSlot&&window.ghRenderStepsSlot($("#ghSlot"),p,()=>viewHabits(el));
+  cycleCard($("#cycSlot"),p,()=>viewHabits(el));
   el.querySelectorAll("[data-score]").forEach(g=>g.querySelectorAll("button").forEach(b=>b.onclick=()=>{
     g.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); rec[g.dataset.score]=+b.dataset.v;
     $("#dayScore").innerHTML=ring(dayScore(rec)||0,1,{size:56,stroke:6,label:pct(dayScore(rec))}); }));
   $("#hSave").onclick=async()=>{
     const v=k=>el.querySelector(`[data-k="${k}"]`);
     const out={client_id:p.id,log_date:S.date,diet:rec.diet??null,training:rec.training??null,cardio:rec.cardio??null,sleep_quality:rec.sleep_quality??null,
-      stress:v("stress").value||null,sleep_hours:num(v("sleep_hours").value),water_l:num(v("water_l").value),steps:num(v("steps").value),cardio_min:num(v("cardio_min").value),cycle:v("cycle")?.value||null,notes:v("notes").value.trim()||null,updated_at:new Date().toISOString()};
+      stress:v("stress").value||null,sleep_hours:num(v("sleep_hours").value),water_l:num(v("water_l").value),steps:num(v("steps").value),cardio_min:num(v("cardio_min").value),notes:v("notes").value.trim()||null,updated_at:new Date().toISOString()};
     const { error, queued } = await dbWrite({op:"upsert",table:"habits",row:out,onConflict:"client_id,log_date"}); if(error) return toast(error.message); toast(queued?"📴 اتحفظ على الموبايل":"✓ اتحفظ"); if(!queued) viewHabits(el);
   };
   const wk=currentWeek(p), by={}; H.forEach(h=>{ const x=weekOfDate(p,h.log_date); if(x) (by[x]=by[x]||[]).push(h); });
