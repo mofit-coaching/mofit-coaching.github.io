@@ -36,6 +36,7 @@ function tabs(){
   const t=[["home","الرئيسية"],["train","التمرين"],["food","التغذية"],["habits","العادات"],["body","التقدم"]];
   if(S.me.role!=="coach" && S.supps?.length) t.push(["supps","المكملات"]);
   if(S.me.role==="coach") t.push(["setup","التحكم"]);
+  if(S.me.role!=="coach" && S.aiOn) t.push(["ai","المساعد"]);
   return t;
 }
 function renderTop(){
@@ -63,7 +64,7 @@ function render(){
     m.appendChild(bar);
   }
   const host=document.createElement("div"); m.appendChild(host);
-  ({home:viewHome,train:viewTrain,food:viewFood,habits:viewHabits,body:viewBody,setup:viewSetup,supps:viewSupps,clients:viewClients,videos:viewVideos,foods:viewFoods}[S.tab]||viewHome)(host);
+  ({home:viewHome,train:viewTrain,food:viewFood,habits:viewHabits,body:viewBody,setup:viewSetup,supps:viewSupps,clients:viewClients,videos:viewVideos,foods:viewFoods,ai:window.viewAiChat}[S.tab]||viewHome)(host);
 }
 
 /* ======================================================================
