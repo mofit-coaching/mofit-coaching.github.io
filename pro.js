@@ -143,7 +143,7 @@ const POSES=[["front","أمامي"],["side","جانبي"],["back","خلفي"]];
 const urlCache={};
 async function photoUrl(path){ if(!path) return null; if(urlCache[path]) return urlCache[path];
   const { data } = await sb.storage.from("checkins").createSignedUrl(path, 3600); urlCache[path]=data?.signedUrl||null; return urlCache[path]; }
-function resizeImage(file, max=1280){ return new Promise((res,rej)=>{ const img=new Image(); img.onload=()=>{ const k=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement("canvas"); c.width=Math.round(img.width*k); c.height=Math.round(img.height*k); c.getContext("2d").drawImage(img,0,0,c.width,c.height); c.toBlob(b=>b?res(b):rej(new Error("image")),"image/jpeg",0.82); URL.revokeObjectURL(img.src); }; img.onerror=rej; img.src=URL.createObjectURL(file); }); }
+function resizeImage(file,max=1280){ return mlCompressImage(file,max); }
 async function viewCheckin(el){
   const p=S.client, wkNow=currentWeek(p), coach=S.me.role==="coach";
   const { data:all } = await sb.from("checkins").select("*").eq("client_id",p.id).order("week");
@@ -160,7 +160,7 @@ async function viewCheckin(el){
       <label class="f">🧱 صعوبات واجهتك<textarea rows="2" data-k="struggles">${esc(cur.struggles??"")}</textarea></label>
       <label class="f">ملاحظات / أسئلة للكوتش<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
       <div class="muted" style="font-weight:700;margin:4px 0 6px">📷 الصور (نفس الإضاءة والمكان كل أسبوع)</div>
-      <div class="grid3">${POSES.map(([k,l])=>`<label class="photo" data-pose="${k}"><input type="file" accept="image/*" capture="environment" hidden><div class="ph" data-img="${k}"><span>📷</span><small>${l}</small></div></label>`).join("")}</div>
+      <div class="grid3">${POSES.map(([k,l])=>`<div class="ml-cell"><label class="photo" data-pose="${k}"><input type="file" accept="image/*" capture="environment" hidden><div class="ph" data-img="${k}"><span>📷</span><small>${l}</small></div></label>${coach&&cur["photo_"+k]?`<button type="button" class="ml-del" data-mldel="${k}" aria-label="حذف الصورة نهائياً" title="حذف الصورة من كل مكان">🗑</button>`:""}</div>`).join("")}</div>
       <button class="btn primary block" id="ciSave" style="margin-top:12px">${cur.id?"تحديث المتابعة":"إرسال المتابعة للكوتش"}</button></div>
     ${coach?`<div class="card"><div class="card-h"><div class="ic acc">💬</div><h2>ردك على المتابعة</h2></div>
       <textarea rows="4" id="ciReply" placeholder="ملاحظاتك وتعديلات الأسبوع الجاي…">${esc(cur.coach_reply??"")}</textarea>
@@ -171,10 +171,17 @@ async function viewCheckin(el){
   const files={};
   for(const [k] of POSES){ const path=cur["photo_"+k]; if(path) photoUrl(path).then(u=>{ if(u) el.querySelector(`[data-img="${k}"]`).innerHTML=`<img src="${u}" alt="">`; }); }
   el.querySelectorAll("[data-pose]").forEach(l=>l.querySelector("input").onchange=e=>{ const f=e.target.files[0]; if(!f) return; files[l.dataset.pose]=f; l.querySelector(".ph").innerHTML=`<img src="${URL.createObjectURL(f)}" alt="">`; });
+  el.querySelectorAll("[data-mldel]").forEach(b=>b.onclick=e=>{ e.preventDefault(); e.stopPropagation(); mlTwoTap(b,async()=>{
+    const k=b.dataset.mldel, path=cur["photo_"+k]; if(!path) return;
+    if(!await mlPurge("checkins",[path])){ b.disabled=false; b.classList.remove("ml-arm"); b.textContent="🗑"; return; }
+    const { error } = await sb.from("checkins").update({["photo_"+k]:null}).eq("id",cur.id);
+    if(error){ toast(error.message); b.disabled=false; b.classList.remove("ml-arm"); b.textContent="🗑"; return; }
+    delete urlCache[path]; toast("✓ اتحذفت الصورة من كل مكان"); viewCheckin(el); }); });
   $("#ciSave").onclick=async()=>{
     const btn=$("#ciSave"); btn.disabled=true; btn.textContent="جارٍ الإرسال…";
     const v=k=>el.querySelector(`[data-k="${k}"]`).value;
     const row={client_id:p.id, week:S.ciWeek, checkin_date:today(), weight:num(v("weight")), wins:v("wins").trim()||null, struggles:v("struggles").trim()||null, notes:v("notes").trim()||null};
+    const oldPh={}; for(const [k] of POSES) oldPh[k]=cur["photo_"+k]||null;
     RATES.forEach(([k])=>row[k]=rec[k]??null);
     for(const [k,f] of Object.entries(files)){
       try{ const blob=await resizeImage(f), path=`${p.id}/w${S.ciWeek}-${k}-${Date.now()}.jpg`;
@@ -184,6 +191,7 @@ async function viewCheckin(el){
     if(!cur.reviewed_at) row.reviewed_at=null;
     const { error } = await sb.from("checkins").upsert(row,{onConflict:"client_id,week"});
     if(error){ toast(error.message); btn.disabled=false; return; }
+    const stale=Object.keys(files).map(k=>oldPh[k]).filter(Boolean); if(stale.length) mlPurge("checkins",stale,true);
     if(row.weight){ const { data:bl } = await sb.from("body_logs").select("week,weight").eq("client_id",p.id).eq("week",S.ciWeek).limit(1);
       if(!bl?.[0]?.weight) await sb.from("body_logs").upsert({client_id:p.id,week:S.ciWeek,log_date:today(),weight:row.weight},{onConflict:"client_id,week"}); }
     toast("✓ اتبعتت المتابعة"); viewCheckin(el);
@@ -419,3 +427,4 @@ function painCard(p){
       ${e.resolved_at?`<span class="pill good">تمت المتابعة</span>`:`<button class="btn sm" data-pres="${e.id}">تمت المتابعة ✓</button>`}</div>`).join("")}
     <p class="hint">لو الألم في مفصل: بدّل التمرين من تبويب البرنامج، أو قلل المدى/الوزن، أو حوّله لنظام "ضهر آمن".</p></div>`;
 }
+
