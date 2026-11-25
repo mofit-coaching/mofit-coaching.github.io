@@ -84,3 +84,11 @@ html,body{max-width:100%;overflow-x:clip}
 .risk.mid{background:#F59E0B}.risk.bad{background:var(--bad);animation:riskP 1.8s ease-in-out infinite}
 @keyframes riskP{0%,100%{box-shadow:0 0 0 0 rgba(220,38,38,.5)}50%{box-shadow:0 0 0 5px rgba(220,38,38,0)}}
 @media(prefers-reduced-motion:reduce){.risk.bad{animation:none}}
+
+/* last seen */
+.seen{display:inline-flex;align-items:center;gap:4px;font-weight:700;color:#64748B}
+.seen i{width:7px;height:7px;border-radius:50%;background:#94A3B8;display:inline-block}
+.seen.on{color:var(--good)}.seen.on i{background:var(--good);animation:seenP 1.8s ease-in-out infinite}
+.seen.cold{color:var(--bad)}.seen.cold i{background:var(--bad)}
+@keyframes seenP{0%,100%{box-shadow:0 0 0 0 rgba(22,163,74,.5)}50%{box-shadow:0 0 0 4px rgba(22,163,74,0)}}
+@media(prefers-reduced-motion:reduce){.seen.on i{animation:none}}

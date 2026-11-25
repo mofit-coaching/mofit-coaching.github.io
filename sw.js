@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-c7f04d28";
-const SHELL=["./","index.html","styles.css?v=c7f04d28","design.css?v=c7f04d28","design.js?v=c7f04d28","core.js?v=c7f04d28","data.js?v=c7f04d28","pro.js?v=c7f04d28","lab.js?v=c7f04d28","anatomy.js?v=c7f04d28","health.js?v=c7f04d28","posing.js?v=c7f04d28","minerals.js?v=c7f04d28","icons.js?v=c7f04d28","supps.js?v=c7f04d28","views.js?v=c7f04d28","coach.js?v=c7f04d28","signup.js?v=c7f04d28","chat.js?v=c7f04d28","inbox.js?v=c7f04d28","screens.js?v=c7f04d28","flame.js?v=c7f04d28","prices.js?v=c7f04d28","training.js?v=c7f04d28","sharecard.js?v=c7f04d28","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-d4b8e216";
+const SHELL=["./","index.html","styles.css?v=d4b8e216","design.css?v=d4b8e216","design.js?v=d4b8e216","core.js?v=d4b8e216","data.js?v=d4b8e216","pro.js?v=d4b8e216","lab.js?v=d4b8e216","anatomy.js?v=d4b8e216","health.js?v=d4b8e216","posing.js?v=d4b8e216","minerals.js?v=d4b8e216","icons.js?v=d4b8e216","supps.js?v=d4b8e216","views.js?v=d4b8e216","coach.js?v=d4b8e216","signup.js?v=d4b8e216","chat.js?v=d4b8e216","inbox.js?v=d4b8e216","screens.js?v=d4b8e216","flame.js?v=d4b8e216","prices.js?v=d4b8e216","training.js?v=d4b8e216","sharecard.js?v=d4b8e216","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
