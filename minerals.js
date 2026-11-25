@@ -17,11 +17,11 @@ function sumMinerals(items){
   items.forEach(i=>{ if(!hasMinCols(i)||!hasMinData(i)){ missing++; return; } withData++; MIN_KEYS.forEach(([k])=>{ if(i[k]!=null) tot[k]=(tot[k]||0)+(+i[k]); }); });
   return {tot,missing,withData};
 }
-function mineralTotHTML(items){
+function mineralTotHTML(items,label){
   if(!items.length||!items.some(hasMinCols)) return "";
   const s=sumMinerals(items);
   if(!s.withData) return `<p class="hint" style="margin-top:10px">الأملاح غير متاحة لأصناف الخطة دي لسه.</p>`;
-  return `<div style="margin-top:12px;border-top:1px solid rgba(255,255,255,.15);padding-top:10px"><div style="font-size:.8rem;color:#CBD5E1;margin-bottom:6px">الأملاح والألياف (إجمالي الخطة)</div>
+  return `<div style="margin-top:12px;border-top:1px solid rgba(255,255,255,.15);padding-top:10px"><div style="font-size:.8rem;color:#CBD5E1;margin-bottom:6px">الأملاح والألياف (${label||"إجمالي الخطة"})</div>
     <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px">${MIN_KEYS.map(([k,l,u,d])=>`<div style="background:rgba(255,255,255,.08);border-radius:10px;padding:6px 8px;text-align:center"><div style="font-size:.72rem;color:#CBD5E1">${l}</div><b class="num">${s.tot[k]!=null?fmt(s.tot[k],d):"—"}</b> <small style="color:#CBD5E1">${u}</small></div>`).join("")}</div>
     ${s.missing?`<p class="hint" style="margin-top:8px;color:#FBBF24">⚠️ الأملاح ناقصة في ${s.missing} صنف من ${items.length}، فالأرقام دي أقل من الحقيقي.</p>`:""}</div>`;
 }
