@@ -1,6 +1,6 @@
 /* Mofit offline cache: app shell + CDN libs. Supabase API calls are never cached. */
-const C="mofit-9c41e7ab";
-const SHELL=["./","index.html","styles.css?v=9c41e7ab","design.css?v=9c41e7ab","design.js?v=9c41e7ab","core.js?v=9c41e7ab","data.js?v=9c41e7ab","pro.js?v=9c41e7ab","lab.js?v=9c41e7ab","anatomy.js?v=9c41e7ab","health.js?v=9c41e7ab","posing.js?v=9c41e7ab","minerals.js?v=9c41e7ab","icons.js?v=9c41e7ab","supps.js?v=9c41e7ab","views.js?v=9c41e7ab","coach.js?v=9c41e7ab","signup.js?v=9c41e7ab","chat.js?v=9c41e7ab","inbox.js?v=9c41e7ab","screens.js?v=9c41e7ab","flame.js?v=9c41e7ab","prices.js?v=9c41e7ab","training.js?v=9c41e7ab","sharecard.js?v=9c41e7ab","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
+const C="mofit-c7f04d28";
+const SHELL=["./","index.html","styles.css?v=c7f04d28","design.css?v=c7f04d28","design.js?v=c7f04d28","core.js?v=c7f04d28","data.js?v=c7f04d28","pro.js?v=c7f04d28","lab.js?v=c7f04d28","anatomy.js?v=c7f04d28","health.js?v=c7f04d28","posing.js?v=c7f04d28","minerals.js?v=c7f04d28","icons.js?v=c7f04d28","supps.js?v=c7f04d28","views.js?v=c7f04d28","coach.js?v=c7f04d28","signup.js?v=c7f04d28","chat.js?v=c7f04d28","inbox.js?v=c7f04d28","screens.js?v=c7f04d28","flame.js?v=c7f04d28","prices.js?v=c7f04d28","training.js?v=c7f04d28","sharecard.js?v=c7f04d28","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","404.html"];
 self.addEventListener("install",e=>{ e.waitUntil(caches.open(C).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())); });
 self.addEventListener("activate",e=>{ e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k!==C).map(k=>caches.delete(k)))).then(()=>self.clients.claim())); });
 self.addEventListener("fetch",e=>{
@@ -12,7 +12,6 @@ self.addEventListener("fetch",e=>{
     e.respondWith(caches.match(e.request).then(hit=>{ const net=fetch(e.request).then(r=>{ if(r.ok||r.type==="opaque"){ const cp=r.clone(); caches.open(C).then(c=>c.put(e.request,cp)); } return r; }).catch(()=>hit); return hit||net; }));
   }
 });
-
 
 
 

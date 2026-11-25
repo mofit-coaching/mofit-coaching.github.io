@@ -52,7 +52,7 @@ const st=document.createElement("style"); st.textContent=`
 .fl-px{position:absolute;border-radius:50%;background:#FFB347;opacity:0;animation:flPx 4.5s ease-in infinite}
 .fl-px.p2{animation-delay:.9s}.fl-px.p3{animation-delay:1.8s}.fl-px.p4{animation-delay:2.7s}.fl-px.p5{animation-delay:3.4s}
 .fl-head{margin-top:18px}
-.fl-head h2{margin:0;font-family:"Noto Kufi Arabic","Cairo",sans-serif;font-weight:700;font-size:1.2rem;line-height:1.6;color:#fff}
+.fl-head h2{margin:0;padding-inline:8px;font-family:"Noto Kufi Arabic","Cairo",sans-serif;font-weight:700;font-size:1.14rem;line-height:1.6;color:#fff}
 .fl-head h2 em{font-style:normal;background:linear-gradient(100deg,#FFB300,#FFE680);-webkit-background-clip:text;background-clip:text;color:transparent}
 .fl-head p{margin:6px 0 0;font-size:.85rem;color:#94A3B8;font-weight:500}
 .fl-chips{display:flex;gap:8px;margin-top:14px;justify-content:center;flex-wrap:wrap}
