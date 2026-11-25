@@ -446,10 +446,23 @@ async function checkinOverviewCard(host,C){
 }
 
 /* ---------- last seen: "online now" / "last active X ago" from profiles.last_active_at (written by touchActive in core.js) ---------- */
-function seenHTML(c){
-  if(!c||!c.last_active_at) return "";
+function seenSpan(c){
+  if(!c) return "";
+  const id=esc(c.id||"");
+  if(!c.last_active_at) return `<span class="seen none" data-seen="${id}"><i></i>لسه ما دخلش التطبيق</span>`;
   const m=Math.max(0,Math.round((Date.now()-new Date(c.last_active_at).getTime())/6e4));
-  if(m<5) return `<span class="seen on"><i></i>أونلاين دلوقتي</span> · `;
+  if(m<5) return `<span class="seen on" data-seen="${id}"><i></i>أونلاين دلوقتي</span>`;
   const t=m<60?m+" د":m<1440?Math.floor(m/60)+" س":Math.floor(m/1440)+" يوم";
-  return `<span class="seen${m>=4320?" cold":""}"><i></i>آخر ظهور من ${t}</span> · `;
+  return `<span class="seen${m>=4320?" cold":""}" data-seen="${id}"><i></i>آخر ظهور من ${t}</span>`;
 }
+function seenHTML(c){ const s=seenSpan(c); return s?s+" · ":""; }
+/* keep the dots live: the clients list is loaded once at login, so re-read last_active_at every 45s while the coach has the app open and update the dots in place */
+(function(){ let busy=false;
+  async function refreshSeen(){ try{
+    if(busy||document.hidden||typeof S==="undefined"||!S.me||S.me.role!=="coach"||!S.coachClients) return; busy=true;
+    const { data } = await sb.from("profiles").select("id,last_active_at").eq("role","client");
+    if(data){ const m=Object.fromEntries(data.map(r=>[r.id,r.last_active_at])); S.coachClients.forEach(c=>{ if(c.id in m) c.last_active_at=m[c.id]; }); }
+    document.querySelectorAll("[data-seen]").forEach(el=>{ const c=S.coachClients.find(x=>x.id===el.dataset.seen); if(!c) return; const t=document.createElement("template"); t.innerHTML=seenSpan(c); const n=t.content.firstElementChild; if(n&&n.outerHTML!==el.outerHTML) el.replaceWith(n); });
+  }catch(e){} busy=false; }
+  setInterval(refreshSeen,45000); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refreshSeen(); });
+})();
