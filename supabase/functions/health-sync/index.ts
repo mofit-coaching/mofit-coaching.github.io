@@ -31,17 +31,20 @@ const civil = (ymd: string) => {
   return { date: { year, month, day }, time: { hours: 0, minutes: 0, seconds: 0, nanos: 0 } };
 };
 
-async function stepsForDay(accessToken: string, ymd: string): Promise<number | null> {
+// Returns the steps, or why there are none: "no_data" (Google answered, nothing for that day),
+// "scope_missing" (401/403: steps permission not granted) or "api_error" (anything else).
+type DayResult = { steps: number | null; reason?: "no_data" | "scope_missing" | "api_error" };
+async function stepsForDay(accessToken: string, ymd: string): Promise<DayResult> {
   const r = await fetch(GH_BASE, {
     method: "POST",
     headers: { "Authorization": `Bearer ${accessToken}`, "Content-Type": "application/json", "Accept": "application/json" },
     body: JSON.stringify({ range: { start: civil(ymd), end: civil(nextDay(ymd)) }, windowSizeDays: 1 }),
   });
-  if (!r.ok) return null;
-  const j = await r.json();
+  if (!r.ok) return { steps: null, reason: r.status === 401 || r.status === 403 ? "scope_missing" : "api_error" };
+  const j = await r.json().catch(() => ({}));
   const dp = Array.isArray(j?.dataPoints) ? j.dataPoints[0] : null;
   const v = dp?.steps?.countSum ?? dp?.value?.countSum ?? null;
-  return v == null ? null : Math.max(0, parseInt(String(v), 10) || 0);
+  return v == null ? { steps: null, reason: "no_data" } : { steps: Math.max(0, parseInt(String(v), 10) || 0) };
 }
 
 // Write steps without touching any other habit field.
@@ -77,7 +80,8 @@ async function syncOne(admin: any, cid: string, secret: string, userId: string, 
   const res: any = { user: userId };
   for (const day of [today, yesterday]) {
     const s = await stepsForDay(access, day);
-    if (s != null) { await writeSteps(admin, userId, day, s); res[day === today ? "today" : "yesterday"] = s; }
+    if (s.steps != null) { await writeSteps(admin, userId, day, s.steps); res[day === today ? "today" : "yesterday"] = s.steps; }
+    else if (day === today) res.reason = s.reason;   // surfaced to the client so it can say why nothing changed
   }
   await admin.from("health_connections").update({ last_sync_at: new Date().toISOString() }).eq("user_id", userId);
   return res;
@@ -112,13 +116,17 @@ Deno.serve(async (req) => {
     // iPhone Shortcut ingest: a per-client code that can ONLY write that client's own steps.
     if (b.action === "shortcut_sync") {
       const code = String(b.code || "").trim();
-      const steps = Math.max(0, Math.min(100000, parseInt(String(b.steps ?? ""), 10) || 0));
+      // Shortcuts sends "" when it reads nothing and a real 0 right after midnight; only the first is bad input.
+      const rawSteps = Math.round(parseFloat(String(b.steps ?? "").replace(/,/g, "")));
+      const steps = Math.max(0, Math.min(100000, Number.isFinite(rawSteps) ? rawSteps : 0));
       const day = /^\d{4}-\d{2}-\d{2}$/.test(String(b.date || "")) ? String(b.date) : civilDate(new Date());
-      if (!code || !steps) return out({ error: "bad_input" }, 400);
+      if (!code) return out({ error: "bad_input", field: "code" }, 400);
+      if (!Number.isFinite(rawSteps)) return out({ error: "bad_input", field: "steps" }, 400);
       const { data: prof } = await admin.from("profiles").select("id").eq("steps_code", code).maybeSingle();
       if (!prof) return out({ error: "bad_code" }, 404);
-      await writeSteps(admin, prof.id, day, steps);
-      return out({ ok: true, date: day, steps });
+      // A zero never overwrites a number the client already has for that day.
+      if (steps > 0) await writeSteps(admin, prof.id, day, steps);
+      return out({ ok: true, date: day, steps, saved: steps > 0 });
     }
 
     // All other actions run as the authed user.
@@ -142,6 +150,8 @@ Deno.serve(async (req) => {
       const tj = await tr.json().catch(() => ({}));
       if (!tr.ok || !tj.access_token) return out({ error: "exchange_failed" }, 502);
       if (!tj.refresh_token) return out({ error: "no_refresh" }, 409); // user must re-consent (frontend uses prompt:'consent')
+      // Google's consent screen lets people untick the steps permission and still return a token.
+      if (!String(tj.scope || "").split(" ").includes(SCOPE)) return out({ error: "scope_missing" }, 409);
       let sub = "";
       try { sub = JSON.parse(atob(String(tj.id_token || "").split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))).sub || ""; } catch { /* sub optional */ }
       await admin.from("health_connections").upsert({
@@ -168,7 +178,7 @@ Deno.serve(async (req) => {
       if (!cid || !secret) return out({ error: "not_configured" }, 503);
       const r = await syncOne(admin, cid, secret, u.user.id, row.refresh_token);
       if (r.error) return out({ error: "sync_failed" }, 502);
-      return out({ today: r.today ?? null, yesterday: r.yesterday ?? null });
+      return out({ today: r.today ?? null, yesterday: r.yesterday ?? null, reason: r.today == null ? (r.reason ?? "no_data") : null });
     }
 
     if (b.action === "disconnect") {
