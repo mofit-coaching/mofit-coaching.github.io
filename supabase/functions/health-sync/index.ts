@@ -209,19 +209,53 @@ Deno.serve(async (req) => {
     }
 
     // iPhone Shortcut ingest: a per-client code that can ONLY write that client's own steps.
+    // Two shapes: one day ({date, steps}, as before) or many days ({days}: lines like "2026-11-25=8123").
+    // `days` may also be a JSON object {"2026-11-25": 8123}. A zero never overwrites steps already saved.
     if (b.action === "shortcut_sync") {
       const code = String(b.code || "").trim();
-      // Shortcuts sends "" when it reads nothing and a real 0 right after midnight; only the first is bad input.
-      const rawSteps = Math.round(parseFloat(String(b.steps ?? "").replace(/,/g, "")));
-      const steps = Math.max(0, Math.min(100000, Number.isFinite(rawSteps) ? rawSteps : 0));
-      const day = /^\d{4}-\d{2}-\d{2}$/.test(String(b.date || "")) ? String(b.date) : civilDate(new Date());
       if (!code) return out({ error: "bad_input", field: "code" }, 400);
-      if (!Number.isFinite(rawSteps)) return out({ error: "bad_input", field: "steps" }, 400);
+      const today = civilDate(new Date());
+      const oldest = (() => { let d = today; for (let i = 0; i < 30; i++) d = prevDay(d); return d; })();
+      const parseSteps = (v: unknown) => Math.max(0, Math.min(100000, Math.round(parseFloat(String(v ?? "").replace(/,/g, "")))));
+      const entries: Array<[string, number]> = [];
+      if (b.days != null && String(b.days).trim() !== "") {
+        let pairs: Array<[string, unknown]> = [];
+        if (typeof b.days === "object") {
+          pairs = Object.entries(b.days as Record<string, unknown>);
+        } else {
+          const txt = String(b.days);
+          try {
+            const j = JSON.parse(txt);
+            if (j && typeof j === "object" && !Array.isArray(j)) pairs = Object.entries(j);
+          } catch { /* not JSON: read lines */ }
+          if (!pairs.length) {
+            for (const part of txt.split(/[\n\r;]+/)) {
+              const m = part.trim().match(/^(\d{4}-\d{2}-\d{2})\s*[=:]\s*([\d.,]+)$/);
+              if (m) pairs.push([m[1], m[2]]);
+            }
+          }
+        }
+        for (const [d, v] of pairs) {
+          const n = parseSteps(v);
+          if (/^\d{4}-\d{2}-\d{2}$/.test(d) && Number.isFinite(n) && d <= today && d >= oldest) entries.push([d, n]);
+        }
+        if (!entries.length) return out({ error: "bad_input", field: "days" }, 400);
+      } else {
+        // Shortcuts sends "" when it reads nothing and a real 0 right after midnight; only the first is bad input.
+        const rawSteps = Math.round(parseFloat(String(b.steps ?? "").replace(/,/g, "")));
+        if (!Number.isFinite(rawSteps)) return out({ error: "bad_input", field: "steps" }, 400);
+        const day = /^\d{4}-\d{2}-\d{2}$/.test(String(b.date || "")) ? String(b.date) : today;
+        entries.push([day, Math.max(0, Math.min(100000, rawSteps))]);
+      }
       const { data: prof } = await admin.from("profiles").select("id").eq("steps_code", code).maybeSingle();
       if (!prof) return out({ error: "bad_code" }, 404);
       // A zero never overwrites a number the client already has for that day.
-      if (steps > 0) await writeSteps(admin, prof.id, day, steps);
-      return out({ ok: true, date: day, steps, saved: steps > 0 });
+      const saved: Record<string, number> = {};
+      for (const [d, n] of entries) {
+        if (n > 0) { await writeSteps(admin, prof.id, d, n); saved[d] = n; }
+      }
+      const first = entries[0];
+      return out({ ok: true, date: first[0], steps: first[1], saved: first[1] > 0, days: entries.length, saved_days: Object.keys(saved).length });
     }
 
     // All other actions run as the authed user.
@@ -292,3 +326,4 @@ Deno.serve(async (req) => {
     return out({ error: "server" }, 500);
   }
 });
+
