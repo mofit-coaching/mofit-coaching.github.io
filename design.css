@@ -130,3 +130,37 @@ html #sheet.msgr #chatSend{background:linear-gradient(135deg,#D04A0A,#BF400B)}
  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}
  .sk{animation:none;background:var(--soft,#E2E8F0)}
 }
+
+/* ===== 60-30-10 palette tokens =====
+   60% neutral surfaces (page + cards), 30% navy (header, nav, hero panels, text), 10% vivid orange
+   (primary actions, active states, key numbers). Retune here; orange is NOT used for pills, tiles, borders. */
+:root{
+  --c60:#F4F3EF; --c60-card:#FFFFFF; --c60-line:#E6E4DE;
+  --c30:#0B1220; --c30-2:#162036; --c30-3:#2B3750; --c30-tint:#E9ECF3; --c30-tint-ink:#26324A;
+  --c10:#F97316; --c10-ink:#D04A0A; --c10-ink2:#BF400B;
+}
+/* orange overload -> navy tint (keeps contrast AA: #26324A on #E9ECF3 is 10:1) */
+html .pill.acc-soft{background:var(--c30-tint);color:var(--c30-tint-ink);box-shadow:none}
+html .pill.acc{background:var(--c30);color:#fff}
+html .card-h .ic.acc{background:var(--c30-tint);color:var(--c30-tint-ink);box-shadow:none}
+html .stat.acc{background:var(--c60-card)!important;border-color:var(--c60-line)}
+html .stat.acc .v{color:var(--c10-ink)}
+html .prog.reps{background:var(--c30-tint);color:var(--c30-tint-ink)}
+html .vchip.warn{background:var(--c30-tint);border-color:#CBD2E1}
+html .mode.on{background:var(--c30-tint);border-color:var(--c30);color:var(--c30)}
+html .warm{background:var(--c30-tint);border-color:#CBD2E1}
+html .chip.cur{border-color:var(--c30);color:var(--c30)}
+html .chip.on.cur{background:var(--c30);border-color:var(--c30);color:#fff}
+html .chip.on{background:linear-gradient(150deg,#0B1220,#1E2B47);box-shadow:0 8px 18px -10px rgba(11,18,32,.7)}
+html .meal-h .ic,html .food-r .fi{background:var(--c30-tint);color:var(--c30-tint-ink)}
+html td.cur,html th.cur{background:var(--c30-tint)}html th.cur{color:var(--c30)}
+html input:focus,html select:focus,html textarea:focus{border-color:var(--c30);box-shadow:0 0 0 3px rgba(11,18,32,.12)}
+/* the rainbow (indigo / teal / pink / orange rotating tints) collapses to the 30% navy tone;
+   orange stays reserved for the 10% accent */
+html main>.card .card-h .ic:not(.dark):not(.acc){color:var(--c30-tint-ink)!important;background:var(--c30-tint)!important;box-shadow:none!important}
+html main>.card:not(.dark){border-top:0!important}
+html .grid2>.stat,html .grid3>.stat,html .grid4>.stat{background:linear-gradient(180deg,#F7F6F2,#F0EFEA)!important;border-color:rgba(11,18,32,.06)!important}
+html .grid2>.stat.dark,html .grid3>.stat.dark,html .grid4>.stat.dark{background:linear-gradient(145deg,#0B1220,#1E2B47)!important;border-color:transparent!important}
+html .grid2>.stat.acc,html .grid3>.stat.acc,html .grid4>.stat.acc{background:var(--c60-card)!important}
+html .client .av,html .client:nth-child(n) .av{background:linear-gradient(145deg,#1E2B47,#0B1220)!important;box-shadow:0 8px 18px -8px rgba(11,18,32,.6)!important;color:#fff}
+.stat:after{background:radial-gradient(circle,rgba(11,18,32,.06),transparent 70%)!important}
