@@ -87,7 +87,7 @@ function loginTab(t){
   if(t==="signup" && typeof drawSignup==="function") drawSignup();
 }
 async function drawPublicPlans(){
-  const box=$("#plansBox"); if(!box.dataset.done) box.innerHTML=`<p class="hint">⏳ بيتحمل…</p>`;
+  const box=$("#plansBox"); if(!box.dataset.done) box.innerHTML=`<div class="sk-wrap" role="status" aria-label="بيتحمل"><i class="sk sk-b"></i><i class="sk sk-l m"></i><i class="sk sk-l s"></i></div>`;
   box.innerHTML=plansHTML(await loadPlans()); box.dataset.done=1;
 }
 (function initLoginTabs(){
@@ -113,7 +113,7 @@ async function drawPublicPlans(){
 async function openPlansSheet(){
   const who=S.client?.full_name||S.me?.full_name||"";
   const body=openSheet(`<div class="between" style="margin-bottom:6px"><b>💳 جدّد اشتراكك</b><button class="btn sm ghost" onclick="closeSheet()">✕</button></div>
-    <p class="hint" style="margin-top:0">اختار العرض وهيتبعت للكوتش على واتساب.</p><div id="sheetPlans"><p class="hint">⏳</p></div>`);
+    <p class="hint" style="margin-top:0">اختار العرض وهيتبعت للكوتش على واتساب.</p><div id="sheetPlans"><div class="sk-wrap" role="status" aria-label="بيتحمل"><i class="sk sk-b"></i><i class="sk sk-l m"></i><i class="sk sk-l s"></i></div></div>`);
   body.querySelector("#sheetPlans").innerHTML=plansHTML(await loadPlans(), who);
 }
 function contactCoach(){ window.open(waLink(`السلام عليكم كوتش 👋\nأنا ${S.me?.full_name||""} من Mofit\n`),"_blank","noopener"); }
