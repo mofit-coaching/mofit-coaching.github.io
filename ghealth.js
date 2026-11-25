@@ -27,6 +27,23 @@ const css=`
 .gh-ios-steps li:before{content:counter(gh);position:absolute;inset-inline-start:0;top:7px;width:20px;height:20px;border-radius:50%;background:#F97316;color:#fff;font:800 11px/20px inherit;text-align:center}
 .gh-ios-steps.on li{color:#E2E8F0}
 .gh-link-btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 14px;border-radius:11px;border:0;background:#F97316;color:#fff;font:800 12.5px/1 inherit;cursor:pointer;text-decoration:none}
+.lt{direction:ltr;unicode-bidi:isolate}
+.gh-auto{margin-top:12px;border-top:1px dashed #CBD5E1;padding-top:10px}
+.gh-auto>b{display:block;font-size:12.5px;margin-bottom:2px}
+.gh-st{margin:10px 0;display:flex;gap:10px;align-items:flex-start}
+.gh-st>i{flex:none;width:20px;height:20px;border-radius:50%;background:#F97316;color:#fff;font:800 11px/20px inherit;text-align:center;font-style:normal;margin-top:2px}
+.gh-st p{margin:0 0 6px;font-size:12.5px;line-height:1.7}
+.gh-mk{direction:ltr;text-align:left;border-radius:14px;background:#0F172A;color:#E2E8F0;padding:10px;font:600 12px/1.3 -apple-system,"SF Pro Text",Helvetica,sans-serif;max-width:260px;border:1px solid #1E293B}
+.gh-mk .r{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 10px;border-radius:9px;background:#1E293B;margin-top:5px}
+.gh-mk .r.hl{outline:2px solid #F97316;background:#2A1B10}
+.gh-mk .tb{display:flex;justify-content:space-around;border-top:1px solid #334155;margin-top:8px;padding-top:7px;font-size:10.5px;color:#94A3B8}
+.gh-mk .tb .hl{color:#F97316;font-weight:800}
+.gh-mk .plus{width:26px;height:26px;border-radius:50%;background:#F97316;color:#fff;font:800 18px/26px inherit;text-align:center;margin-left:auto;outline:2px solid #FDBA74;outline-offset:2px}
+.gh-mk .tg{width:34px;height:20px;border-radius:12px;background:#475569;position:relative}
+.gh-mk .tg:after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:#fff}
+.gh-mk .big{font:800 30px/1 -apple-system,Helvetica,sans-serif;text-align:center;color:#fff;padding:6px 0;letter-spacing:1px}
+.gh-mk .sm{font-size:10px;color:#94A3B8}
+.gh-mk .ok{color:#F97316;font-weight:800}
 .gh-note{font-size:10.5px;color:var(--slate);margin-top:8px}
 .gh-hero .gh-note{color:#94A3B8}
 .gh-hero{margin-bottom:14px;border-radius:18px;padding:16px;color:#fff;background:linear-gradient(135deg,#0F172A,#1E293B);position:relative;overflow:hidden}
@@ -113,6 +130,24 @@ function lastSyncLine(conn){
 }
 
 /* Habits view: small slot right under the steps field. */
+
+function autoGuide(){
+  const st=(n,t,m)=>`<div class="gh-st"><i>${n}</i><div><p>${t}</p>${m}</div></div>`;
+  return `<div class="gh-auto"><b>آخر خطوة: التشغيل التلقائي كل ليلة (مرة واحدة بس، دقيقتين)</b>`+
+   st(1,"افتح تطبيق <b>الاختصارات</b> <span class=lt>(Shortcuts)</span> وادخل تبويب <b class=lt>Automation</b> (أتمتة) تحت.",
+     `<div class="gh-mk"><div class="r"><span>My Shortcuts</span><span class="sm">&#9656;</span></div><div class="r"><span>Gallery</span><span class="sm">&#9656;</span></div><div class="tb"><span>Shortcuts</span><span class="hl">Automation</span><span>Gallery</span></div></div>`)+
+   st(2,"دوس علامة <b>+</b> فوق، وبعدين <b class=lt>Create Personal Automation</b>.",
+     `<div class="gh-mk"><div style="display:flex;align-items:center"><span style="font-weight:800;font-size:15px">Automation</span><span class="plus">+</span></div><div class="r"><span>New Automation</span></div></div>`)+
+   st(3,"اختار <b class=lt>Time of Day</b> (وقت من اليوم).",
+     `<div class="gh-mk"><div class="r"><span>Alarm</span></div><div class="r hl"><span>Time of Day</span><span class="ok">&#10003;</span></div><div class="r"><span>Arrive</span></div></div>`)+
+   st(4,"اضبط الوقت على <b class=lt>23:55</b> و<b class=lt>Daily</b>، وبعدين <span class=lt>Next</span>.",
+     `<div class="gh-mk"><div class="big">23:55</div><div class="r hl"><span>Repeat</span><span class="ok">Daily</span></div></div>`)+
+   st(5,"دوس <b class=lt>Add Action</b>، ابحث عن <b class=lt>Run Shortcut</b> واختار <b class=lt>Mofit</b>.",
+     `<div class="gh-mk"><div class="r"><span>Run Shortcut</span></div><div class="r hl"><span>Shortcut</span><span class="ok">Mofit</span></div></div>`)+
+   st(6,"في الشاشة الأخيرة خلّي <b class=lt>Run Immediately</b> و <b class=lt>Notify When Run</b> مقفول <span class=lt>(OFF)</span>، وبعدين <b class=lt>Done</b>.",
+     `<div class="gh-mk"><div class="r hl"><span>Automation</span><span class="ok">Run Immediately</span></div><div class="r"><span>Notify When Run</span><span class="tg"></span></div></div>`)+
+   `<div class="gh-note">تمام كده — خطواتك هتتبعت لوحدها كل ليلة. لو الاختصار طلب إذن للصحة وافق عليه مرة واحدة.</div></div>`;
+}
 async function iosCard(box,s){
   /* s = {code, shortcut_url} from shortcut_code action; null = not deployed yet */
   if(!s){ box.innerHTML=""; return; }
@@ -122,7 +157,7 @@ async function iosCard(box,s){
   box.innerHTML=`<ol class="gh-ios-steps">
     <li>${link} دوس تحميل — الآيفون هيضيف الاختصار لوحده</li>
     <li>شغّل الاختصار أول مرة، ولما يطلب الكود الصق ده: <button type="button" class="gh-code" id="ghCode">${s.code} <small>نسخ</small></button></li>
-    <li>من تطبيق الاختصارات فعّل "أتمتة" للتشغيل اليومي — Apple بتطلب تأكيدها مرة واحدة وبعدها بيبعت لوحده كل يوم</li></ol>
+    </ol>${autoGuide()}
     <div class="gh-note">خطواتك بتتشارك مع التطبيق ده بس، والكتابة اليدوية شغالة برضه.</div>`;
   box.querySelector("#ghCode").onclick=async ev=>{
     try{ await navigator.clipboard.writeText(s.code); ev.currentTarget.querySelector("small").textContent="✓ اتنسخ"; }
