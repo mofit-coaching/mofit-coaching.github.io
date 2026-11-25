@@ -53,8 +53,10 @@ async function viewInbox(el){
   el.innerHTML=`<div class="grid3 inbst" style="margin-bottom:14px"><div class="stat acc"><div class="l">💬 رسائل</div><div class="v num">${un}</div></div>
     <div class="stat"><div class="l">💳 اشتراكات</div><div class="v num">${subs}</div></div><div class="stat dark"><div class="l">🆕 طلبات</div><div class="v num">${pend}</div></div></div>
     <div class="card"><div class="card-h"><div class="ic acc">📥</div><h2>الوارد<small>${items.length?items.length+" عميل محتاجك":"كله تمام 👌 مفيش حاجة مستنية"}</small></h2></div><div id="inbL">${items.map(inboxRow).join("")}</div></div>
+    <div class="card" id="inbStp"></div>
     <button class="btn block" id="inbAll">👥 كل العملاء</button>`;
   $("#inbAll").onclick=()=>{ S.tab="clients"; render(); };
+  window.stepsCoachCard&&window.stepsCoachCard($("#inbStp"),C);
   $("#inbL").onclick=async e=>{ const b=e.target.closest("[data-a]"), row=e.target.closest(".inb"); if(!b||!row) return; const c=C.find(x=>x.id===row.dataset.id);
     if(b.dataset.a==="chat") openChat(c.id,c.full_name||"العميل");
     else if(b.dataset.a==="open"){ await openClient(c); S.tab="hub"; render(); window.scrollTo(0,0); }
@@ -67,12 +69,14 @@ async function viewHub(el){
       <div class="inb-a"><button class="btn sm primary" id="hbChat">💬 محادثة${un?` (${un})`:""}</button>${c.phone?`<a class="btn sm" target="_blank" rel="noopener" href="${esc(remindLink(c,{text:"متابعة"}))}">📲 واتساب</a>`:""}<button class="btn sm" id="hbSet">⚙ التحكم</button></div></div>
     <div class="grid2"><div class="stat ${sub&&sub.cls!=="good"?"acc":""}"><div class="l">💳 الاشتراك</div><div class="v" style="font-size:1rem">${sub?sub.icon+" "+esc(sub.text):"—"}</div><div class="s">${c.sub_end?"ينتهي "+esc(c.sub_end):""}</div></div>
       <div class="stat"><div class="l">📅 الأسبوع</div><div class="v num">${wk}</div><div class="s">بلوك ${blockOf(wk)} · ${wInBlock(wk)}/12</div></div></div>
+    <div id="hbSteps"></div>
     <div class="card" id="hbStreak"><p class="muted">جارٍ التحميل…</p></div>
     <div class="card"><div class="card-h"><div class="ic">📸</div><h2>المتابعة الأسبوعية<small>${o.last_checkin_week?"آخر متابعة: أسبوع "+o.last_checkin_week:"مفيش متابعات لسه"}${o.unreviewed?" · "+o.unreviewed+" مستنية ردك":""}</small></h2></div>
       <button class="btn block ${o.unreviewed?"primary":""}" id="hbCI">${o.unreviewed?"راجع وردّ":"افتح المتابعات"}</button></div>
     <div class="card"><div class="card-h"><div class="ic">🏋</div><h2>البرنامج<small>${esc(c.split_name||"بدون برنامج")}${c.level?" · "+esc(c.level):""} · ${esc(c.goal||"")}</small></h2></div>
       <div class="inb-a"><button class="btn sm" id="hbTr">التمرين</button><button class="btn sm" id="hbFd">التغذية</button><button class="btn sm" id="hbBd">التقدم</button></div></div>
     <div class="card" id="hbMsgs"><div class="card-h"><div class="ic acc">💬</div><h2>آخر الرسايل</h2></div><p class="muted">جارٍ التحميل…</p></div>`;
+  window.stepsClientCard&&window.stepsClientCard($("#hbSteps"),c,"خطوات العميل");
   const go=(t,seg)=>()=>{ S.tab=t; if(seg) S.bodySeg=seg; render(); window.scrollTo(0,0); };
   $("#hbChat").onclick=()=>openChat(c.id,c.full_name||"العميل"); $("#hbSet").onclick=go("setup"); $("#hbTr").onclick=go("train"); $("#hbFd").onclick=go("food"); $("#hbBd").onclick=go("body");
   $("#hbCI").onclick=()=>{ S.ciWeek=o.last_checkin_week||Math.max(1,wk-1); go("body","c")(); };

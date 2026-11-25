@@ -74,7 +74,7 @@ async function viewHome(el){
   const p=S.client, t=targets(p), wk=currentWeek(p), dn=todayDayNo();
   const todayEx=S.program.filter(e=>e.day_no===dn);
   el.innerHTML=`${S.me.role==="client"?installCardHTML():""}
-    <div id="ghHome"></div><div id="hFlame"></div><div id="hFirst"></div>
+    <div id="ghHome"></div><div id="hSteps"></div><div id="hFlame"></div><div id="hFirst"></div>
     <div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
       ${dn?`<div class="hero-body">${anatomySVG(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<div>${muscleLegend(muscleVol(todayEx.map(e=>[e.name,e.sets])),{dark:true})}<small class="hero-sub">${todayEx.length} تمارين · ${todayEx.reduce((a,e)=>a+(+e.sets||0),0)} مجموعة</small></div></div><button class="btn primary block" style="margin-top:10px" id="goTrain">ابدأ التمرين ←</button>`
           :`<p class="hint">😴 الراحة جزء من التطور. سجّل نومك ومياهك وخطواتك في العادات.</p>`}</div>
@@ -86,6 +86,7 @@ async function viewHome(el){
     <div class="card" id="hB"></div><div id="hLoad"></div><div id="hGoal"></div><div id="hComp"></div><div id="hStr"></div><div id="hHr"></div><div id="hHealth"></div>`;
   wireInstall();
   window.ghRenderHomeCard&&S.me.role==="client"&&window.ghRenderHomeCard($("#ghHome"),p,()=>viewHome(el));
+  window.stepsClientCard&&window.stepsClientCard($("#hSteps"),p);
   $("#goTrain")&&($("#goTrain").onclick=()=>{ S.tab="train"; S.day=dn; S.week=wk; render(); });
   homeCheckinCard(p,wk);
   const id=p.id;
