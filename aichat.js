@@ -120,12 +120,12 @@ window.viewAiChat=async function(el){
   if(!rows.length){
     L.innerHTML=`<div class="chat-empty">🤖<br>أهلاً بيك يا بطل! أنا مساعدك الذكي، موجود هنا ٢٤ ساعة 💪<br>اسألني عن أكلك أو تمرينك وهجاوبك على طول من برنامجك.<br><small style="opacity:.7">تنبيه: ده مساعد مش دكتور، وكلامه مش نصيحة طبية. لو سؤال طبي أو إصابة بحوّله للكوتش بنفسه.</small></div>`;
   } else {
-    L.innerHTML="";
+    L.innerHTML=""; L.classList.add("bulk");
     rows.forEach(r=>{
       L.append(aichBubble("me",r.question,aichWhen(r.created_at)));
       L.append(aichBubble(r.kind==="flag"?"flag":"ai",r.answer));
     });
-    L.scrollTop=L.scrollHeight;
+    L.classList.remove("bulk"); L.scrollTop=L.scrollHeight;
   }
   document.getElementById("aichChips").querySelectorAll(".qr").forEach(c=>c.onclick=()=>{ const i=document.getElementById("aichI"); if(i){ i.value=c.dataset.q||c.textContent.trim(); i.focus(); } });
   document.getElementById("aichF").onsubmit=async e=>{
