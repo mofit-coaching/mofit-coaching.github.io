@@ -173,7 +173,7 @@ const BADGES=[[1,"🌱","أول تمرين"],[5,"💪","٥ تمارين"],[10,"�
 (function(){ if(document.getElementById("hm-st")) return; const st=document.createElement("style"); st.id="hm-st"; st.textContent=`
 .hm-wrap{margin-top:12px}
 .hm-title{font-size:.72rem;font-weight:800;color:var(--mut,#8A93A6);margin-bottom:6px}
-.hm{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;direction:ltr;justify-content:end;overflow-x:auto;padding-bottom:4px}
+.hm{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;direction:ltr;justify-content:end;overflow-x:auto;padding-bottom:4px;padding-inline:4px}
 .hm-c{width:11px;height:11px;border-radius:3px;background:#EEF0F4;opacity:0;animation:hmPop .35s ease forwards}
 .dark .hm-c{background:#232B3A}
 .hm-c.l1{background:#FFD9BF}.hm-c.l2{background:#FFA66B}.hm-c.l3{background:#FF6B1A}
