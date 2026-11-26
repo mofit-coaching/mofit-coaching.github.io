@@ -2,6 +2,8 @@
    WEEKLY LEAGUE v2 (lg-*) - coach-started, opt-in, trophies for top 3.
    - The coach STARTS the league with a button (league_start). Starting
      resets the baseline: only activity after the start counts.
+   - v4 (Nov 26, Mohammed): every member's points count from THEIR OWN
+     join day, never from before (league-v4.sql).
    - Every active client gets an in-app invite on their home screen and
      chooses to join or not (league_respond). Only joined members get the
      "الليج" tab and appear on the board.
@@ -247,7 +249,7 @@ function headHTML(board,isCoach){
 }
 function explainHTML(){
   return `<details class="lg-more"><summary>إزاي بتكسب نقاط؟</summary>
-    <p>تمرين مسجّل = <b style="color:#FFE680">10</b> نقاط · يوم عادات مسجّل = <b style="color:#FFE680">4</b> · متابعة أسبوعية = <b style="color:#FFE680">15</b> · كل أسبوع ملتزم (3+ تمارين) = <b style="color:#FFE680">5</b> بونص.<br>النقاط بتتسجل من يوم ما الكوتش بدأ الليج بس - القديم مش بيتحسب. الأسبوع بيقفل يوم الحد 12 بالليل والأبطال بيتعلنوا تاني يوم. اسمك الحقيقي مش بيظهر لحد أبداً.</p>
+    <p>تمرين مسجّل = <b style="color:#FFE680">10</b> نقاط · يوم عادات مسجّل = <b style="color:#FFE680">4</b> · متابعة أسبوعية = <b style="color:#FFE680">15</b> · كل أسبوع ملتزم (3+ تمارين) = <b style="color:#FFE680">5</b> بونص.<br>نقاطك بتتسجل من يوم ما انت اشتركت في الليج بس - اللي قبل اشتراكك مش بيتحسب. الأسبوع بيقفل يوم الحد 12 بالليل والأبطال بيتعلنوا تاني يوم. اسمك الحقيقي مش بيظهر لحد أبداً.</p>
   </details>`;
 }
 
@@ -256,7 +258,7 @@ function inviteHTML(board){
   return `${headHTML(board,false)}
   <div class="lg-inv">
     <b>🔥 الكوتش بدأ الليج الأسبوعي!</b>
-    <p>نافس زمايلك على التمارين والالتزام طول الأسبوع. اسمك بيظهر بلقب مستعار ومرتب بس - محدش يعرف مين انت. أول 3 بياخدوا 🥇🥈🥉 كل أسبوع.<br>${escAr(rewardText(board.reward_mode,board.reward_note))}</p>
+    <p>نافس زمايلك على التمارين والالتزام طول الأسبوع. اسمك بيظهر بلقب مستعار ومرتب بس - محدش يعرف مين انت. أول 3 بياخدوا 🥇🥈🥉 كل أسبوع. نقاطك بتتحسب من يوم اشتراكك بس - القديم مش بيتحسب.<br>${escAr(rewardText(board.reward_mode,board.reward_note))}</p>
     <div class="lg-cta"><button class="lg-btn" id="lgYes">اشترك في الليج 🔥</button><button class="lg-ghost" id="lgNo">مش دلوقتي</button></div>
   </div>
   ${prizeLineHTML(board)}`;
@@ -297,7 +299,7 @@ function coachHTML(board,names){
     return `<div class="lg-h"><div class="lg-ic">🏆</div>
       <div class="lg-ht"><h3>الليج الأسبوعي</h3><small>لسه ما بدأتش - ابدأ وكل عملائك المفعّلين هيوصلهم الدعوة</small></div></div>
       <div class="lg-inv"><b>🔥 ابدأ الليج</b>
-      <p>أول ما تبدأ: النقاط بتتحسب من اللحظة دي بس (السجل القديم مش بيتحسب)، وكل عميل مفعّل هيلاقي دعوة على الرئيسية يختار يشترك أو لأ.</p>
+      <p>أول ما تبدأ: كل عميل مفعّل هيلاقي دعوة على الرئيسية يختار يشترك أو لأ، ونقاط كل مشترك بتتحسب من يوم اشتراكه بس (السجل القديم مش بيتحسب).</p>
       <div class="lg-cta"><button class="lg-btn" id="lgStart">ابدأ الليج دلوقتي 🔥</button></div></div>
       ${cfgHTML(board)}`;
   }
@@ -347,7 +349,7 @@ function startModalHTML(board){
     <button class="lg-x" id="lgX" aria-label="إغلاق">✕</button>
     ${headHTML(board,false)}
     <div class="lg-inv"><b>🏆 الليج بدأ رسمي!</b>
-      <p>الموسم ${board.season} بدأ - النقاط بتتسجل من دلوقتي. ${joined?"انت مشترك.. يلا نولّعها 🔥":"اشترك ونافس - اسمك بيظهر بلقب مستعار بس."}</p>
+      <p>الموسم ${board.season} بدأ - ${joined?"نقاطك بتتسجل من دلوقتي":"نقاطك بتتسجل من يوم اشتراكك"}. ${joined?"انت مشترك.. يلا نولّعها 🔥":"اشترك ونافس - اسمك بيظهر بلقب مستعار بس."}</p>
       <div class="lg-cta">${joined?`<button class="lg-btn" id="lgGo">افتح تبويب الليج 🏆</button>`:`<button class="lg-btn" id="lgYesM">اشترك في الليج 🔥</button><button class="lg-ghost" id="lgNoM">مش دلوقتي</button>`}</div>
     </div>
     ${prizeLineHTML(board)}
