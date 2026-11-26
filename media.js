@@ -20,15 +20,25 @@
   const s=document.createElement("style"); s.textContent=css; document.head.appendChild(s);
 })();
 
-/* Compress a photo for upload: downscale to <=max px on the long edge, then step JPEG
-   quality down from 0.82 until the blob is <=targetKB (quality floor 0.5). */
-function mlCompressImage(file,max=1280,targetKB=400){ return new Promise((res,rej)=>{
-  const img=new Image();
-  img.onload=()=>{ const k=Math.min(1,max/Math.max(img.width,img.height)||1);
-    const c=document.createElement("canvas"); c.width=Math.max(1,Math.round(img.width*k)); c.height=Math.max(1,Math.round(img.height*k));
-    c.getContext("2d").drawImage(img,0,0,c.width,c.height); URL.revokeObjectURL(img.src);
-    let q=0.82; const step=()=>c.toBlob(b=>{ if(!b) return rej(new Error("image")); if(b.size<=targetKB*1024||q<=0.5) res(b); else { q=Math.max(0.5,+(q-0.08).toFixed(2)); step(); } },"image/jpeg",q); step(); };
-  img.onerror=rej; img.src=URL.createObjectURL(file); }); }
+/* Compress a photo for upload: honor the phone's EXIF rotation, downscale to <=max px on the
+   long edge, then step JPEG quality down from 0.82 until the blob is <=targetKB (floor 0.5).
+   JPEG on purpose: Safari still cannot encode WebP from canvas, and clients are on iPhone. */
+function mlCompressImage(file,max=1600,targetKB=450){
+  const draw=(src,w0,h0)=>new Promise((res,rej)=>{
+    const k=Math.min(1,max/(Math.max(w0,h0)||1));
+    const c=document.createElement("canvas"); c.width=Math.max(1,Math.round(w0*k)); c.height=Math.max(1,Math.round(h0*k));
+    c.getContext("2d").drawImage(src,0,0,c.width,c.height);
+    let q=0.82; const step=()=>c.toBlob(b=>{ if(!b) return rej(new Error("image")); if(b.size<=targetKB*1024||q<=0.5) res(b); else { q=Math.max(0.5,+(q-0.08).toFixed(2)); step(); } },"image/jpeg",q); step(); });
+  const fromImg=()=>new Promise((res,rej)=>{ const img=new Image(), url=URL.createObjectURL(file);
+    img.onload=()=>draw(img,img.naturalWidth||img.width,img.naturalHeight||img.height)
+      .then(b=>{ URL.revokeObjectURL(url); res(b); },e=>{ URL.revokeObjectURL(url); rej(e); });
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error("image")); }; img.src=url; });
+  /* createImageBitmap applies EXIF orientation on every iOS our clients use; fall back to
+     <img> when it is missing or rejects (some HEIC edge cases). */
+  if(window.createImageBitmap) return createImageBitmap(file,{imageOrientation:"from-image"})
+    .then(bmp=>draw(bmp,bmp.width,bmp.height).then(b=>{ try{ bmp.close&&bmp.close(); }catch(e){} return b; }))
+    .catch(fromImg);
+  return fromImg(); }
 
 /* Remove storage objects. quiet=true for background cleanup (no toast). Returns true when clean. */
 async function mlPurge(bucket,paths,quiet){ const list=(paths||[]).filter(Boolean); if(!list.length) return true;

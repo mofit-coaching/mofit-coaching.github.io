@@ -143,7 +143,7 @@ const POSES=[["front","أمامي"],["side","جانبي"],["back","خلفي"]];
 const urlCache={};
 async function photoUrl(path){ if(!path) return null; if(urlCache[path]) return urlCache[path];
   const { data } = await sb.storage.from("checkins").createSignedUrl(path, 3600); urlCache[path]=data?.signedUrl||null; return urlCache[path]; }
-function resizeImage(file,max=1280){ return mlCompressImage(file,max); }
+function resizeImage(file,max=1600){ return mlCompressImage(file,max); }
 async function viewCheckin(el){
   const p=S.client, wkNow=currentWeek(p), coach=S.me.role==="coach";
   const { data:all } = await sb.from("checkins").select("*").eq("client_id",p.id).order("week");
@@ -434,4 +434,3 @@ function painCard(p){
       ${e.resolved_at?`<span class="pill good">تمت المتابعة</span>`:`<button class="btn sm" data-pres="${e.id}">تمت المتابعة ✓</button>`}</div>`).join("")}
     <p class="hint">لو الألم في مفصل: بدّل التمرين من تبويب البرنامج، أو قلل المدى/الوزن، أو حوّله لنظام "ضهر آمن".</p></div>`;
 }
-

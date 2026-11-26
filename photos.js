@@ -88,7 +88,8 @@ const starSvg='<svg viewBox="0 0 24 24"><path d="M12 3.6l2.6 5.3 5.8.8-4.2 4.1 1
 const flameSvg=(cls)=>`<svg class="${cls||""}" viewBox="0 0 24 24" fill="none"><defs><linearGradient id="ppfg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB347"/><stop offset="1" stop-color="#FF5A0A"/></linearGradient></defs><path d="M12 22c4.4 0 7.5-3 7.5-7.2 0-3.1-1.8-5.5-3.4-7.3-.4 1.2-1.1 2.2-2.1 2.8.3-2.9-1-6.3-4.2-8.3.2 2.5-.7 4.3-2.1 5.9C6.3 9.5 4.5 11.6 4.5 14.8 4.5 19 7.6 22 12 22Z" fill="url(#ppfg)"/><path d="M12 22c2.2 0 3.9-1.6 3.9-3.8 0-1.9-1.1-3.1-2-4.1-.5.6-1 1-1.7 1.2.2-1.5-.5-3-2-3.9.1 1.4-.4 2.4-1.2 3.3-.9 1-1.9 2-1.9 3.5C7.1 20.4 9.8 22 12 22Z" fill="#FFE680" opacity=".9"/></svg>`;
 const dragSvg='<svg viewBox="0 0 24 24"><path d="M9 6.5 3.5 12 9 17.5"/><path d="m15 6.5 5.5 5.5-5.5 5.5"/></svg>';
 
-function resizeBlob(file,max=900){ return new Promise((res,rej)=>{ const img=new Image();
+function resizeBlob(file,max=900){ if(typeof mlCompressImage==="function") return mlCompressImage(file,max);
+  return new Promise((res,rej)=>{ const img=new Image();
   img.onload=()=>{ const k=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement("canvas");
     c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
     c.getContext("2d").drawImage(img,0,0,c.width,c.height);
