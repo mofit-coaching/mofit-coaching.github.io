@@ -7,8 +7,8 @@
    If Workbox fails to load, the worker stays a passthrough (no caching).
    ====================================================================== */
 importScripts("wb/workbox-sw.js");
-const V="a72f5c18";
-const SHELL0=["./","index.html","styles.css?v=a72f5c18","design.css?v=a72f5c18","icons-anim.css?v=a72f5c18","coachshell.css?v=a72f5c18","dark.css?v=a72f5c18","coachshell.js?v=a72f5c18","design.js?v=a72f5c18","core.js?v=a72f5c18","data.js?v=a72f5c18","data-systems2.js?v=a72f5c18","data-systems3.js?v=a72f5c18","data-systems4.js?v=a72f5c18","data-rehab2.js?v=a72f5c18","media.js?v=a72f5c18","pro.js?v=a72f5c18","lab.js?v=a72f5c18","anatomy.js?v=a72f5c18","health.js?v=a72f5c18","posing.js?v=a72f5c18","minerals.js?v=a72f5c18","ghealth.js?v=a72f5c18","stepsboard.js?v=a72f5c18","push.js?v=a72f5c18","confetti.js?v=a72f5c18","celebrate.js?v=a72f5c18","lottie.min.js?v=a72f5c18","anims.js?v=a72f5c18","chart.min.js?v=a72f5c18","charts.js?v=a72f5c18","exdb-data.js?v=a72f5c18","exdb.js?v=a72f5c18","lottie-star.json","lottie-dumbbell.json","icons.js?v=a72f5c18","supps.js?v=a72f5c18","views.js?v=a72f5c18","coach.js?v=a72f5c18","signup.js?v=a72f5c18","qrcode.js?v=a72f5c18","invite.js?v=a72f5c18","referral.js?v=a72f5c18","transform.js?v=a72f5c18","chat.js?v=a72f5c18","aichat.js?v=a72f5c18","ai.js?v=a72f5c18","inbox.js?v=a72f5c18","screens.js?v=a72f5c18","showcase.js?v=a72f5c18","flame.js?v=a72f5c18","photos.js?v=a72f5c18","firstweek.js?v=a72f5c18","league.js?v=a72f5c18","prices.js?v=a72f5c18","training.js?v=a72f5c18","sharecard.js?v=a72f5c18","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","icon-maskable-512.png","404.html"];
+const V="7fa31c94";
+const SHELL0=["./","index.html","styles.css?v=7fa31c94","design.css?v=7fa31c94","fonts.css?v=7fa31c94","fonts/Anton-400-latin.woff2","fonts/Changa-700-arabic.woff2","fonts/Changa-700-latin.woff2","fonts/Changa-800-arabic.woff2","fonts/Changa-800-latin.woff2","fonts/IBMPlexSansArabic-400-arabic.woff2","fonts/IBMPlexSansArabic-400-latin.woff2","fonts/IBMPlexSansArabic-600-arabic.woff2","fonts/IBMPlexSansArabic-600-latin.woff2","fonts/IBMPlexSansArabic-700-arabic.woff2","fonts/IBMPlexSansArabic-700-latin.woff2","fonts/Outfit-600-latin.woff2","fonts/Outfit-700-latin.woff2","fonts/Outfit-800-latin.woff2","icons-anim.css?v=7fa31c94","coachshell.css?v=7fa31c94","dark.css?v=7fa31c94","coachshell.js?v=7fa31c94","design.js?v=7fa31c94","core.js?v=7fa31c94","data.js?v=7fa31c94","data-systems2.js?v=7fa31c94","data-systems3.js?v=7fa31c94","data-systems4.js?v=7fa31c94","data-rehab2.js?v=7fa31c94","media.js?v=7fa31c94","pro.js?v=7fa31c94","lab.js?v=7fa31c94","anatomy.js?v=7fa31c94","health.js?v=7fa31c94","posing.js?v=7fa31c94","pose-annotate.js?v=7fa31c94","minerals.js?v=7fa31c94","ghealth.js?v=7fa31c94","stepsboard.js?v=7fa31c94","push.js?v=7fa31c94","confetti.js?v=7fa31c94","celebrate.js?v=7fa31c94","lottie.min.js?v=7fa31c94","anims.js?v=7fa31c94","chart.min.js?v=7fa31c94","charts.js?v=7fa31c94","exdb-data.js?v=7fa31c94","exdb.js?v=7fa31c94","dayjs.min.js","dayjs-relative.js","dayjs-ar.js","barcode.js","vendor/zxing.min.js","dates.js?v=7fa31c94","lottie-star.json","lottie-dumbbell.json","icons.js?v=7fa31c94","supps.js?v=7fa31c94","views.js?v=7fa31c94","coach.js?v=7fa31c94","signup.js?v=7fa31c94","qrcode.js?v=7fa31c94","invite.js?v=7fa31c94","referral.js?v=7fa31c94","transform.js?v=7fa31c94","chat.js?v=7fa31c94","aichat.js?v=7fa31c94","ai.js?v=7fa31c94","inbox.js?v=7fa31c94","subs.js?v=7fa31c94","screens.js?v=7fa31c94","showcase.js?v=7fa31c94","flame.js?v=7fa31c94","photos.js?v=7fa31c94","firstweek.js?v=7fa31c94","league.js?v=7fa31c94","prices.js?v=7fa31c94","training.js?v=7fa31c94","sharecard.js?v=7fa31c94","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","icon-maskable-512.png","404.html"];
 const SHELL=SHELL0;
 if(self.workbox){
   const wb=self.workbox;
@@ -17,11 +17,13 @@ if(self.workbox){
   wb.precaching.cleanupOutdatedCaches();
   wb.routing.registerRoute(({request})=>request.mode==="navigate",
     new wb.strategies.NetworkFirst({cacheName:"mofit-pages-"+V,networkTimeoutSeconds:8}));
+  wb.routing.registerRoute(({url})=>/cdn\.jsdelivr\.net\/npm\/@mediapipe\/tasks-vision@1\.2\.3\//.test(url.href)||/storage\.googleapis\.com\/mediapipe-models\/pose_landmarker\//.test(url.href),
+    new wb.strategies.CacheFirst({cacheName:"mofit-pose-v1"}));
   wb.routing.registerRoute(({url,request})=>request.method==="GET"&&(url.origin===location.origin||/jsdelivr|googleapis|gstatic/.test(url.hostname)),
     new wb.strategies.StaleWhileRevalidate({cacheName:"mofit-static-"+V}));
   self.addEventListener("install",e=>self.skipWaiting());
   self.addEventListener("activate",e=>{
-    e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.indexOf("mofit-")===0&&k.indexOf(V)===-1).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+    e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.indexOf("mofit-")===0&&k.indexOf("mofit-pose")!==0&&k.indexOf(V)===-1).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
   });
 }
 
@@ -42,4 +44,8 @@ self.addEventListener("notificationclick",e=>{
     return clients.openWindow(url);
   }));
 });
+
+
+
+
 
