@@ -7,6 +7,10 @@
    - v5 (Nov 26, Mohammed): coach "end and crown winners" + "cancel
      completely" buttons (league_end RPC, league-v5.sql); the ended
      start card shows the latest podium.
+   - v6 (Nov 26, Mohammed): free-text custom rewards in the coach
+     settings - weekly champion reward (reward_note, overrides the mode)
+     plus clearer free-text prize fields. No SQL change (set_config
+     already takes p_note).
    - Every active client gets an in-app invite on their home screen and
      chooses to join or not (league_respond). Only joined members get the
      "الليج" tab and appear on the board.
@@ -340,9 +344,10 @@ function cfgHTML(board){
       <div class="lg-opt${board.reward_mode==="free_week"?" on":""}" data-m="free_week">🎁 أسبوع مجاني</div>
       <div class="lg-opt${board.reward_mode==="plan_upgrade"?" on":""}" data-m="plan_upgrade">⭐ ترقية الباقة</div>
     </div>
+    <div class="lg-pz-in" style="margin-top:8px"><span>✍️</span><input id="lgRNote" type="text" maxlength="120" placeholder="أو اكتب مكافأة البطل من عندك - بتغطي على الاختيار اللي فوق" value="${escAr(board.reward_note||"")}"></div>
     <h4 style="margin-top:12px">📅 الليج بيبدأ يوم إيه؟ <small style="font-weight:400;color:#64748B">(الأسبوع بيقفل آخر اليوم السابع)</small></h4>
     <div class="lg-days" id="lgDays">${DAYS.map((d,i)=>`<div class="lg-day${i===wsd?" on":""}" data-d="${i}">${d}</div>`).join("")}</div>
-    <h4 style="margin-top:12px">🏆 جوائز الأسبوع <small style="font-weight:400;color:#64748B">(بتظهر للمشتركين في تبويب الليج)</small></h4>
+    <h4 style="margin-top:12px">🏆 جوائز الأسبوع <small style="font-weight:400;color:#64748B">(اكتب أي جائزة من عندك أو اختر من الاقتراحات - بتظهر للمشتركين)</small></h4>
     <div class="lg-prizes">
       <div class="lg-pz-in"><span>🥇</span><input id="lgP1" type="text" maxlength="80" placeholder="جائزة المركز الأول - اكتبها أو اختر من الاقتراحات" value="${escAr(board.prize_1||"")}"></div>
       <div class="lg-chips" data-for="lgP1">${PRIZE_PRESETS[0].map(p=>`<span class="lg-chip">${p}</span>`).join("")}</div>
@@ -423,7 +428,7 @@ function wireCfg(host,board){
   save.onclick=async e=>{
     const b=e.currentTarget; b.disabled=true; b.textContent="…";
     try{
-      const { error }=await sb.rpc("league_set_config",{p_mode:mode,p_week_start_day:wsd,
+      const { error }=await sb.rpc("league_set_config",{p_mode:mode,p_week_start_day:wsd,p_note:val("#lgRNote"),
         p_prize_1:val("#lgP1"),p_prize_2:val("#lgP2"),p_prize_3:val("#lgP3")});
       if(error) throw error;
       b.textContent="✅ اتحفظ"; setTimeout(()=>{ b.textContent="حفظ الإعدادات"; b.disabled=false; },1600);
