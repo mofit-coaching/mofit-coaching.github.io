@@ -372,15 +372,48 @@ function openFoodPicker(title, onPick, opts={}){
 }
 function qtyText(i){ return `${fmt(i.qty,COUNT_UNITS(i.unit)?2:0)} ${esc(i.unit||"جم")}`; }
 
+async function renderFoodWeek(el){
+  const p=S.client, t=targets(p);
+  const dow=(new Date(S.date+"T00:00:00Z").getUTCDay()+1)%7; /* Saturday = 0 */
+  const wkStart=addDays(S.date,-dow), wkEnd=addDays(wkStart,6);
+  el.innerHTML=`<div class="card"><div class="between"><button class="btn sm" id="wPrev">→</button><div style="text-align:center"><b>الأسبوع</b><div class="muted num">${wkStart} ← ${wkEnd}</div></div><button class="btn sm" id="wNext">←</button></div>
+    <button class="btn sm navy block" id="wDay" style="margin-top:8px">📅 رجوع ليوم ${niceDate(S.date)}</button></div>
+  <div class="card dark" id="wTot"></div><div class="card" id="wBars"></div><div class="card" id="wDays"></div>`;
+  $("#wPrev").onclick=()=>{ S.date=addDays(S.date,-7); renderFoodWeek(el); };
+  $("#wNext").onclick=()=>{ S.date=addDays(S.date,7); renderFoodWeek(el); };
+  $("#wDay").onclick=()=>renderMeals(el,{mode:"day"});
+  const { data, error }=await sb.from("meal_items").select("log_date,kcal,protein,carbs,fat").eq("client_id",p.id).gte("log_date",wkStart).lte("log_date",wkEnd);
+  if(!el.isConnected) return;
+  if(error){ toast(error.message); return; }
+  const byD={}; (data||[]).forEach(i=>{ (byD[i.log_date]=byD[i.log_date]||[]).push(i); });
+  const days=Array.from({length:7},(_,i)=>{ const d=addDays(wkStart,i); return { d, s:sumMacros(byD[d]||[]), n:(byD[d]||[]).length }; });
+  const logged=days.filter(x=>x.n);
+  const avg=k=>logged.length?logged.reduce((a,x)=>a+x.s[k],0)/logged.length:0;
+  const maxK=Math.max(t.kcal||0,...days.map(x=>x.s.kcal),1);
+  const wk=sumMacros(data||[]);
+  $("#wTot").innerHTML=`<div class="card-h"><div class="ic">🔥</div><h2>متوسط اليوم في الأسبوع<small>${logged.length} من 7 أيام متسجلة</small></h2></div>
+    <div style="display:flex;gap:16px;align-items:center">${ring(avg("kcal"),t.kcal||1,{size:104,track:"rgba(255,255,255,.15)",label:fmt(avg("kcal")),sub:"من "+(t.kcal?fmt(t.kcal):"—"),textColor:"#fff"})}
+    <div style="flex:1;color:#fff">${macroRow("بروتين",avg("P"),t.P,"جم")}${macroRow("كارب",avg("C"),t.C,"جم")}${macroRow("دهون",avg("F"),t.F,"جم")}</div></div>
+    <p style="color:#CBD5E1;font-size:.75rem;margin:8px 0 0">المتوسط محسوب على الأيام المتسجلة بس · إجمالي الأسبوع ${fmt(wk.kcal)} kcal</p>`;
+  $("#wBars").innerHTML=`<div class="card-h"><div class="ic">📊</div><h2>سعرات كل يوم<small>السبت للجمعة · الهدف ${t.kcal?fmt(t.kcal):"—"} kcal</small></h2></div>
+    <div style="display:flex;align-items:flex-end;gap:6px;direction:ltr">${days.map(x=>{ const h=x.n?Math.max(6,Math.round(x.s.kcal/maxK*110)):6; const over=t.kcal&&x.n&&x.s.kcal>t.kcal*1.08; const dn=new Date(x.d+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"short"});
+      return `<div style="flex:1;text-align:center;min-width:0"><div class="wbar" style="height:4px;background:${x.n?(over?"#e0507a":"linear-gradient(180deg,var(--acc,#ff6a13),#c2410c)"):"rgba(128,128,150,.18)"};border-radius:8px 8px 3px 3px;transition:height .9s cubic-bezier(.34,1.56,.64,1)" data-h="${h}"></div><small class="muted">${dn}</small><div class="num" style="font-size:.66rem">${x.n?fmt(x.s.kcal):"—"}</div></div>`; }).join("")}</div>
+    <p class="hint">الأيام الفاضية ملهاش تسجيل · الأحمر معناه عدّيت الهدف</p>`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll(".wbar").forEach(b=>b.style.height=b.dataset.h+"px")));
+  $("#wDays").innerHTML=`<div class="card-h"><div class="ic">🗓</div><h2>يوم بيوم<small>دوس على يوم يفتحه</small></h2></div>`+days.slice().reverse().map(x=>`<div class="item" style="cursor:pointer" data-day="${x.d}"><div class="nm"><b>${niceDate(x.d)}</b><small class="muted num">${x.d}</small></div>${x.n?`<span class="kc num">${fmt(x.s.kcal)}</span><span class="muted" style="font-size:.72rem">ب ${fmt(x.s.P)} · ك ${fmt(x.s.C)} · د ${fmt(x.s.F)}</span>`:`<span class="muted">مفيش تسجيل</span>`}</div>`).join("");
+  el.querySelectorAll("[data-day]").forEach(r=>r.onclick=()=>{ S.date=r.dataset.day; renderMeals(el,{mode:"day"}); });
+}
+
 async function viewFood(el){ if(S.dietPending){ el.innerHTML=planningCard("food"); return; } return renderMeals(el,{mode:"day"}); }
 async function renderMeals(el,{mode}){
   const p=S.client, t=targets(p), meals=Math.max(1,Math.min(+p.meals_per_day||3,8)), planMode=mode==="plan";
   el.innerHTML=(planMode?"":`<div class="card"><div class="between"><button class="btn sm" id="dPrev">→</button><div style="text-align:center"><b>${niceDate(S.date)}</b><div class="muted num">${S.date}</div></div><button class="btn sm" id="dNext">←</button></div>
-      <label class="datejump"><input type="date" id="fDate" value="${S.date}" aria-label="اختار اليوم"><span class="datejump-txt">📅 ${new Date(S.date+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</span></label></div>`)+`<div class="card dark" id="fTot"></div><div id="meals"></div>`;
+      <label class="datejump"><input type="date" id="fDate" value="${S.date}" aria-label="اختار اليوم"><span class="datejump-txt">📅 ${new Date(S.date+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</span></label><button class="btn sm block" id="wkV" style="margin-top:8px">📊 ملخص الأسبوع</button></div>`)+`<div class="card dark" id="fTot"></div><div id="meals"></div>`;
   if(!planMode){
     $("#fDate").onchange=e=>{S.date=e.target.value; renderMeals(el,{mode});};
     $("#dPrev").onclick=()=>{S.date=addDays(S.date,-1); renderMeals(el,{mode});};
     $("#dNext").onclick=()=>{S.date=addDays(S.date,1); renderMeals(el,{mode});};
+    $("#wkV").onclick=()=>renderFoodWeek(el);
   }
   const [pl,lg]=await Promise.all([
     sb.from("diet_plan_items").select("*").eq("client_id",p.id).order("meal_no").order("position"),
