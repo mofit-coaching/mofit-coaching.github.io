@@ -109,7 +109,9 @@ async function drawTransformCard(p,st){
   x.textAlign="center"; x.direction="rtl";
   const first=(p.full_name||"").trim().split(/\s+/)[0];
   x.fillStyle="rgba(255,230,128,.95)"; x.font=F(800,50);
-  x.fillText("🏆 بطاقة التحوّل"+(first?" · "+first:""),W/2,300);
+  const kick="بطاقة التحوّل"+(first?" · "+first:"");
+  x.fillText(kick,W/2,300);
+  const _kw=x.measureText(kick).width; mofitCanvasGlyph(x,"trophy",W/2+_kw/2+45,285,46,"#FFE680","#FFC21A");
 
   // hero: the milestone number
   const hero=st.hero||{n:String(st.total),arrow:"💪",line:"تمرين كامل منذ البداية",sub:null};
@@ -127,10 +129,10 @@ async function drawTransformCard(p,st){
 
   // chips row
   const chips=[];
-  chips.push([String(st.total),"تمرين كامل 💪"]);
-  if(st.streak>0) chips.push([String(st.streak),(st.streak>2?"أسابيع":"أسبوع")+" التزام 🔥"]);
+  chips.push([String(st.total),"تمرين كامل"]);
+  if(st.streak>0) chips.push([String(st.streak),(st.streak>2?"أسابيع":"أسبوع")+" التزام"]);
   else chips.push([String(st.weeks),(st.weeks>2?"أسابيع":"أسبوع")+" مع Mofit"]);
-  if(st.dWa!=null) chips.push([fmt(Math.abs(st.dWa),1)+(st.dWa<0?"▼":"▲"),"سم من الوسط 📏"]);
+  if(st.dWa!=null) chips.push([fmt(Math.abs(st.dWa),1)+(st.dWa<0?"▼":"▲"),"سم من الوسط"]);
   else if(st.cur!=null&&p.height_cm) chips.push([fmt(st.cur/((p.height_cm/100)*(p.height_cm/100)),1),"BMI دلوقتي"]);
   else chips.push(["🔥","الشعلة شغالة"]);
   const bw=300,bh=175,gap=34,x0=(W-(3*bw+2*gap))/2,y0=815;
@@ -138,13 +140,14 @@ async function drawTransformCard(p,st){
     const a=x0+i*(bw+gap);
     rr(a,y0,bw,bh,28); x.fillStyle="rgba(255,255,255,.07)"; x.fill();
     x.strokeStyle="rgba(255,255,255,.14)"; x.lineWidth=2; x.stroke();
-    x.fillStyle="#FFB347"; x.font=F(800,64); x.fillText(String(c2[0]),a+bw/2,y0+86);
+    if(c2[0]==="🔥"){ mofitCanvasGlyph(x,"flame",a+bw/2,y0+64,58,"#FFB347","#FF8A3D"); }
+    else { x.fillStyle="#FFB347"; x.font=F(800,64); x.fillText(String(c2[0]),a+bw/2,y0+86); }
     x.fillStyle="rgba(255,255,255,.8)"; x.font=F(600,32); x.fillText(c2[1],a+bw/2,y0+136);
   });
 
   // footer: invite QR (carries the client's referral code)
   x.fillStyle="rgba(255,255,255,.92)"; x.font=F(700,44);
-  x.fillText("عايز تبدأ تحوّلك انت كمان؟ امسح الكود 📲",W/2,1062);
+  x.fillText("عايز تبدأ تحوّلك انت كمان؟ امسح الكود",W/2,1062);
   tfQR(x,W/2,1210,205,tfUrl(p));
   x.fillStyle="rgba(255,255,255,.45)"; x.font="600 27px Outfit, Cairo, sans-serif"; x.direction="ltr";
   x.fillText("mofit-coaching.github.io",W/2,H-6);
@@ -206,4 +209,3 @@ window.tfStats=tfStats;
 window.drawTransformCard=drawTransformCard;
 window.shareTransformCard=shareTransformCard;
 })();
-
