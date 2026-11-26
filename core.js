@@ -24,7 +24,7 @@ const pct = v => v === null || v === undefined || isNaN(v) ? "—" : Math.round(
 function today(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 function addDays(iso,n){ const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
 function daysBetween(a,b){ return Math.round((new Date(b+"T00:00:00Z")-new Date(a+"T00:00:00Z"))/864e5); }
-function niceDate(iso){ if(iso===today()) return "النهارده"; if(iso===addDays(today(),-1)) return "امبارح"; return new Date(iso+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"}); }
+function niceDate(iso){ if(iso===today()) return "النهارده"; if(iso===addDays(today(),-1)) return "امبارح"; return window.dayjs?dayjs(iso+"T00:00:00").format("dddd D MMMM"):new Date(iso+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"}); }
 function toast(msg){ document.querySelectorAll(".toast").forEach(t=>t.remove()); const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
 function avg(a){ const x=a.filter(v=>v!==null&&v!==undefined&&!isNaN(v)); return x.length? x.reduce((s,v)=>s+ +v,0)/x.length : null; }
 function genPass(){ const c="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"; const a=new Uint32Array(10); crypto.getRandomValues(a); return [...a].map(x=>c[x%c.length]).join(""); }
@@ -316,4 +316,30 @@ document.addEventListener("scroll",s,{passive:true,capture:true});document.addEv
     }
   }catch(e){} busy=false; }
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden) setTimeout(check,3000); }); window.addEventListener("pageshow",()=>setTimeout(check,3000)); setTimeout(check,30000);
+})();
+
+/* ======================================================================
+   SW self-heal: an open app never re-fetches files, so when a new service
+   worker activates under it the runtime can be a stale/mixed shell (the
+   Nov-26 stuck-skeletons incident). Reload once per version onto the new
+   consistent shell; the sessionStorage guard makes a loop impossible.
+   Also nudge update+reload when the served sw.js is newer than this page.
+   ====================================================================== */
+(function(){
+  if(!("serviceWorker" in navigator)) return;
+  const reloaded=v=>sessionStorage.getItem("mofit-reloaded-"+v);
+  const mark=v=>sessionStorage.setItem("mofit-reloaded-"+v,"1");
+  navigator.serviceWorker.addEventListener("message",e=>{
+    const d=e.data||{}; if(d.type!=="mofit-sw-activated"||!d.V) return;
+    if(reloaded(d.V)) return; mark(d.V); location.reload();
+  });
+  try{
+    const pageV=([...document.scripts].map(s=>(s.src.match(/[?&]v=([0-9a-f]{8})/)||[])[1]).find(Boolean));
+    if(!pageV) return;
+    fetch("sw.js?cb="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{
+      const m=t.match(/const V="([^"]+)"/); if(!m||m[1]===pageV||reloaded(m[1])) return;
+      mark(m[1]);
+      navigator.serviceWorker.getRegistration().then(r=>(r?r.update():Promise.resolve()).finally(()=>location.reload()));
+    }).catch(()=>{});
+  }catch(_){}
 })();

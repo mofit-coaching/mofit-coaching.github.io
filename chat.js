@@ -51,8 +51,8 @@ const CHAT = { open:null, ch:null, unread:{}, started:false };
 })();
 
 const chatMine = () => S.me.role==="coach" ? "coach" : "client";
-const chatTime = t => { try{ return new Date(t).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}); }catch(_){ return ""; } };
-const chatDay = t => { try{ return new Date(t).toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"}); }catch(_){ return ""; } };
+const chatTime = t => { try{ return window.dTime?dTime(t):new Date(t).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}); }catch(_){ return ""; } };
+const chatDay = t => { try{ return window.dDay?dDay(t):new Date(t).toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"}); }catch(_){ return ""; } };
 
 const CHAT_URLS={};
 async function chatUrl(path){ if(CHAT_URLS[path]) return CHAT_URLS[path]; const { data } = await sb.storage.from("checkins").createSignedUrl(path,3600); CHAT_URLS[path]=data?.signedUrl||""; return CHAT_URLS[path]; }
@@ -85,7 +85,7 @@ function chatAppend(m){
   const day=chatDay(m.created_at); if(L.dataset.day!==day){ const h=document.createElement("div"); h.className="chat-day"; h.textContent=day; L.append(h); L.dataset.day=day; }
   const el=chatBubble(m), prev=L.lastElementChild;
   if(prev&&prev.classList.contains("msg")&&prev.classList.contains("me")===el.classList.contains("me")&&(new Date(m.created_at)-new Date(prev.dataset.t||0))<120000){ prev.classList.add("gnext"); el.classList.add("cont"); }
-  el.dataset.t=m.created_at; L.append(el); L.scrollTop=L.scrollHeight;
+  el.dataset.t=m.created_at; L.append(el); if(!L.classList.contains("bulk")) L.scrollTop=L.scrollHeight;
 }
 async function chatMarkRead(cid){
   const { error } = await sb.from("messages").update({read_at:new Date().toISOString()}).eq("client_id",cid).neq("sender_role",chatMine()).is("read_at",null);
@@ -119,7 +119,13 @@ async function openChat(clientId, title){
   L.innerHTML="";
   if(error){ L.innerHTML=`<div class="chat-empty">تعذر تحميل الرسايل</div>`; return; }
   if(!data.length) L.innerHTML=emptyBox("👋","ابدأ المحادثة",S.me.role==="coach"?"ابعت أول رسالة لعميلك – كلمة تشجيع في الأول بتفرق.":"الرسايل بتوصل للكوتش مباشرة – اسأل عن تمرينك أو أكلك في أي وقت.","","es-sm");
-  data.reverse().forEach(chatAppend);
+  if(data.length){
+    L.classList.add("bulk"); data.reverse().forEach(chatAppend); L.classList.remove("bulk");
+    /* entrance cascade: only the newest 10 bubbles animate, with a short stagger; the rest pop in instantly */
+    const bb=[...L.querySelectorAll(".msg,.chat-day")], K=Math.max(0,bb.length-10);
+    bb.forEach((b,i)=>{ if(i<K) b.classList.add("no-in"); else b.style.animationDelay=((i-K)*45)+"ms"; });
+    L.scrollTop=L.scrollHeight;
+  }
   chatMarkRead(clientId);
   const send=async(f)=>{ const { data:m, error:er } = await sb.from("messages").insert({client_id:clientId, sender_role:chatMine(), ...f}).select().single(); if(er){ toast("تعذر الإرسال، جرّب تاني"); return null; } chatAppend(m); return m; };
   $("#chatF").onsubmit=async e=>{
@@ -139,7 +145,7 @@ async function openChat(clientId, title){
   $("#chatMic").onclick=async()=>{
     if(rec&&rec.state==="recording"){ rec.stop(); return; }
     if(!navigator.mediaDevices||!window.MediaRecorder) return toast("التسجيل الصوتي مش مدعوم هنا");
-    try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); const mt=["audio/mp4","audio/webm;codecs=opus","audio/webm"].find(t=>MediaRecorder.isTypeSupported(t))||""; rec=new MediaRecorder(st,mt?{mimeType:mt}:{}); chunks=[]; cancelled=false;
+    try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); const mt=["audio/mp4","audio/webm;codecs=opus","audio/webm"].find(t=>MediaRecorder.isTypeSupported(t))||""; rec=new MediaRecorder(st,mt?{mimeType:mt,audioBitsPerSecond:32000}:{audioBitsPerSecond:32000}); chunks=[]; cancelled=false;
       rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
       rec.onstop=async()=>{ st.getTracks().forEach(t=>t.stop()); const dur=Date.now()-t0; stopUi(); if(cancelled||dur<700) return; const type=rec.mimeType||mt||"audio/mp4"; const blob=new Blob(chunks,{type}); const ext=/mp4/.test(type)?"m4a":"webm"; toast("⏳ بيبعت الصوت…"); const path=await upload(blob,ext,type.split(";")[0]); if(path) await send({kind:"voice",media_path:path,duration_ms:dur,body:"🎤 رسالة صوتية"}); };
       rec.start(); t0=Date.now(); $("#chatRec").classList.remove("hidden"); $("#chatMic").textContent="■"; $("#recT").textContent="0:00"; tick=setInterval(()=>{ const s=Math.floor((Date.now()-t0)/1000); $("#recT").textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); },250);
@@ -233,7 +239,7 @@ ICON.chats='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-wi
   const _t=tabs; tabs=function(){ const t=_t(); if(S.me&&S.me.role==="coach"&&!S.client){ const n=Object.values(CHAT.unread).reduce((a,b)=>a+b,0); t.splice(0,0,["chats","الرسايل"+(n?`<i class="nbdg">${n>9?"9+":n}</i>`:"")]); } return t; };
   const _h=viewHome; viewHome=async function(el){ if(S.me.role==="coach"&&!S.client&&S.tab==="chats") return viewChats(el); return _h.apply(this,arguments); };
 })();
-function chatWhen(t){ const d=new Date(t), n=new Date(); try{ if(d.toDateString()===n.toDateString()) return d.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}); if(n-d<6*864e5) return d.toLocaleDateString("ar-EG",{weekday:"short"}); return d.toLocaleDateString("ar-EG",{day:"numeric",month:"short"}); }catch(_){ return ""; } }
+function chatWhen(t){ try{ return window.dRel?dRel(t):new Date(t).toLocaleString("ar-EG"); }catch(_){ return ""; } }
 async function viewChats(el){
   el.innerHTML=`<div class="mlist"><div class="msearch"><input id="mq" type="search" placeholder="ابحث في المحادثات" aria-label="بحث"></div><div id="mrows"><div class="chat-empty">⏳ بيتحمل…</div></div></div>`;
   const { data } = await sb.from("messages").select("client_id,sender_role,body,kind,created_at").order("created_at",{ascending:false}).limit(600);
@@ -248,4 +254,3 @@ async function viewChats(el){
 }
 (function(){ const _c=closeSheet; closeSheet=function(){ $("#sheet").classList.remove("msgr"); _c.apply(this,arguments); if(S.me?.role==="coach"&&!S.client&&S.tab==="chats"){ try{ render(); }catch(e){} } };
   const _i=chatIncoming; chatIncoming=function(m){ _i.apply(this,arguments); if(S.me?.role==="coach"&&!S.client&&S.tab==="chats"&&$("#sheet").classList.contains("hidden")){ try{ render(); }catch(e){} } }; })();
-

@@ -46,7 +46,7 @@ window.aiChatHook=async function(cid){if(!(await aiConfigured()))return;const f=
 window.aiClientCard=async function(p){const el=document.getElementById("aicH");if(!el)return;if(!(await aiConfigured()))return;
  const {data}=await sb.from("ai_asks").select("question,answer,kind,created_at").eq("user_id",p.id).order("created_at",{ascending:false}).limit(30);
  if(!data||!data.length)return;el.hidden=false;
- const when=t=>{try{return new Date(t).toLocaleString("ar-EG",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})}catch(_){return""}};
+ const when=t=>{try{return window.dDay&&window.dTime?dDay(t)+" "+dTime(t):new Date(t).toLocaleString("ar-EG",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})}catch(_){return""}};
  el.innerHTML=`<div class="card-h"><div class="ic acc">🤖</div><h2>محادثة العميل مع المساعد<small>آخر ${data.length} سؤال · قراءة للكوتش بس</small></h2></div><div class="aich-l" style="height:auto;max-height:380px">`+
   data.reverse().map(r=>`<div class="aich-m me"><p>${esc(r.question)}</p><small>${when(r.created_at)}</small></div><div class="aich-m ai${r.kind==="flag"?" esc":""}"><p>${esc(r.answer)}</p>${r.kind==="flag"?`<small>🔶 اتحوّل ليك</small>`:""}</div>`).join("")+`</div>`};
 })();

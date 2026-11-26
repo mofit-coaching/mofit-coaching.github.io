@@ -168,9 +168,41 @@ function wireBlockReview(p, el){
 
 /* ---------- streaks, weekly goal ring, milestone badges (client home) ---------- */
 const BADGES=[[1,"🌱","أول تمرين"],[5,"💪","٥ تمارين"],[10,"🔥","١٠ تمارين"],[25,"⚡","٢٥ تمرين"],[50,"🏆","٥٠ تمرين"],[100,"🌟","١٠٠ تمرين"]];
+
+/* heatmap styles */
+(function(){ if(document.getElementById("hm-st")) return; const st=document.createElement("style"); st.id="hm-st"; st.textContent=`
+.hm-wrap{margin-top:12px}
+.hm-title{font-size:.72rem;font-weight:800;color:var(--mut,#8A93A6);margin-bottom:6px}
+.hm{display:grid;grid-auto-flow:column;grid-template-rows:repeat(7,1fr);gap:3px;direction:ltr;justify-content:end;overflow-x:auto;padding-bottom:4px;padding-inline:4px}
+.hm-c{width:11px;height:11px;border-radius:3px;background:#EEF0F4;opacity:0;animation:hmPop .35s ease forwards}
+.dark .hm-c{background:#232B3A}
+.hm-c.l1{background:#FFD9BF}.hm-c.l2{background:#FFA66B}.hm-c.l3{background:#FF6B1A}
+.hm-c.today{outline:2px solid #FF6B1A;outline-offset:1px}
+@keyframes hmPop{from{opacity:0;transform:scale(.3)}to{opacity:1;transform:scale(1)}}
+.hm-legend{display:flex;gap:4px;align-items:center;justify-content:flex-end;margin-top:6px;font-size:.62rem;color:var(--mut,#8A93A6)}
+.hm-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
+`; document.head.appendChild(st); })();
+
+/* ---------- training-year heatmap (inside streak card) ---------- */
+function heatmapHTML(p){
+  const W=(window._hmSessions||[]);
+  const cnt={}; W.forEach(s=>{ if(s.log_date) cnt[s.log_date]=(cnt[s.log_date]||0)+1; });
+  const t=today();
+  const start=addDays(t,-(52*7-1));
+  const dow=new Date(start+"T00:00:00").getDay(); // 6=Sat
+  const aligned=addDays(start,-((dow+1)%7)); // rows Sat..Fri
+  let cells=[], k=0;
+  for(let d=aligned; d<=t; d=addDays(d,1)){
+    const n=cnt[d]||0, lvl=n>=3?3:n;
+    const label=window.dDay?dDay(d+"T00:00:00"):d;
+    cells.push(`<div class="hm-c${lvl?" l"+lvl:""}${d===t?" today":""}" style="animation-delay:${Math.min(k*4,900)}ms" title="${label}${n?` · ${n>=3?"3+":n} ${n>2?"تمارين":"تمرين"}`:" · راحة"}"></div>`); k++;
+  }
+  return `<div class="hm-wrap"><div class="hm-title">سجل السنة</div><div class="hm" role="img" aria-label="خريطة التزام السنة">${cells.join("")}</div>
+    <div class="hm-legend">أقل <i style="background:#EEF0F4"></i><i style="background:#FFD9BF"></i><i style="background:#FFA66B"></i><i style="background:#FF6B1A"></i> أكتر</div></div>`;
+}
 async function streakCardHTML(p){
   const { data } = await sb.from("workout_sessions").select("log_date,week").eq("client_id",p.id);
-  const W=data||[];
+  const W=data||[]; window._hmSessions=W;
   const goal=Math.max(1,new Set(S.program.map(e=>e.day_no)).size||3), wkNow=currentWeek(p), cnt={};
   W.forEach(s=>{ cnt[s.week]=(cnt[s.week]||0)+1; });
   const done=cnt[wkNow]||0; let streak=0, w=done>=goal?wkNow:wkNow-1;
@@ -184,6 +216,7 @@ async function streakCardHTML(p){
       <div class="streak-info"><div class="flame ${streak?"on":""}">🔥<span class="num">${streak}</span></div><small>${done>=goal?"✅ هدف الأسبوع اتحقق!":`فاضل ${goal-done} ${goal-done>2?"تمارين":"تمرين"} الأسبوع ده`}</small></div></div>
     <div class="badges">${BADGES.map(b=>`<div class="badge ${total>=b[0]?"got":""}" title="${b[2]}"><i>${b[1]}</i><small>${b[2]}</small></div>`).join("")}</div>
     ${next?`<p class="hint" style="margin:8px 0 0">${next[0]-total} تمرين وتاخد شارة ${next[1]} ${next[2]}</p>`:""}
+    ${heatmapHTML(p)}
     <button class="btn sm ghost block" style="margin-top:10px" onclick="shareStreakCard(this)" data-streak="${streak}" data-total="${total}" data-done="${done}" data-goal="${goal}" data-badge="${earned.length?earned[earned.length-1][1]:""}" data-badgename="${earned.length?earned[earned.length-1][2]:""}">📤 شارك تقدمك</button></div>`;
 }
 function streakAfter(p){ if(window._streakNew){ try{ localStorage.setItem(window._streakKey,window._streakCount); }catch(e){} setTimeout(()=>{ window.mofitCelebrate?mofitCelebrate.badge():(typeof burst==="function"&&burst()); toast("🎖 شارة جديدة اتفتحت!"); },700); } }

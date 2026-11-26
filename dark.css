@@ -28,6 +28,7 @@
   }
 
   html,body{background:var(--base);color:var(--navy)}
+  body::before{display:none}
 
   /* ---- components that used --navy as a SURFACE stay deep navy ------ */
   .top{background:linear-gradient(135deg,#0B1424 0%,#16233C 100%)}
@@ -60,6 +61,7 @@
   main>.card:not(.dark){background:linear-gradient(180deg,#101B31 0%,#0E1830 100%)}
   .card{background:var(--card)}
   input,select,textarea{background:#0C1526;border-color:var(--soft);color:var(--navy)}
+  .datejump-txt{background:#0C1526;border-color:var(--soft);color:var(--navy)}
   input:focus,select:focus,textarea:focus{background:#0C1526;border-color:var(--acc);box-shadow:0 0 0 3px rgba(249,115,22,.22)}
   input::placeholder,textarea::placeholder{color:#5E7195}
   .btn{background:var(--raise);border-color:var(--soft);color:var(--navy);box-shadow:none}
@@ -179,6 +181,14 @@
   html #sheet.msgr input,html #sheet.msgr textarea{background:var(--raise);color:var(--navy)}
   .gh-btn{background:var(--raise);border-color:var(--soft);color:var(--navy)}
   .gh-hero-btn{background:#E9EEF8;color:#0B1424}
+  /* iPhone steps shortcut card was hardcoded light: white card, light text on white in dark mode */
+  .gh-box.off{border-color:var(--soft);background:var(--raise)}
+  .gh-box.on{background:var(--good-soft)}
+  .gh-strip{background:var(--good-soft)}
+  .gh-row b{color:#86EFAC}
+  .gh-sync{color:var(--good)}
+  .gh-re{background:var(--raise);color:var(--good)}
+  .gh-auto,.gh-run{border-top-color:var(--soft)}
 
   /* steps board "needs activation" box was a light orange tint */
   .stp-need{background:rgba(249,115,22,.12)!important;border-color:rgba(249,115,22,.35)!important}
