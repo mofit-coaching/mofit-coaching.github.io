@@ -22,12 +22,21 @@ async function boot(){
   if(me) cacheSet("me",me); else { me=cacheGet("me"); if(!me||me.id!==session.user.id){ $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden"); window.__bootN=(window.__bootN||0)+1; waitCard($("#main"),()=>boot(),Math.min(window.__bootN-1,5)); return; } }
   if(!me.active){ await sb.auth.signOut(); $("#loginView").classList.remove("hidden"); $("#loginErr").textContent=me.signup_days?"طلبك قيد المراجعة – الكوتش هيفعّل حسابك بعد تأكيد الاشتراك":"الحساب غير مفعّل – تواصل مع الكوتش"; return; }
   S.me=me; $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
+  if(me.role==="assistant"){ S.assistant=true; renderAssistantHome(); return; }
   if(!$("#main").children.length) $("#main").innerHTML=skelCards();
   await loadVideos(); flushQueue();
   if(me.role==="coach"){ S.tab="clients"; await Promise.all([loadClients(),loadCoachTemplates(),loadDietTemplates()]); }
   else { await openClient(me); const qt=new URLSearchParams(location.search).get("tab"); if(qt==="supps"&&S.supps?.length){ S.tab="supps"; } else if(qt==="train"||qt==="food"){ S.tab=qt; if(qt==="food") S.date=today(); } }
   render();
   (async()=>{ if(me.role==="client"){ try{ await ensureHealth(); }catch(e){} } setTimeout(maybeOnboard,400); })();
+}
+/* Assistants land here until the coach assigns them work. No client data is loaded or shown. */
+function renderAssistantHome(){
+  const nv=$("#nav"); if(nv) nv.classList.add("hidden");
+  $("#top").innerHTML=`<div class="top-row"><div class="logo">MO<b>FIT</b></div><span class="pill glass">حساب مساعد</span><div class="sp"></div><button class="ibtn" onclick="logout()">خروج</button></div>`;
+  $("#main").innerHTML=`<div class="card" style="text-align:center;padding:30px 20px;margin-top:18px"><div style="font-size:2.6rem;margin-bottom:8px">🤝</div>
+    <h2 style="margin:0 0 6px">أهلاً ${esc((S.me.full_name||"").split(" ")[0])} 👋</h2>
+    <p class="hint" style="margin:0">حسابك كمساعد في MOFIT جاهز.<br>الكوتش هيحدد شغلك من لوحته – أول ما تتكلّف بمهمة هتظهر لك هنا.</p></div>`;
 }
 async function openClient(p){
   S.client=p; S.week=currentWeek(p); S.date=today(); S.bodyWeek=null;
