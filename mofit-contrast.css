@@ -86,3 +86,7 @@ html .login.stageA .login-art .logo-big{position:relative;z-index:1;margin-top:c
 @media(max-width:600px){html .login.stageA .login-art{min-height:46svh}.st-word span{-webkit-text-stroke-width:1.5px}}
 @media(prefers-reduced-motion:reduce){.st-word span,.st-bpm i{animation:none!important}}
 html .login.stageA ~ .st-top,canvas.st-top{position:fixed;inset:0;width:100vw;height:100vh;z-index:60;pointer-events:none}
+
+/* fade the fixed ring and ECG out as the page scrolls (--stf is set by the stage script) */
+html .login.stageA::before{filter:opacity(var(--stf,1))}
+html .login.stageA::after{filter:blur(26px) opacity(var(--stf,1))}
