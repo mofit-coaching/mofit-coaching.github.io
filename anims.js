@@ -9,6 +9,7 @@
    prefers reduced motion.
    ====================================================================== */
 (function(){
+const MYV=((document.currentScript&&document.currentScript.src||"").split("?v=")[1]||"").split("&")[0];
 if(!document.getElementById("mofit-lottie-css")){ const st=document.createElement("style"); st.id="mofit-lottie-css";
 st.textContent=".lg-star{position:absolute;top:8px;inset-inline-start:8px;width:44px;height:44px;pointer-events:none;z-index:3;filter:drop-shadow(0 2px 8px rgba(255,179,0,.5))}.empty .big.lottie-on{width:72px;height:72px;margin:0 auto}"; document.head.appendChild(st); }
 const cache={};
@@ -17,8 +18,19 @@ function load(name){
   if(!cache[name]) cache[name]=fetch("lottie-"+name+".json").then(r=>r.ok?r.json():null).catch(()=>null);
   return cache[name];
 }
+let llib=0; const lcbs=[];
+function ensureLottie(cb){
+  if(typeof lottie!=="undefined") return cb();
+  lcbs.push(cb);
+  if(llib) return; llib=1;
+  const s=document.createElement("script"); s.src="lottie.min.js"+(MYV?"?v="+MYV:"");
+  s.onload=()=>{ llib=2; lcbs.splice(0).forEach(f=>{ try{f();}catch(_){ } }); };
+  s.onerror=()=>{ llib=0; lcbs.length=0; };
+  document.head.appendChild(s);
+}
 function mount(el,name,clear){
-  if(!el||el.dataset.lt||typeof lottie==="undefined"||rm()) return;
+  if(!el||el.dataset.lt||rm()) return;
+  if(typeof lottie==="undefined"){ el.dataset.lt="pending"; ensureLottie(()=>{ delete el.dataset.lt; mount(el,name,clear); }); return; }
   el.dataset.lt=name;
   load(name).then(data=>{
     if(!data||!el.isConnected) return;
