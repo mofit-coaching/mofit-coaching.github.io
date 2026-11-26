@@ -192,7 +192,14 @@
           }
         });
       }
-      var res = { name: P.name, count: reps.length, list: reps, rom: P.rom };
+      /* plausibility: a body-check or pose clip is not a rep set. Skip reps when the body turns (shoulder width collapses), and drop impossible angles or too-quick ones. */
+      var sp = [];
+      fr.forEach(function (f) { var a = f.lms[11], b = f.lms[12]; if (a && b && Math.min(a[2] == null ? 1 : a[2], b[2] == null ? 1 : b[2]) >= MINV) sp.push(Math.abs(a[0] - b[0])); });
+      sp.sort(function (x, y) { return x - y; });
+      var turning = false;
+      if (sp.length >= 6) { var s10 = sp[Math.floor(sp.length * 0.1)], s90 = sp[Math.floor(sp.length * 0.9)]; turning = s90 > 0 && s10 / s90 < 0.45; }
+      reps = turning ? [] : reps.filter(function (r) { return r.bottom >= 25 && r.dur >= 0.6; });
+      var res = { name: P.name, count: reps.length, list: reps, rom: P.rom, turning: turning };
       if (reps.length) {
         var bs = reps.map(function (r) { return r.bottom; });
         var bavg = bs.reduce(function (s, v) { return s + v; }, 0) / bs.length;
@@ -308,7 +315,7 @@
         '<span class="mpr-chip">أعمق زاوية<b>' + n0(R.avgBottom) + '°</b></span>' +
         '<span class="mpr-chip">ثبات العدّات<b>' + n0(R.consistency) + '٪</b></span></div>';
     } else {
-      h += '<div class="mpr-big">0</div><div class="mpr-bigl">مفيش عدّات واضحة</div><div class="mpr-note">الحركة في الفيديو صغيرة أو الجسم مش باين كفاية. جرّب فيديو من الجنب والجسم كله باين.</div>';
+      h += '<div class="mpr-big">0</div><div class="mpr-bigl">مفيش عدّات واضحة</div><div class="mpr-note">'+(R && R.turning ? "الجسم بيلف في الفيديو (زي فحص الجسم أو بوزات)، فمفيش عدّات تتحسب. الزوايا والعزم تحت لسه شغالين." : "الحركة في الفيديو صغيرة أو الجسم مش باين كفاية. جرّب فيديو من الجنب والجسم كله باين.")+'</div>';
     }
     h += "</div>";
     h += '<div class="mpr-card mpr-tone-' + (G ? G.tone : "mid") + '" style="' + delay() + '"><div class="mpr-h">⚖️ خط الجاذبية</div>';
