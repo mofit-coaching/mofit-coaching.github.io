@@ -12,7 +12,7 @@ function profileFields(p={}){
     <label class="f">الطول (سم)<input inputmode="decimal" data-p="height_cm" value="${esc(p.height_cm??"")}"></label>
     <label class="f">الوزن عند البداية (كجم)<input inputmode="decimal" data-p="start_weight" value="${esc(p.start_weight??"")}"></label>
     <label class="f">🎯 الوزن المستهدف (كجم)<input inputmode="decimal" data-p="target_weight" value="${esc(p.target_weight??"")}"></label>
-    <label class="f">تاريخ البداية<input type="date" data-p="start_date" value="${esc(p.start_date??today())}"></label>
+    <label class="f">تاريخ البداية${djField(`<input type="date" data-p="start_date" value="${esc(p.start_date??today())}">`,p.start_date??today())}</label>
     <label class="f">عدد الوجبات<select data-p="meals_per_day">${[2,3,4,5,6].map(n=>`<option ${(+p.meals_per_day||3)===n?"selected":""}>${n}</option>`).join("")}</select></label>
     <label class="f">مستوى النشاط<select data-p="activity_factor">${ACTIVITY.map(([l,v])=>`<option value="${v}" ${(+p.activity_factor||1.2)===v?"selected":""}>${l}</option>`).join("")}</select></label>
     <label class="f">الهدف<select data-p="goal">${GOALS.map(([l])=>`<option ${p.goal===l?"selected":""}>${l}</option>`).join("")}</select></label>
@@ -178,8 +178,8 @@ function setupData(el){
     <div class="card"><div class="card-h"><div class="ic acc">💳</div><h2>الاشتراك<small>${(s=>s?s.icon+" "+esc(s.text):"لم يحدد")(subStatus(p))}</small></h2></div>
       <div class="grid2"><label class="f">الباقة<input id="sPlan" placeholder="شهري / 3 شهور…" value="${esc(p.sub_plan??"")}"></label>
       <label class="f">السعر<input id="sPrice" inputmode="decimal" value="${esc(p.sub_price??"")}"></label>
-      <label class="f">من<input type="date" id="sStart" value="${esc(p.sub_start??"")}"></label>
-      <label class="f">إلى<input type="date" id="sEnd" value="${esc(p.sub_end??"")}"></label></div>
+      <label class="f">من${djField(`<input type="date" id="sStart" value="${esc(p.sub_start??"")}">`,p.sub_start)}</label>
+      <label class="f">إلى${djField(`<input type="date" id="sEnd" value="${esc(p.sub_end??"")}">`,p.sub_end)}</label></div>
       <div class="row" style="margin-bottom:10px">${[[1,0],[3,1],[6,2],[12,6]].map(([m,f])=>`<button class="chip" data-sm="${m+f}" data-plan="${f?esc(planTitle({months:m,free_months:f})):"شهري"}">${f?`${m}+${f} 🎁`:"+1 شهر"}</button>`).join("")}<label class="row" style="gap:6px;margin-inline-start:auto;font-weight:700"><input type="checkbox" id="sPaid" style="width:auto;min-height:0" ${p.sub_paid?"checked":""}> مدفوع</label></div>
       ${"bonus_weeks" in p?`<label class="f">🎁 أسابيع هدية (بتتضاف على أسابيع الباقة)<input id="sBonus" inputmode="numeric" value="${esc(p.bonus_weeks??0)}"></label><p class="hint">الباقة: ${planBaseWeeks(p)??"—"} أسبوع · الإجمالي للعميل: ${planBaseWeeks(p)===null?"مفتوح":maxWeek(p)} أسبوع</p>`:`<p class="hint">الأسابيع الظاهرة للعميل: ${planBaseWeeks(p)===null?"مفتوحة (حدد التواريخ)":planBaseWeeks(p)+" أسبوع"}</p>`}
       <label class="f">ملاحظات الدفع<input id="sNotes" value="${esc(p.sub_notes??"")}"></label>
@@ -189,7 +189,7 @@ function setupData(el){
       <label class="f">الاسم<input data-x="full_name" value="${esc(p.full_name??"")}"></label>${profileFields(p)}
       <label class="f">ملاحظات الكوتش (خاصة – العميل مش بيشوفها)<textarea rows="2" data-x="coach_notes" placeholder="بيتحمل…"></textarea></label>
       <button class="btn primary block" id="pSave">حفظ البيانات</button></div>`;
-  el.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{ const st=$("#sStart").value||today(); $("#sStart").value=st; const d=new Date(st+"T00:00:00"); d.setMonth(d.getMonth()+(+b.dataset.sm)); d.setDate(d.getDate()-1); $("#sEnd").value=d.toISOString().slice(0,10); $("#sPlan").value=b.dataset.plan; });
+  el.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{ const st=$("#sStart").value||today(); $("#sStart").value=st; const d=new Date(st+"T00:00:00"); d.setMonth(d.getMonth()+(+b.dataset.sm)); d.setDate(d.getDate()-1); $("#sEnd").value=d.toISOString().slice(0,10); djSync($("#sStart")); djSync($("#sEnd")); $("#sPlan").value=b.dataset.plan; });
   el.insertAdjacentHTML("afterbegin",healthCard(p)+painCard(p)+'<div class="card" id="aicH" hidden></div>'); fillCoachNote(el,p); el.insertAdjacentHTML("beforeend",assessmentCardHTML(p)); wireAssessment($("#ohsa"),p);
   if(typeof aiClientCard==="function") aiClientCard(p);
   el.querySelectorAll("[data-pres]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("client_events").update({resolved_at:new Date().toISOString()}).eq("id",b.dataset.pres); if(error) return toast("تعذر الحفظ"); await loadEvents(); toast("تم ✓"); setupData(el); });
