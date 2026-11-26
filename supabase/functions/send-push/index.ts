@@ -162,6 +162,63 @@ Deno.serve(async (req) => {
       return out({ ok: true, missing: missing.length, ...r });
     }
 
+    if (b.action === "subs") {
+      // subscription renewal reminders (Mohammed's round-6 pick, Nov 26):
+      // clients get a push exactly 3 days, 1 day and on the day their sub_end
+      // arrives; the coach gets one morning digest of everything that needs
+      // a renewal follow-up. Days are computed on the Africa/Cairo calendar.
+      const todayStr = new Date().toLocaleDateString("en-CA", { timeZone: "Africa/Cairo" });
+      const todayMs = new Date(todayStr + "T00:00:00Z").getTime();
+      const dayMs = 86400000;
+      const { data: clients } = await admin.from("profiles")
+        .select("id,full_name,sub_end,sub_paid")
+        .eq("role", "client").eq("active", true).not("sub_end", "is", null);
+      const rows = (clients || []).map((c: any) => ({
+        id: c.id,
+        left: Math.round((new Date(String(c.sub_end).slice(0, 10) + "T00:00:00Z").getTime() - todayMs) / dayMs),
+        paid: !!c.sub_paid,
+      }));
+
+      // client pushes: exactly T-3, T-1, T-0 (each fires once per cycle)
+      let clientSent = 0;
+      for (const r of rows.filter((r) => r.left === 3 || r.left === 1 || r.left === 0)) {
+        const { data: subs } = await admin.from("push_subscriptions")
+          .select("endpoint,p256dh,auth").eq("user_id", r.id);
+        if (!subs?.length) continue;
+        const note = r.left === 0
+          ? { title: "اشتراكك بينتهي النهارده ⏳", body: "جدد مع الكوتش النهارده عشان تكمل برنامجك من غير ما تفصل.", tag: "mofit-sub-end0", url: "./#prices" }
+          : { title: r.left === 1 ? "اشتراكك باقيله يوم واحد 📅" : "اشتراكك باقيله 3 أيام 📅", body: "جدد بدري عشان متوقفش تقدمك - التجديد بضغطة من صفحة الأسعار.", tag: "mofit-sub-end" + r.left, url: "./#prices" };
+        const res = await sendAll(vapid, subs, note, admin);
+        clientSent += res.sent;
+      }
+
+      // coach digest: expired, expiring within 7 days, or started-but-unpaid
+      const watch = rows.filter((r) => r.left < 0 || r.left <= 7 || !r.paid);
+      let coachSent = 0;
+      if (watch.length) {
+        const { data: coaches } = await admin.from("profiles").select("id").eq("role", "coach").eq("active", true);
+        const ids = (coaches || []).map((c: any) => c.id);
+        const { data: subs } = await admin.from("push_subscriptions")
+          .select("endpoint,p256dh,auth").in("user_id", ids);
+        if (subs?.length) {
+          const expired = watch.filter((r) => r.left < 0).length;
+          const soon = watch.filter((r) => r.left >= 0 && r.left <= 7).length;
+          const unpaid = watch.filter((r) => !r.paid).length;
+          const parts: string[] = [];
+          if (soon) parts.push(soon === 1 ? "اشتراك بينتهي خلال أسبوع" : soon + " اشتراكات بتنتهي خلال أسبوع");
+          if (expired) parts.push(expired === 1 ? "اشتراك منتهي" : expired + " اشتراكات منتهية");
+          if (unpaid) parts.push(unpaid === 1 ? "واحد غير مدفوع" : unpaid + " غير مدفوع");
+          const res = await sendAll(vapid, subs, {
+            title: "💳 متابعة الاشتراكات",
+            body: parts.join(" · ") + " - افتح تبويب الاشتراكات للمتابعة",
+            url: "./?tab=subs", tag: "mofit-subs-digest-" + todayStr,
+          }, admin);
+          coachSent = res.sent;
+        }
+      }
+      return out({ ok: true, clients_notified: clientSent, coach_notified: coachSent, watching: watch.length });
+    }
+
     return out({ error: "bad_action" }, 400);
   } catch (e) {
     return out({ error: "server" }, 500);
