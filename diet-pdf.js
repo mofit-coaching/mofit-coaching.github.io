@@ -47,7 +47,7 @@ async function build(p){
   const date=new Date().toLocaleDateString("ar-EG",{day:"numeric",month:"long",year:"numeric"});
   return `<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><title>خطة-الدايت-${esc(p.full_name||"")}</title><link rel="stylesheet" href="${new URL("fonts.css",document.baseURI).href}"><style>${PCSS}</style></head><body>
   <div class="hd"><div><b>MO<i>FIT</i></b><small>خطة التغذية</small></div><div style="text-align:left"><b style="font-size:16px;font-family:inherit">${esc(p.full_name||"")}</b><small>${date}</small></div></div>
-  <h1>خطة الأكل اليومية</h1><div class="sub">${maxMeal} وجبات · الأرقام محسوبة من أصناف الخطة</div>
+  <h1>خطة الأكل اليومية</h1><div class="sub">${N(maxMeal)} وجبات · الأرقام محسوبة من أصناف الخطة</div>
   <div class="tot"><div><b>${N(tot.kcal)}</b><span>سعر حراري${t.kcal?" · الهدف "+N(t.kcal):""}</span></div><div><b>${N(tot.P)}</b><span>بروتين جم${t.P?" · الهدف "+N(t.P):""}</span></div><div><b>${N(tot.C)}</b><span>كارب جم${t.C?" · الهدف "+N(t.C):""}</span></div><div><b>${N(tot.F)}</b><span>دهون جم${t.F?" · الهدف "+N(t.F):""}</span></div></div>
   ${h}<div class="ft">MOFIT · تابع تقدمك من التطبيق</div></body></html>`;
 }
