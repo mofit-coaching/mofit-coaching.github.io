@@ -6,6 +6,9 @@
 const st=document.createElement("style");
 st.textContent=`
 .sub,th,.login-art p,.pill,h1,h2,h3{letter-spacing:0}
+@supports(height:100dvh){.login{min-height:100dvh}}
+h1,h2,h3{text-wrap:balance}
+.stat .v,.lift .num,.mlg-r b,.wu-n{font-variant-numeric:tabular-nums}
 input[type=email],input[type=tel],input[type=password],input[type=url],input[type=number]{direction:ltr;text-align:end}
 input[type=email]::placeholder,input[type=tel]::placeholder,input[type=password]::placeholder,input[type=number]::placeholder{direction:ltr;text-align:end}
 `;
