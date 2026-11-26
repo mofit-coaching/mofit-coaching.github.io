@@ -333,15 +333,22 @@ async function viewTrain(el){
 /* ======================================================================
    NUTRITION (day log + coach plan) — also used as the plan editor
    ====================================================================== */
+function favFoods(){ try{ const v=JSON.parse(localStorage.getItem("mofitFavFoods")||"[]"); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function favFoodToggle(food){ const fv=favFoods(), i=fv.findIndex(x=>x.id===food.id); if(i>=0) fv.splice(i,1); else { fv.unshift(food); if(fv.length>20) fv.length=20; } try{ localStorage.setItem("mofitFavFoods",JSON.stringify(fv)); }catch(e){} return i<0; }
 function openFoodPicker(title, onPick, opts={}){
   const body=openSheet(`<div class="between"><b>${esc(title)}</b><button class="btn sm ghost" data-close>✕</button></div>
     <input id="fpQ" placeholder="🔍 اكتب اسم الصنف (حرفين على الأقل)…" style="margin-top:10px" autocomplete="off"><div id="fpRes" style="margin-top:8px"></div>`);
   body.querySelector("[data-close]").onclick=closeSheet;
   const q=$("#fpQ"), res=$("#fpRes"); let timer; setTimeout(()=>q.focus(),100);
+  const rowHTML=x=>{ const u=unitInfo(x); return `<div class="food-r" data-id="${x.id}"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(x.name)}<small>${u.base}: <b>${fmt(u.per.kcal)} kcal</b> · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}</small></div><span class="pill">${esc(x.unit)}</span></div>`; };
+  const showFavs=()=>{ const fv=favFoods();
+    res.innerHTML=fv.length?`<div class="sub" style="margin-top:4px">⭐ مفضلتك – دوس عليها تسجّل على طول</div>`+fv.map(rowHTML).join(""):"";
+    res.querySelectorAll("[data-id]").forEach(d=>d.onclick=()=>pickQty(fv.find(x=>x.id==d.dataset.id))); };
+  showFavs();
   q.oninput=()=>{ clearTimeout(timer); timer=setTimeout(async()=>{
-    const term=q.value.trim(); if(term.length<2){ res.innerHTML=""; return; }
+    const term=q.value.trim(); if(term.length<2){ showFavs(); return; }
     const { data:f } = await sb.rpc("search_foods",{q:term});
-    res.innerHTML=(f||[]).length?f.map(x=>{ const u=unitInfo(x); return `<div class="food-r" data-id="${x.id}"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(x.name)}<small>${u.base}: <b>${fmt(u.per.kcal)} kcal</b> · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}</small></div><span class="pill">${esc(x.unit)}</span></div>`; }).join("")
+    res.innerHTML=(f||[]).length?f.map(rowHTML).join("")
       :emptyBox("🔎","مفيش نتائج","اكتب اسم الصنف بشكل تاني"+(S.me.role==="coach"?"، أو ضيفه من تبويب الأطعمة":"")+".","","es-sm");
     res.querySelectorAll("[data-id]").forEach(d=>d.onclick=()=>pickQty(f.find(x=>x.id==d.dataset.id)));
   },250); };
@@ -349,7 +356,7 @@ function openFoodPicker(title, onPick, opts={}){
   function pickQty(food){
     const u=unitInfo(food);
     body.innerHTML=`<div class="between"><button class="btn sm ghost" data-back>→ رجوع</button><button class="btn sm ghost" data-close>✕</button></div>
-      <b style="font-size:1.05rem">${esc(food.name)}</b>
+      <div class="between"><b style="font-size:1.05rem">${esc(food.name)}</b><button class="btn sm ghost" id="fpStar" title="حفظ في المفضلة">${favFoods().some(x=>x.id===food.id)?"⭐":"☆"}</button></div>
       <div class="unitbox"><span class="u">${u.base}</span> <span style="color:#CBD5E1;font-size:.8rem">${u.cnt?"القيم لكل "+esc(food.unit)+" واحد":"القيم لكل 100 "+esc(food.unit)}</span>
         <div class="g4"><div><b class="num">${fmt(u.per.kcal)}</b><small>سعرات</small></div><div><b class="num">${fmt(u.per.P,1)}</b><small>بروتين</small></div><div><b class="num">${fmt(u.per.C,1)}</b><small>كارب</small></div><div><b class="num">${fmt(u.per.F,1)}</b><small>دهون</small></div></div></div>
       <label class="f">${u.qtyLabel}</label>
@@ -358,6 +365,7 @@ function openFoodPicker(title, onPick, opts={}){
       <div class="card" style="background:var(--acc-soft);box-shadow:none;margin:10px 0" id="fpPrev"></div>
       <button class="btn primary block" id="fpAdd">إضافة</button>`;
     const qi=$("#fpQty"), step=u.cnt?1:10;
+    const starB=$("#fpStar"); if(starB) starB.onclick=()=>{ const on=favFoodToggle(food); starB.textContent=on?"⭐":"☆"; toast(on?"⭐ اتضاف للمفضلة":"اتشال من المفضلة"); };
     if(opts.match&&food.kcal>0) qi.value=roundQty(opts.match.kcal/(food.kcal/100),food.unit);
     const prev=()=>{ const qv=num(qi.value)||0, c=foodCalc(food, qv); $("#fpPrev").innerHTML=`<div class="between"><b>${fmt(qv,1)} ${esc(food.unit)}</b><b style="color:var(--acc)" class="num">${fmt(c.kcal)} kcal</b></div><div class="muted">بروتين ${fmt(c.protein,1)} · كارب ${fmt(c.carbs,1)} · دهون ${fmt(c.fat,1)} جم</div>${mineralLine(food,qv)}`; };
     qi.oninput=prev; prev();
