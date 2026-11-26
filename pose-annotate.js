@@ -510,10 +510,10 @@ video.addEventListener("loadedmetadata", anRestoreAuto, { once: true });
 
 const anEnsureAuto = async mode => {
   if (!window.apInit) {
-    toast("⏳ بيحمّل نموذج التحليل أول مرة (~١٦ ميجا، بعدها بيفتح فوراً)…");
+    toast("⏳ بيحمّل نموذج التحليل أول مرة (~١٧ ميجا، بعدها بيشتغل فوراً حتى أوفلاين)…");
     await anLoadScript("pose-auto.js");
   }
-  return apInit("vendor/pose", AN.auto.variant, null, mode);
+  return apInit(AN.auto.variant, null, mode);
 };
 
 AN.variantGo = async () => {
