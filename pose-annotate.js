@@ -226,6 +226,176 @@ function anStroke(ctx, W, H, s, dim) {
 const ANS_BONES = [[11,12],[11,13],[13,15],[12,14],[14,16],[11,23],[12,24],[23,24],[23,25],[25,27],[24,26],[26,28],[27,29],[29,31],[28,30],[30,32],[0,11],[0,12]];
 const ANS_MARKABLE = [11,12,13,14,15,16,23,24,25,26,27,28];
 const ANS_LM = { 11:"الكتف الشمال",12:"الكتف اليمين",13:"الكوع الشمال",14:"الكوع اليمين",15:"الرسغ الشمال",16:"الرسغ اليمين",23:"الورك الشمال",24:"الورك اليمين",25:"الركبة الشمالية",26:"الركبة اليمنى",27:"الكاحل الشمال",28:"الكاحل اليمين" };
+/* ---------- biomechanics overlay: gravity line, relative joint torque, motion intensity ----------
+   Pure math on saved landmarks (also used by clients, no model). Distances are measured in
+   pixel space; torque is RELATIVE (moment arm x distal mass share, as % of trunk length x body
+   weight) because the real body weight and any bar load are not known. */
+const ANB_SEG = [ // [mass share, a, b] : segment centre = midpoint(a,b)
+  [0.081, 7, 8], [0.497, "sh", "hp"],
+  [0.028, 11, 13], [0.028, 12, 14], [0.022, 13, 15], [0.022, 14, 16],
+  [0.1, 23, 25], [0.1, 24, 26], [0.0465, 25, 27], [0.0465, 26, 28], [0.0145, 27, 31], [0.0145, 28, 32]];
+const ANB_ANG = [["الكوع", 11, 13, 15, 12, 14, 16], ["الركبة", 23, 25, 27, 24, 26, 28], ["الكتف", 23, 11, 13, 24, 12, 14], ["الورك", 11, 23, 25, 12, 24, 26]];
+function anbPts(lms, ar) {
+  const f = i => { const p = lms[i]; return p && (p[2] == null ? 1 : p[2]) >= 0.4 ? { x: p[0] * ar, y: p[1] } : null; };
+  const mid = (a, b) => (a && b) ? { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 } : (a || b || null);
+  return { f, mid };
+}
+function anbAnalyze(lms, ar) {
+  const { f, mid } = anbPts(lms, ar);
+  const sh = mid(f(11), f(12)), hp = mid(f(23), f(24));
+  if (!sh || !hp) return null;
+  const trunk = Math.hypot(sh.x - hp.x, sh.y - hp.y);
+  if (trunk < 0.02) return null;
+  const pt = k => k === "sh" ? sh : k === "hp" ? hp : f(k);
+  // whole-body centre of mass
+  let M = 0, cx = 0, cy = 0;
+  const segC = [];
+  for (const [m, a, b] of ANB_SEG) {
+    const c = mid(pt(a), pt(b)); segC.push(c);
+    if (c) { M += m; cx += m * c.x; cy += m * c.y; }
+  }
+  if (M < 0.5) return null;
+  const com = { x: cx / M, y: cy / M };
+  const feet = [27, 28, 29, 30, 31, 32].map(f).filter(Boolean);
+  const ground = feet.length ? Math.max(...feet.map(p => p.y)) : Math.max(sh.y, hp.y) + trunk * 1.6;
+  const bos = feet.length ? [Math.min(...feet.map(p => p.x)), Math.max(...feet.map(p => p.x))] : null;
+  // joint torque (relative): distal mass share x horizontal arm to its centre of mass
+  const dist = idx => { let m = 0, x = 0, y = 0; idx.forEach(i => { const c = segC[i]; if (c) { m += ANB_SEG[i][0]; x += ANB_SEG[i][0] * c.x; y += ANB_SEG[i][0] * c.y; } }); return m > 0 ? { m, x: x / m, y: y / m } : null; };
+  const L = { elbow: [[4], [5]], shoulder: [[2, 4], [3, 5]], knee: [[8, 10], [9, 11]], hip: [[1, 0, 2, 3, 4, 5], [1, 0, 2, 3, 4, 5]] };
+  // indices: 0 head,1 trunk,2 Larm,3 Rarm,4 Lfore,5 Rfore,6 Lthigh,7 Rthigh,8 Lshank,9 Rshank,10 Lfoot,11 Rfoot
+  const defs = [
+    ["الكوع", 13, dist([4]), 0], ["الكوع", 14, dist([5]), 1],
+    ["الكتف", 11, dist([2, 4]), 0], ["الكتف", 12, dist([3, 5]), 1],
+    ["الركبة", 25, dist([8, 10]), 0], ["الركبة", 26, dist([9, 11]), 1],
+    ["الورك", 23, dist([1, 0, 2, 3, 4, 5]), 0], ["الورك", 24, dist([1, 0, 2, 3, 4, 5]), 1]];
+  const torques = [];
+  for (const [name, j, d, side] of defs) {
+    const J = f(j); if (!J || !d) continue;
+    const arm = d.x - J.x;
+    torques.push({ name, side, j, arm, val: Math.abs(arm) * d.m / trunk * 100, from: J, to: { x: d.x, y: J.y } });
+  }
+  return { com, ground, bos, trunk, torques, inside: bos ? (com.x >= bos[0] && com.x <= bos[1]) : null };
+}
+function anbAngles(lms) {
+  const out = [];
+  for (const [nm, a, b, c, a2, b2, c2] of ANB_ANG) {
+    [[a, b, c, 0], [a2, b2, c2, 1]].forEach(([i, j, k, side]) => {
+      const A = lms[i], B = lms[j], C = lms[k]; if (!A || !B || !C) return;
+      if (Math.min(A[2] ?? 1, B[2] ?? 1, C[2] ?? 1) < 0.4) return;
+      let d = Math.abs((Math.atan2(C[1] - B[1], C[0] - B[0]) - Math.atan2(A[1] - B[1], A[0] - B[0])) * 180 / Math.PI);
+      if (d > 180) d = 360 - d;
+      out.push({ name: nm, side, j, deg: Math.round(d) });
+    });
+  }
+  return out;
+}
+const ANB_SIDE = ["الشمال", "اليمين"];
+/* per-frame speed of limbs (trunk lengths per second) */
+function anbSpeeds(frames, ar) {
+  const J = [15, 16, 27, 28];
+  const out = [];
+  for (let i = 0; i < frames.length; i++) {
+    const a = frames[i], p = frames[i - 1];
+    let v = null;
+    if (p && a.t > p.t) {
+      const A = anbAnalyze(a.lms, ar); const tr = A ? A.trunk : null;
+      if (tr) {
+        let s = 0, n = 0;
+        J.forEach(k => { const u = a.lms[k], w = p.lms[k]; if (u && w && (u[2] ?? 1) > 0.4 && (w[2] ?? 1) > 0.4) { s += Math.hypot((u[0] - w[0]) * ar, u[1] - w[1]) / tr / (a.t - p.t); n++; } });
+        if (n) v = s / n;
+      }
+    }
+    out.push(v);
+  }
+  return out;
+}
+/* extra series for the chart: relative torque per joint + movement intensity */
+function anbSeries(frames, ar) {
+  const m = {}, add = (n, t, v, u) => { (m[n] = m[n] || { name: n, unit: u, pts: [] }).pts.push([t, v]); };
+  const sp = anbSpeeds(frames, ar);
+  frames.forEach((fr, i) => {
+    const A = anbAnalyze(fr.lms, ar); if (!A) return;
+    A.torques.forEach(q => add("عزم " + q.name + " " + ANB_SIDE[q.side], fr.t, +q.val.toFixed(1), "%"));
+    if (sp[i] != null) add("شدة الحركة", fr.t, +sp[i].toFixed(2), "/s");
+  });
+  return Object.values(m).filter(s => s.pts.length > 3);
+}
+function anbSpeedColor(v) { // 0..2.5 trunk/s : blue -> yellow -> red
+  const k = Math.max(0, Math.min(1, v / 2.5));
+  return "hsl(" + Math.round(210 - k * 210) + ",95%," + Math.round(55 + (1 - Math.abs(k - .5) * 2) * 0) + "%)";
+}
+function anbOverlay(ctx, W, H, lms, track, t) {
+  if (!lms) return;
+  const ar = W / H;
+  const A = anbAnalyze(lms, ar); if (!A) return;
+  const X = x => x / ar * W, Y = y => y * H;
+  const fs = Math.max(11, W / 46);
+  ctx.save();
+  ctx.font = `700 ${fs}px system-ui,sans-serif`; ctx.direction = "ltr"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
+  ctx.shadowColor = "rgba(0,0,0,.7)"; ctx.shadowBlur = 3;
+  // motion trails (wrists + ankles), coloured by speed
+  if (track && track.frames && t != null) {
+    const fr = track.frames.filter(f => f.t <= t && f.t > t - 1.2);
+    [15, 16, 27, 28].forEach(k => {
+      for (let i = 1; i < fr.length; i++) {
+        const a = fr[i - 1].lms[k], b = fr[i].lms[k]; if (!a || !b || (a[2] ?? 1) < 0.4 || (b[2] ?? 1) < 0.4) continue;
+        const sp = Math.hypot((b[0] - a[0]) * ar, b[1] - a[1]) / A.trunk / Math.max(0.02, fr[i].t - fr[i - 1].t);
+        ctx.strokeStyle = anbSpeedColor(sp); ctx.globalAlpha = 0.25 + 0.75 * i / fr.length; ctx.lineWidth = Math.max(2, W / 150) * (0.5 + i / fr.length);
+        ctx.lineCap = "round";
+        ctx.beginPath(); ctx.moveTo(a[0] * W, a[1] * H); ctx.lineTo(b[0] * W, b[1] * H); ctx.stroke();
+      }
+    });
+    ctx.globalAlpha = 1;
+  }
+  // gravity line through the centre of mass + base of support
+  const cx = X(A.com.x), cy = Y(A.com.y), gy = Y(A.ground);
+  const ok = A.inside !== false;
+  ctx.strokeStyle = ok ? "#22C55E" : "#EF4444"; ctx.fillStyle = ctx.strokeStyle; ctx.lineWidth = Math.max(2, W / 260);
+  ctx.setLineDash([8, 6]); ctx.beginPath(); ctx.moveTo(cx, Math.max(0, cy - A.trunk * H * 1.2)); ctx.lineTo(cx, gy); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.arc(cx, cy, Math.max(5, W / 90), 0, 7); ctx.fill(); ctx.lineWidth = 2; ctx.strokeStyle = "#0A1020"; ctx.stroke();
+  if (A.bos) { ctx.fillStyle = ok ? "rgba(34,197,94,.9)" : "rgba(239,68,68,.9)"; ctx.fillRect(X(A.bos[0]), gy, Math.max(2, X(A.bos[1]) - X(A.bos[0])), Math.max(3, W / 200)); }
+  ctx.fillStyle = ok ? "#86EFAC" : "#FCA5A5";
+  ctx.fillText("↓ g", Math.min(W - fs * 3, cx + 8), Math.min(H - 6, gy - 6));
+  // torque arms: horizontal arm from joint to the centre of its distal mass
+  const shown = [];
+  A.torques.forEach(q => {
+    const x1 = X(q.from.x), x2 = X(q.to.x), y = Y(q.from.y);
+    if (Math.abs(x2 - x1) < 4) return;
+    const k = Math.min(1, q.val / 18);
+    ctx.strokeStyle = `rgba(${Math.round(250)},${Math.round(204 - 140 * k)},${Math.round(21 + 20 * k)},.95)`;
+    ctx.lineWidth = Math.max(2, W / 200 * (1 + k * 1.6));
+    ctx.beginPath(); ctx.moveTo(x1, y); ctx.lineTo(x2, y); ctx.stroke();
+    const dir = x2 > x1 ? 1 : -1, hs = Math.max(6, W / 70);
+    ctx.beginPath(); ctx.moveTo(x2, y); ctx.lineTo(x2 - dir * hs, y - hs * .6); ctx.lineTo(x2 - dir * hs, y + hs * .6); ctx.closePath(); ctx.fillStyle = ctx.strokeStyle; ctx.fill();
+    shown.push(q);
+  });
+  // labels: angle + torque per joint, stacked away from overlaps
+  const angs = anbAngles(lms), placed = [];
+  const byJ = {}; angs.forEach(a => { byJ[a.j] = a; });
+  const labelJ = {}; A.torques.forEach(q => { labelJ[q.j] = q; }); angs.forEach(a => { if (!labelJ[a.j]) labelJ[a.j] = null; });
+  Object.keys(labelJ).forEach(j => {
+    const p = lms[j]; if (!p) return;
+    const a = byJ[j], q = labelJ[j];
+    const txt = (a ? a.deg + "°" : "") + (q ? (a ? "  " : "") + "τ" + q.val.toFixed(0) : "");
+    if (!txt) return;
+    const tw = ctx.measureText(txt).width;
+    let lx = p[0] * W < W / 2 ? p[0] * W - tw - 14 : p[0] * W + 14, ly = p[1] * H - 8;
+    lx = Math.max(4, Math.min(W - tw - 8, lx));
+    let n = 0; while (placed.some(o => Math.abs(o.ly - ly) < fs * 1.4 && Math.abs(o.lx - lx) < tw + 10) && n++ < 8) ly += fs * 1.4;
+    placed.push({ lx, ly });
+    ctx.shadowBlur = 0; ctx.fillStyle = "rgba(10,16,32,.8)"; ctx.beginPath(); ctx.roundRect(lx - 4, ly - fs * 1.0, tw + 8, fs * 1.35, 5); ctx.fill();
+    ctx.fillStyle = "#FACC15"; ctx.fillText(txt, lx, ly);
+  });
+  // legend
+  const lg = ["● مركز الثقل + خط الجاذبية" + (A.inside === false ? " (خارج قاعدة الارتكاز)" : ""), "τ = عزم نسبي (ذراع × وزن الجزء)", "ذيل ملون = سرعة الحركة"];
+  ctx.shadowBlur = 0; ctx.font = `600 ${Math.max(10, W / 58)}px system-ui,sans-serif`;
+  const lh = Math.max(13, W / 46), lw = Math.max(...lg.map(s => ctx.measureText(s).width)) + 14;
+  ctx.fillStyle = "rgba(10,16,32,.7)"; ctx.beginPath(); ctx.roundRect(W - lw - 6, 6, lw, lh * lg.length + 8, 6); ctx.fill();
+  ctx.direction = "rtl"; ctx.textAlign = "right";
+  ctx.fillStyle = "#E2E8F0"; lg.forEach((s, i) => ctx.fillText(s, W - 13, 6 + lh * (i + 1)));
+  ctx.restore();
+}
+
 function anSkeleton(ctx, W, H, s, dim, quiet) {
   const lms = s.lms || [];
   const P = i => { const p = lms[i]; return p ? { x: p[0] * W, y: p[1] * H, v: p[2] == null ? 1 : p[2] } : null; };
@@ -280,6 +450,7 @@ function anSkeleton(ctx, W, H, s, dim, quiet) {
     for (const q of placed) ctx.fillText(q.label, q.lx, q.ly);
   }
   ctx.restore();
+  if (!quiet && !dim && s.lms) { try { anbOverlay(ctx, W, H, s.lms, null, null); } catch (_) {} }
 }
 function anContainDraw(ctx, canvas, img) {
   const W = canvas.width, H = canvas.height;
@@ -315,8 +486,9 @@ function anChartDraw(canvas, track, curT, selName) {
   const ser = (track.series || []).find(x => x.name === selName);
   const dur = Math.max(0.01, ...track.frames.map(f => f.t));
   if (!ser || !ser.pts.length) return;
-  let mn = 180, mx = 0; ser.pts.forEach(pt => { mn = Math.min(mn, pt[1]); mx = Math.max(mx, pt[1]); });
-  if (mx - mn < 10) { mn = Math.max(0, mn - 5); mx = Math.min(180, mx + 5); }
+  let mn = Infinity, mx = -Infinity; ser.pts.forEach(pt => { mn = Math.min(mn, pt[1]); mx = Math.max(mx, pt[1]); });
+  const unit = ser.unit || "°", span = unit === "°" ? 10 : (unit === "%" ? 2 : 0.2);
+  if (mx - mn < span) { mn = Math.max(0, mn - span / 2); mx = mx + span / 2; if (unit === "°") mx = Math.min(180, mx); }
   const X = t => (t / dur) * W, Y = d => H - 6 * dpr - ((d - mn) / (mx - mn)) * (H - 22 * dpr);
   ctx.strokeStyle = "rgba(148,163,184,.15)"; ctx.lineWidth = 1;
   for (let g = 0; g <= 2; g++) { const y = Y(mn + (mx - mn) * g / 2); ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
@@ -325,7 +497,7 @@ function anChartDraw(canvas, track, curT, selName) {
   ctx.stroke();
   ctx.fillStyle = "#94A3B8"; ctx.font = `700 ${11 * dpr}px system-ui,sans-serif`;
   ctx.direction = "ltr"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
-  ctx.fillText(mx + "°", 4 * dpr, 12 * dpr); ctx.fillText(mn + "°", 4 * dpr, H - 2 * dpr);
+  const fmt = v => (unit === "°" ? Math.round(v) : +v.toFixed(1)) + unit; ctx.fillText(fmt(mx), 4 * dpr, 12 * dpr); ctx.fillText(fmt(mn), 4 * dpr, H - 2 * dpr);
   ctx.strokeStyle = "#38BDF8"; ctx.lineWidth = 1.5 * dpr;
   ctx.beginPath(); ctx.moveTo(X(curT), 0); ctx.lineTo(X(curT), H); ctx.stroke();
 }
@@ -391,7 +563,7 @@ function anDrawTools(root) {
        <button class="an-tool" data-an="undo" title="تراجع">↩ تراجع</button>
        <button class="an-tool" data-an="clear" title="مسح اللقطة">🗑 مسح</button>
        <span style="flex:none;width:4px"></span>
-       <button class="an-tool" data-an="auto" title="تحليل تلقائي للقطة الحالية">🤖 تحليل</button>
+       <button class="an-tool" data-an="auto" title="تحليل تلقائي كامل للفيديو: زوايا، عزم، جاذبية، شدة">🤖 تحليل</button>
        <button class="an-tool" data-an="track" title="تتبع الزوايا في الفيديو كله">📈 تتبع</button>
        <button class="an-tool" data-an="photo" title="تحليل صورة من الجهاز">📷 صورة</button>
        <button class="an-tool" data-an="variant" title="دقة النموذج">⚙️ خفيف</button>
@@ -487,7 +659,7 @@ async function openAnnotateStudio(checkin, videoUrl, moments, onSaved) {
       const cb = root.querySelector(".an-chartbar");
       if (cb && cb.style.display !== "none") {
         const f = anTrackFrameAt(AN.auto.track, video.currentTime);
-        if (f && Math.abs(f.t - video.currentTime) < 0.4) anSkeleton(ctx, W, H, { lms: f.lms, joints: [], angles: [] }, false, true);
+        if (f && Math.abs(f.t - video.currentTime) < 0.4) { anSkeleton(ctx, W, H, { lms: f.lms, joints: [], angles: [] }, false, true); try { anbOverlay(ctx, W, H, f.lms, AN.auto.track, video.currentTime); } catch (_) {} }
       }
     }
     anChartTick(root, video.currentTime);
@@ -537,7 +709,10 @@ const anAutoOff = silent => {
 };
 
 AN.autoGo = async () => {
-  if (AN.auto.mode === "tracking") return toast("استنى التتبع يخلص الأول");
+  if (AN.auto.mode === "tracking") return toast("استنى التحليل يخلص الأول");
+  if (AN.auto.mode === "loading") return;
+  /* one tap = full automatic analysis of the whole video (angles, torque, gravity, intensity) */
+  if (video.duration > 0) { anAutoOff(true); return AN.trackGo(); }
   if (AN.auto.mode !== "off") { anAutoOff(); return; }
   video.pause();
   AN.auto.mode = "loading";
@@ -581,13 +756,16 @@ const anSyncSkel = () => {
 AN.trackGo = async () => {
   if (AN.auto.mode === "tracking") return;
   AN.auto.mode = "tracking";
-  toast("📈 التتبع شغال، الفيديو بيعمل مسح لوحده…");
+  toast("🤖 بحلّل الفيديو كله: زوايا، عزم، خط الجاذبية، شدة الحركة… ثانية واحدة بعد ما الفيديو يخلص");
   let track = null;
   try {
     await anEnsureAuto("VIDEO");
     const t0 = AN.video.currentTime;
+    video.pause(); video.currentTime = 0;
+    await new Promise(r => { if (video.readyState >= 2 && !video.seeking) return r(); video.addEventListener("seeked", r, { once: true }); setTimeout(r, 1500); });
     const res = await apTrack(video, 10, p => { const pb = root.querySelector('[data-an="play"]'); if (pb) pb.textContent = Math.round(p * 100) + "٪"; });
-    track = { fps: res.fps, frames: res.frames, series: apSeries(res.frames) };
+    const ar = (video.videoWidth && video.videoHeight) ? video.videoWidth / video.videoHeight : 0.5625;
+    track = { fps: res.fps, ar, frames: res.frames, series: apSeries(res.frames).map(x => ({ ...x, unit: "°" })).concat(anbSeries(res.frames, ar)) };
     video.currentTime = t0;
     const pb = root.querySelector('[data-an="play"]'); if (pb) pb.textContent = "▶";
   } catch (e) {
@@ -601,7 +779,7 @@ AN.trackGo = async () => {
   AN.chartSel = null;
   AN.dirty = true;
   anShowChart(root, video);
-  toast("✓ التتبع خلص: " + track.frames.length + " لقطة — اختار الزاوية من فوق");
+  toast("✓ التحليل خلص: " + track.frames.length + " لقطة. اختار الزاوية أو العزم أو الشدة من فوق");
 };
 
 AN.photoGo = () => {
