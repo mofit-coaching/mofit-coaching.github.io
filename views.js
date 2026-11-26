@@ -371,7 +371,7 @@ async function viewFood(el){ if(S.dietPending){ el.innerHTML=planningCard("food"
 async function renderMeals(el,{mode}){
   const p=S.client, t=targets(p), meals=Math.max(1,Math.min(+p.meals_per_day||3,8)), planMode=mode==="plan";
   el.innerHTML=(planMode?"":`<div class="card"><div class="between"><button class="btn sm" id="dPrev">→</button><div style="text-align:center"><b>${niceDate(S.date)}</b><div class="muted num">${S.date}</div></div><button class="btn sm" id="dNext">←</button></div>
-      <input type="date" id="fDate" value="${S.date}" style="margin-top:8px"></div>`)+`<div class="card dark" id="fTot"></div><div id="meals"></div>`;
+      <label class="datejump"><input type="date" id="fDate" value="${S.date}" aria-label="اختار اليوم"><span class="datejump-txt">📅 ${new Date(S.date+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</span></label></div>`)+`<div class="card dark" id="fTot"></div><div id="meals"></div>`;
   if(!planMode){
     $("#fDate").onchange=e=>{S.date=e.target.value; renderMeals(el,{mode});};
     $("#dPrev").onclick=()=>{S.date=addDays(S.date,-1); renderMeals(el,{mode});};
