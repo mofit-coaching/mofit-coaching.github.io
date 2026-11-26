@@ -16,6 +16,7 @@ function planningInner(k){ const [ic,t,m]=PW[k]; return `<div class="pw-orb"><sp
 function planningCard(k){ return `<div class="card plan-wait">${planningInner(k)}</div>`; }
 const progWait=()=>S.me?.role!=="coach"&&(S.progPending||!(S.program||[]).length);
 async function boot(){
+  if(window.__mofitRecovery){ if(typeof rpShowRecovery==="function") rpShowRecovery(); return; }
   const { data:{ session } } = await sb.auth.getSession();
   if(!session){ $("#loginView").classList.remove("hidden"); $("#appView").classList.add("hidden"); return; }
   let me=null; try{ ({ data:me } = await sb.from("profiles").select("*").eq("id",session.user.id).single()); }catch(e){ me=null; }
