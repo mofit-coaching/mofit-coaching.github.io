@@ -1,10 +1,28 @@
 /* MOFIT auto pose analysis: on-device BlazePose via MediaPipe tasks-vision.
    Loaded lazily - only when the coach taps the auto-analysis button.
-   The model loads from the app's own vendor/pose/ folder: no photo or video
-   pixel ever leaves the device. 33 landmarks, skeleton + key joint angles,
-   tap-to-mark corrections. Detection results are saved as normalized vector
-   JSON through the posing_annotations path (see pose-annotate.js); clients
-   view the rendered result without ever loading this file or the model. */
+   Engine + models load from pinned public CDNs (jsdelivr npm, version-locked,
+   and Google's mediapipe-models bucket); model bytes are SHA-256 verified
+   before use, and the service worker caches everything (mofit-pose-v1 cache)
+   so later opens are instant and work offline. No photo or video pixel ever
+   leaves the device: detection runs fully on-device. 33 landmarks, skeleton +
+   key joint angles, tap-to-mark corrections. Detection results are saved as
+   normalized vector JSON through the posing_annotations path (pose-annotate.js);
+   clients view the rendered result without ever loading this file or the model. */
+
+const AP_BUNDLE = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/vision_bundle.mjs";
+const AP_WASM = "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@1.2.3/wasm";
+const AP_MODELS = {
+  lite: {
+    url: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_lite/float16/1/pose_landmarker_lite.task",
+    bytes: 5777746,
+    sha256: "59929e1d1ee95287735ddd833b19cf4ac46d29bc7afddbbf6753c459690d574a",
+  },
+  full: {
+    url: "https://storage.googleapis.com/mediapipe-models/pose_landmarker/pose_landmarker_full/float16/1/pose_landmarker_full.task",
+    bytes: 9398198,
+    sha256: "5134a3aad27a58b93da0088d431f366da362b44e3ccfbe3462b3827a839011b1",
+  },
+};
 
 const AP_LM = {
   0: "الأنف", 7: "الودن الشمال", 8: "الودن اليمين",
@@ -29,19 +47,18 @@ let apLandmarker = null, apDelegate = null, apVariant = null, apMode = null;
 
 /* variant: "lite" (default, ~5.8MB) or "full" (~9.4MB). mode: "IMAGE" or "VIDEO".
    GPU first, CPU fallback (needed on some iPhones). Cached per combo. */
-async function apInit(base, variant, forceDelegate, mode) {
-  base = base || "vendor/pose";
-  if (!/^(https?:|\.|\/)/.test(base)) base = "/" + base; // import() needs an absolute/relative-dot specifier
+async function apInit(variant, forceDelegate, mode) {
   variant = variant || "lite";
   mode = mode || "IMAGE";
   const key = variant + ":" + (forceDelegate || "auto") + ":" + mode;
   if (apLandmarker && apVariant === key) return { delegate: apDelegate, variant, mode };
   if (apLandmarker) { try { apLandmarker.close(); } catch (_) {} apLandmarker = null; }
-  const baseSlash = base.endsWith("/") ? base : base + "/";
-  const vision = await import(baseSlash + "vision_bundle.mjs");
-  const fileset = await vision.FilesetResolver.forVisionTasks(baseSlash + "wasm");
+  const vision = await import(AP_BUNDLE);
+  const fileset = await vision.FilesetResolver.forVisionTasks(AP_WASM);
+  const spec = AP_MODELS[variant] || AP_MODELS.lite;
+  const modelBytes = await apFetchModel(spec);
   const mk = (delegate) => vision.PoseLandmarker.createFromOptions(fileset, {
-    baseOptions: { modelAssetPath: baseSlash + "pose_landmarker_" + variant + ".task", delegate },
+    baseOptions: { modelAssetBuffer: modelBytes, delegate },
     runningMode: mode,
     numPoses: 1,
     minPoseDetectionConfidence: 0.5,
@@ -56,6 +73,18 @@ async function apInit(base, variant, forceDelegate, mode) {
   }
   apVariant = key; apMode = mode;
   return { delegate: apDelegate, variant, mode };
+}
+
+/* fetch the model bytes, verify size + SHA-256 before use (CDN integrity) */
+async function apFetchModel(spec) {
+  const res = await fetch(spec.url, { credentials: "omit" });
+  if (!res.ok) throw new Error("model download failed: " + res.status);
+  const buf = new Uint8Array(await res.arrayBuffer());
+  if (buf.length !== spec.bytes) throw new Error("model size mismatch");
+  const digest = new Uint8Array(await crypto.subtle.digest("SHA-256", buf));
+  const hex = [...digest].map(b => b.toString(16).padStart(2, "0")).join("");
+  if (hex !== spec.sha256) throw new Error("model hash mismatch");
+  return buf;
 }
 
 function apAngle(a, b, c) {
