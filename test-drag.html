@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEST — drag reorder (coach)</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Noto+Kufi+Arabic:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js" integrity="sha384-HZZ/fukV+9G8gwTNjN7zQDG0Sp7MsZy5DDN6VfY3Be7V9dvQpEpR2jF2HlyFUUjU" crossorigin="anonymous"></script>
+<style>
+  body{font-family:"Cairo",sans-serif;background:#F4F3EF;margin:0;padding:14px;max-width:480px;margin-inline:auto}
+  #testbar{background:#DC2626;color:#fff;font-weight:800;text-align:center;border-radius:12px;padding:8px;margin-bottom:12px;font-size:.9rem}
+  #log{background:#0F172A;color:#7DD3FC;font-size:.72rem;border-radius:12px;padding:10px;margin-top:14px;white-space:pre-wrap;direction:ltr;text-align:left;max-height:180px;overflow:auto}
+  .test-toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0F172A;color:#fff;padding:10px 18px;border-radius:99px;font-weight:700;font-size:.85rem;z-index:99;width:max-content;max-width:90vw;height:auto;min-height:0}
+</style>
+</head>
+<body>
+<div id="testbar">⚠️ TEST PAGE — بيانات وهمية، مفيش عميل حقيقي ⚠️</div>
+<div id="main">
+  <div class="card">
+    <div class="card-h"><div class="ic dark">✏️</div><h2>تعديل البرنامج يدوياً<small>يوم 2 — اضغط واسحب من المقبض ⠿</small></h2></div>
+    <div class="scroller" id="chips"></div>
+    <div id="pListWrap"><div id="pList"></div></div>
+  </div>
+</div>
+<div id="log">// program_exercises.position updates appear here</div>
+<script>
+/* ---- stubs: same globals exdrag.js expects (no Supabase, no real data) ---- */
+const NAMES=["INCLINE PRESS MACHINE","FLAT DB PRESS","PEC DECK FLY MACHINE","UPPER BACK ROW MACHINE","UPPER BACK PULLDOWN","SA REVERSE LAT PULLDOWN MACHINE"];
+const S={ me:{role:"coach"}, client:{id:"test-client"}, day:2,
+  program:NAMES.map((n,i)=>({id:"ex"+(i+1),client_id:"test-client",day_no:2,position:i,name:n,sets:4,target_reps:"8-12"})) };
+const LOG=[];
+const sb={ from:t=>({ update:u=>({ eq:(k,id)=>{ LOG.push(`UPDATE ${t} SET position=${u.position} WHERE id=${id}`);
+    const p=S.program.find(e=>e.id===id); if(p) p.position=u.position;
+    document.getElementById("log").textContent=LOG.join("\n"); return Promise.resolve({error:null}); } }) }) };
+function toast(m){ const t=document.createElement("div"); t.className="test-toast"; t.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0F172A;color:#fff;padding:10px 18px;border-radius:99px;font-weight:700;font-size:.85rem;z-index:99;width:max-content;height:auto;min-height:0"; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
+
+/* ---- mini re-render that mimics coach.js setupProgram (numbering + arrows) ---- */
+function renderList(){
+  const exs=S.program.filter(e=>e.day_no===S.day).sort((a,b)=>a.position-b.position);
+  document.getElementById("chips").innerHTML=[1,2,3].map(d=>`<button class="chip ${S.day===d?"on":""}" data-d="${d}">يوم ${d}</button>`).join("");
+  document.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{S.day=+b.dataset.d;renderList();});
+  document.getElementById("pListWrap").innerHTML='<div id="pList"></div>';  /* same as setupProgram: fresh #pList each render */
+  const list=document.getElementById("pList");
+  list.innerHTML=exs.map((ex,i)=>`<div class="edit-ex"><div class="between" style="margin-bottom:8px"><b>${i+1}. ${ex.name}</b><div class="row"><button class="btn sm">▲</button><button class="btn sm">▼</button></div></div>
+    <div class="grid3"><label class="f">المجموعات<input value="${ex.sets}"></label><label class="f">العدات<input value="${ex.target_reps}"></label><label class="f">RIR<input value="1-2"></label></div></div>`).join("");
+}
+renderList();
+</script>
+<script src="exdrag.js"></script>
+</body>
+</html>
