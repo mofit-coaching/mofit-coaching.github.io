@@ -343,3 +343,15 @@ document.addEventListener("scroll",s,{passive:true,capture:true});document.addEv
     }).catch(()=>{});
   }catch(_){}
 })();
+
+/* ======================================================================
+   Arabic date field (datejump pattern from #200): keep the native date
+   picker but show an Arabic long-date label instead of the browser's
+   English mm/dd/yyyy. djField wraps an input; one delegated listener
+   refreshes the label on change; djSync refreshes it after code sets a
+   value programmatically.
+   ====================================================================== */
+function dAr(v){ return v?new Date(v+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long",year:"numeric"}):""; }
+function djField(inputHTML,val){ return '<span class="datejump">'+inputHTML+'<span class="datejump-txt">📅 '+(dAr(val)||"اختار التاريخ")+'</span></span>'; }
+function djSync(i){ const t=i&&i.parentElement&&i.parentElement.querySelector(".datejump-txt"); if(t) t.textContent="📅 "+(dAr(i.value)||"اختار التاريخ"); }
+document.addEventListener("change",e=>{ const i=e.target; if(i&&i.matches&&i.matches('.datejump input[type="date"]')) djSync(i); });
