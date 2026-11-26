@@ -19,7 +19,8 @@
   const V=SELF.replace(/swiper\.js(\?.*)?$/,"")+"vendor/";
 
   const CSS=`
-  .mf-sw{overflow:hidden}
+  .mf-sw{display:block!important;overflow:hidden!important;scroll-snap-type:none!important;scrollbar-width:none}
+  .mf-sw::-webkit-scrollbar{display:none}
   .mf-sw .swiper-slide{width:auto;height:auto}
   .mf-quotes .swiper-slide{width:82%}
   .mf-quotes{padding-bottom:26px}
@@ -49,15 +50,15 @@
   function convert(el, cls, opts){
     if(el.dataset.mfSw) return;
     const slides=[...el.children]; if(!slides.length) return;
-    const wrap=document.createElement("div");
-    wrap.className="swiper mf-sw "+cls;
-    if(el.id){ wrap.id=el.id; el.removeAttribute("id"); }
+    // Keep the original element as the swiper container: its id, classes,
+    // data attributes and listeners all stay valid for the rest of the app.
+    // The .mf-sw CSS above neutralizes its old flex/scroll-snap layout.
     const w=document.createElement("div"); w.className="swiper-wrapper";
     slides.forEach(c=>{ c.classList.add("swiper-slide"); w.appendChild(c); });
-    wrap.appendChild(w);
-    el.replaceWith(wrap);
-    wrap.dataset.mfSw="1"; // guard on the live node: sweep() must not re-convert our own wrapper
-    return {wrap, w, count:slides.length};
+    el.appendChild(w);
+    el.classList.add("swiper","mf-sw",cls);
+    el.dataset.mfSw="1"; // guard: sweep() must not re-convert our own wrapper
+    return {wrap:el, w, count:slides.length};
   }
 
   const reduced=window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches;
