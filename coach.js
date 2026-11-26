@@ -350,6 +350,12 @@ function setupAccount(el){
    bucket so logged-out visitors can load it. Until one is uploaded, the landing keeps
    the designed avatar. Needs assets.sql run once in Supabase. */
 const COACH_PHOTO_PATH="coach/photo.jpg";
+function cpResize(file,max){ return new Promise((res,rej)=>{ const img=new Image();
+  img.onload=()=>{ const k=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement("canvas");
+    c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
+    c.getContext("2d").drawImage(img,0,0,c.width,c.height);
+    c.toBlob(b=>{ URL.revokeObjectURL(img.src); b?res(b):rej(new Error("image")); },"image/jpeg",.82); };
+  img.onerror=rej; img.src=URL.createObjectURL(file); }); }
 function coachPhotoUrl(){ const { data }=sb.storage.from("assets").getPublicUrl(COACH_PHOTO_PATH); return data?.publicUrl||""; }
 async function coachPhotoCard(host){
   if(!host) return;
@@ -371,7 +377,7 @@ async function coachPhotoCard(host){
   host.querySelector("#cpPick").onclick=()=>file.click();
   file.onchange=async()=>{ const f=file.files&&file.files[0]; file.value=""; if(!f) return;
     const btn=host.querySelector("#cpPick"); btn.disabled=true; btn.textContent="⏳ بيترفع…";
-    try{ const blob=await resizeBlob(f,512);
+    try{ const blob=await cpResize(f,512);
       const { error }=await sb.storage.from("assets").upload(COACH_PHOTO_PATH,blob,{contentType:"image/jpeg",cacheControl:"300",upsert:true});
       if(error) throw error;
       toast("✓ اترفعت – هتظهر على صفحة الدخول خلال دقائق"); await showCur();
