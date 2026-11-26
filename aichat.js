@@ -125,7 +125,11 @@ window.viewAiChat=async function(el){
       L.append(aichBubble("me",r.question,aichWhen(r.created_at)));
       L.append(aichBubble(r.kind==="flag"?"flag":"ai",r.answer));
     });
-    L.classList.remove("bulk"); L.scrollTop=L.scrollHeight;
+    L.classList.remove("bulk");
+    /* entrance cascade: only the newest 10 bubbles animate, with a short stagger; the rest pop in instantly */
+    const bb=[...L.querySelectorAll(".aich-m")], K=Math.max(0,bb.length-10);
+    bb.forEach((b,i)=>{ if(i<K) b.classList.add("no-in"); else b.style.animationDelay=((i-K)*45)+"ms"; });
+    L.scrollTop=L.scrollHeight;
   }
   document.getElementById("aichChips").querySelectorAll(".qr").forEach(c=>c.onclick=()=>{ const i=document.getElementById("aichI"); if(i){ i.value=c.dataset.q||c.textContent.trim(); i.focus(); } });
   document.getElementById("aichF").onsubmit=async e=>{
