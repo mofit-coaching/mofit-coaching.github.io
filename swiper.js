@@ -48,15 +48,15 @@
 
   function convert(el, cls, opts){
     if(el.dataset.mfSw) return;
-    el.dataset.mfSw="1";
     const slides=[...el.children]; if(!slides.length) return;
     const wrap=document.createElement("div");
     wrap.className="swiper mf-sw "+cls;
-    if(el.id) wrap.id=el.id;
+    if(el.id){ wrap.id=el.id; el.removeAttribute("id"); }
     const w=document.createElement("div"); w.className="swiper-wrapper";
     slides.forEach(c=>{ c.classList.add("swiper-slide"); w.appendChild(c); });
     wrap.appendChild(w);
     el.replaceWith(wrap);
+    wrap.dataset.mfSw="1"; // guard on the live node: sweep() must not re-convert our own wrapper
     return {wrap, w, count:slides.length};
   }
 
