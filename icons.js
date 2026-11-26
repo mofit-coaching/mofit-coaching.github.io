@@ -134,6 +134,7 @@ const EMOJI_ICO={
   "✕":"x","✖":"x","←":"arrL","→":"arrR","🤖":"bot","★":"star","🌟":"star","❚❚":"pause","▶":"play","🎤":"mic","✉":"mail",
   "🆕":"badgeNew","📥":"inbox","📢":"megaphone","🔶":"diamond","🧂":"salt","🥬":"sprout","🌾":"wheat","🍚":"bowl","🍌":"banana",
   "👟":"run","🔩":"bolt","📖":"book","📤":"share","🖼":"image","⬆":"share","↕":"vertSwap","➖":"minus","👍":"thumbsUp","🎖":"medal","🏅":"medal","👑":"crown","🥇":"medal","🥈":"medal","🥉":"medal",
+  "🤝":"users","🎊":"sparkle","🖍":"pencil","🛒":"box","↩":"arrL","↻":"refresh",
 };
 const ICO_GRP={dumbbell:"train",bolt:"train",leg:"train",arm:"train",run:"train",steps:"train",hourglass:"train",slow:"train",
   apple:"food",bowl:"food",plate:"food",pan:"food",cup:"food",drumstick:"food",bread:"food",drop:"food",pill:"food",
@@ -152,6 +153,8 @@ const CANVAS_GLYPH={
   bolt:["M13 2.5L4.5 13.5H11L10 21.5l8.5-11H12z","M13 2.5l-3 7H12z"],
   trophy:["M7 4h10v5a5 5 0 01-10 0V4zM7 6H4a3 3 0 003 4M17 6h3a3 3 0 01-3 4M12 14v3.5M8 21h8M9 21c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5",
           "M12 6l.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3z"],
+  check:["M5 12.5l4.5 4.5L19 7.5",null],
+  x:["M6.5 6.5l11 11M17.5 6.5l-11 11",null],
   star:["M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z",null]
 };
 const CANVAS_BADGE={"🔥":"flame","⚡":"bolt","🏆":"trophy","🌟":"star"};
