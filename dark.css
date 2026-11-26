@@ -60,6 +60,7 @@
   main>.card:not(.dark){background:linear-gradient(180deg,#101B31 0%,#0E1830 100%)}
   .card{background:var(--card)}
   input,select,textarea{background:#0C1526;border-color:var(--soft);color:var(--navy)}
+  .datejump-txt{background:#0C1526;border-color:var(--soft);color:var(--navy)}
   input:focus,select:focus,textarea:focus{background:#0C1526;border-color:var(--acc);box-shadow:0 0 0 3px rgba(249,115,22,.22)}
   input::placeholder,textarea::placeholder{color:#5E7195}
   .btn{background:var(--raise);border-color:var(--soft);color:var(--navy);box-shadow:none}

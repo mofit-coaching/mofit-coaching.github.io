@@ -1,5 +1,6 @@
-/* MOFIT stepper v1: +/- buttons on reps, weight, RIR and tempo in the workout screen.
-   Input UI only: never touches program data. Tempo tweaks are kept on this phone per exercise. */
+/* MOFIT stepper v2: +/- buttons on reps, weight and RIR in the workout screen.
+   Tempo blocks (نزول/توقف تحت/طلوع/توقف فوق) are display-only: they show the program tempo.
+   Input UI only: never touches program data. */
 (function(){
   if(window.__stp) return; window.__stp=1;
   var css=
@@ -8,21 +9,18 @@
   '.set .no{margin-top:8px}'+
   '.set .fail{grid-column:5;grid-row:1;align-self:start;min-height:42px}'+
   '.set .more{grid-column:5;grid-row:1;align-self:end;min-height:34px}'+
-  '.stp{direction:ltr;display:grid;grid-template-columns:1fr 1fr;gap:5px}'+
+  '.stp{direction:ltr;display:grid;grid-template-columns:1fr 1fr;gap:4px}'+
   '.stp>input,.stp>select{grid-column:1/-1;width:100%;min-width:0;box-sizing:border-box;font-size:1.05rem;transition:transform .15s,box-shadow .15s}'+
   '.stp>input.pop,.stp>select.pop{animation:stppop .22s ease}'+
   '@keyframes stppop{40%{transform:scale(1.12);box-shadow:0 0 0 3px rgba(255,107,26,.55)}}'+
-  '.stp button,.tempo .tb{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer;border:1px solid rgba(255,255,255,.14);color:#fff;font:800 1.15rem/1 Outfit,system-ui,sans-serif;transition:transform .08s,background .15s}'+
-  '.stp button{min-height:34px;border-radius:10px;background:linear-gradient(180deg,#1E2A47,#16203A);padding:0}'+
-  '.stp button.plus,.tempo .tb.plus{background:linear-gradient(180deg,#FF8A3D,#FF6B1A);border-color:transparent}'+
-  '.stp button:active,.tempo .tb:active,.stp button.hold,.tempo .tb.hold{transform:scale(.88)}'+
+  '.stp button{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation;-webkit-tap-highlight-color:transparent;cursor:pointer;border:1px solid rgba(255,255,255,.14);color:#fff;font:800 .95rem/1 Outfit,system-ui,sans-serif;transition:transform .08s,background .15s}'+
+  '.stp button{min-height:26px;border-radius:8px;background:linear-gradient(180deg,#1E2A47,#16203A);padding:0}'+
+  '.stp button.plus{background:linear-gradient(180deg,#FF8A3D,#FF6B1A);border-color:transparent}'+
+  '.stp button:active,.stp button.hold{transform:scale(.88)}'+
   '.ex-b .tempo{gap:6px}'+
   '.ex-b .tempo>div{background:linear-gradient(180deg,#1B2744,#131C33)!important;border:1px solid rgba(255,255,255,.12);border-radius:14px!important;padding:6px 3px 6px!important;color:#C7D2EA!important;font-size:.72rem;font-weight:700;animation:none!important;display:flex;flex-direction:column;align-items:center;gap:3px}'+
   '.ex-b .tempo>div b{color:#fff!important;font-size:1.45rem!important;line-height:1}'+
-  '.ex-b .tempo>div b.pop{animation:stppop .22s ease}'+
-  '.tempo .trow{direction:ltr;display:grid!important;background:none!important;border:0!important;padding:0!important;animation:none!important;flex:none;grid-template-columns:1fr 1fr;gap:4px;width:100%}'+
-  '.tempo .tb{min-height:30px;border-radius:9px;background:#243256;padding:0}'+
-  '@media(prefers-reduced-motion:reduce){.stp>input.pop,.stp>select.pop,.tempo b.pop{animation:none}.stp button,.tempo .tb{transition:none}}';
+  '@media(prefers-reduced-motion:reduce){.stp>input.pop,.stp>select.pop{animation:none}.stp button{transition:none}}';
   var st=document.createElement('style'); st.textContent=css; document.head.appendChild(st);
   var rm=function(){return window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches};
   var buzz=function(n){try{navigator.vibrate&&navigator.vibrate(n||8)}catch(e){}};
@@ -46,7 +44,7 @@
     if(!reps||!w||!rir) return;
     function build(ctl,calc){
       var box=document.createElement('div'); box.className='stp'; ctl.parentNode.insertBefore(box,ctl); box.appendChild(ctl);
-      var minus=mk('minus','\u2212','\u2212'), plus=mk('plus','+','+'); box.appendChild(minus); box.appendChild(plus);
+      var minus=mk('minus','−','−'), plus=mk('plus','+','+'); box.appendChild(minus); box.appendChild(plus);
       var timer;
       function commit(){ clearTimeout(timer); timer=setTimeout(function(){ ctl.dispatchEvent(new Event('change',{bubbles:true})); },700); }
       function go(dir){ return function(mult){ var nv=calc(dir,mult); if(nv===null) return; ctl.value=nv; pop(ctl); buzz(6); commit(); }; }
@@ -58,30 +56,8 @@
     build(rir,function(d){ var v=rir.value===''?NaN:parseInt(rir.value,10); if(isNaN(v)) return '2'; v=Math.max(0,Math.min(5,v+d)); return String(v); });
   }
 
-  function wrapTempo(tp){
-    var ex=tp.closest('.ex'); var nameEl=ex&&ex.querySelector('.ex-t b[data-vid]'); var key='mofit_tempo_'+(nameEl?nameEl.textContent.trim():'');
-    var cells=[].slice.call(tp.children), orig=cells.map(function(c){return c.querySelector('b').textContent.trim()});
-    var saved=null; try{ saved=JSON.parse(localStorage.getItem(key)||'null'); }catch(e){}
-    var vals=(saved&&saved.o===orig.join('-')&&saved.v&&saved.v.length===4)?saved.v.slice():orig.slice();
-    function paint(touch){
-      cells.forEach(function(c,i){ c.querySelector('b').textContent=vals[i]; });
-      var s=vals.join('-'); var pill=ex&&[].slice.call(ex.querySelectorAll('.ex-tags .pill')).filter(function(p){return p.textContent.indexOf('\uD83D\uDD52')>-1})[0]; if(pill) pill.textContent='\uD83D\uDD52 '+s;
-      if(ex&&touch){ [].forEach.call(ex.querySelectorAll('input[data-k="tempo"]'),function(i){ i.value=(s===orig.join('-'))?'':s; }); }
-      try{ if(s===orig.join('-')) localStorage.removeItem(key); else localStorage.setItem(key,JSON.stringify({o:orig.join('-'),v:vals})); }catch(e){}
-    }
-    cells.forEach(function(c,i){
-      var row=document.createElement('div'); row.className='trow'; var m=mk('tb minus','\u2212','\u2212'), p=mk('tb plus','+','+'); row.appendChild(m); row.appendChild(p); c.appendChild(row);
-      function go(d){ return function(){ var v=parseInt(vals[i],10); if(isNaN(v)) return; v=Math.max(0,Math.min(9,v+d)); vals[i]=String(v); paint(true); pop(c.querySelector('b')); buzz(6); }; }
-      hold(m,go(-1)); hold(p,go(1));
-    });
-    if(saved&&saved.o===orig.join('-')) paint();
-    /* set rows are built after the tempo block: fill them once they exist */
-    setTimeout(paint,0);
-  }
-
   function scan(root){
     [].forEach.call(root.querySelectorAll('.set:not([data-stp])'),function(r){ r.setAttribute('data-stp',1); wrapSet(r); });
-    [].forEach.call(root.querySelectorAll('.tempo:not([data-stp])'),function(t){ t.setAttribute('data-stp',1); if(t.children.length===4) wrapTempo(t); });
   }
   function start(){ var m=document.getElementById('main')||document.body; scan(m);
     var busy=false; new MutationObserver(function(){ if(busy) return; busy=true; requestAnimationFrame(function(){ busy=false; scan(m); }); }).observe(m,{childList:true,subtree:true}); }
