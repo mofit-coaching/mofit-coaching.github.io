@@ -124,6 +124,26 @@ const css=`
 .sc-cchips{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
 .sc-cchips span{padding:6px 11px;border-radius:99px;font-size:11px;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#D9E1EE}
 @media(prefers-reduced-motion:reduce){.sc-tg .w{transition:none;color:#fff}.sc-faq summary:after,.sc-faq details{transition:none}}
+/* ---------- free consultation form ---------- */
+.sc-cform{margin-top:14px;display:grid;gap:12px}
+.sc-cform .f2{display:grid;gap:7px;font:700 13px/1.4 var(--disp);color:#E6EBF5}
+.sc-cform input,.sc-cform textarea{width:100%;padding:13px 14px;border-radius:14px;border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.06);color:#fff;font:400 14.5px/1.5 inherit;transition:border-color .3s,box-shadow .3s,background .3s;-webkit-appearance:none;appearance:none}
+.sc-cform input::placeholder,.sc-cform textarea::placeholder{color:#7C8AA5}
+.sc-cform input:focus,.sc-cform textarea:focus{outline:none;border-color:#FF8A3D;background:rgba(255,255,255,.09);box-shadow:0 0 0 4px rgba(255,107,26,.22)}
+.sc-cform textarea{resize:vertical;min-height:74px}
+.scc-goals{display:flex;gap:8px;flex-wrap:wrap}
+.scc-goal{padding:9px 13px;border-radius:99px;font:700 12.5px/1 var(--disp);color:#D9E1EE;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);cursor:pointer;transition:transform .25s cubic-bezier(.34,1.56,.64,1),background .25s,border-color .25s,color .25s}
+.scc-goal:active{transform:scale(.93)}
+.scc-goal.on{background:linear-gradient(135deg,#FF5A0A,#FFA24D);border-color:transparent;color:#fff;box-shadow:0 8px 20px -8px rgba(255,107,26,.7);transform:translateY(-2px)}
+.scc-err{margin:0;font-size:12.5px;font-weight:700;color:#FF9C9C;min-height:1em}
+.scc-done{text-align:center;padding:26px 14px}
+.scc-done .tick{width:72px;height:72px;margin:0 auto 14px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#22C55E,#4ADE80);box-shadow:0 14px 34px -10px rgba(34,197,94,.8);animation:sccpop .6s cubic-bezier(.34,1.56,.64,1) both}
+.scc-done .tick svg{width:36px;height:36px}
+@keyframes sccpop{from{opacity:0;transform:scale(.4) rotate(-30deg)}to{opacity:1;transform:none}}
+.scc-done h3{margin:0 0 8px;font:800 19px/1.4 var(--disp);color:#fff}
+.scc-done p{margin:0 0 16px;font-size:13.5px;color:#A9B4C8;line-height:1.8}
+.sc-cform .sc-btn{width:100%;border:0}
+@media(prefers-reduced-motion:reduce){.scc-done .tick{animation:none}.scc-goal,.sc-cform input,.sc-cform textarea{transition:none}}
 @media(prefers-reduced-motion:reduce){.sc-rv{opacity:1;transform:none;transition:none}.sc-btn:after{animation:none;display:none}.sc-cframe:before,.sc-cphoto .sc-cshine{animation:none;display:none}.sc-cphoto{animation:none}}
 `;
 const st=document.createElement("style");st.textContent=css;document.head.appendChild(st);
@@ -184,10 +204,51 @@ el.addEventListener("pointermove",e=>{if(drag)at(e)});
 ["pointerup","pointercancel"].forEach(t=>el.addEventListener(t,()=>{drag=false}));
 hd.addEventListener("keydown",e=>{const v=+hd.getAttribute("aria-valuenow");if(e.key==="ArrowLeft"){set(v-5);e.preventDefault()}if(e.key==="ArrowRight"){set(v+5);e.preventDefault()}});
 el._hint=()=>{if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;const t0=performance.now();const f=t=>{const k=(t-t0)/1500;if(k>=1||drag){if(!drag)set(50);return}set(50+Math.sin(k*Math.PI*2)*22*(1-k));requestAnimationFrame(f)};requestAnimationFrame(f)}}
+/* ---------- free consultation: landing form -> WhatsApp hand-off to the coach ---------- */
+const CONSULT_WA="201093047225";
+const CONSULT_GOALS=["🔥 تنشيف وخسارة وزن","🏋️ تضخيم وبناء عضل","🤸 لياقة وشد الجسم","🩹 رجوع بعد إصابة","🤔 لسه مش متأكد"];
+function consult(){
+return `<div class="sc-ccard sc-rv"><form class="sc-cform" id="scConsult" novalidate>
+<label class="f2">الاسم<input id="sccName" type="text" autocomplete="name" maxlength="60" placeholder="اسمك الأول كفاية"></label>
+<label class="f2">رقم الواتساب<input id="sccPhone" type="tel" inputmode="tel" autocomplete="tel" dir="ltr" placeholder="01xxxxxxxxx"></label>
+<div class="f2">هدفك إيه؟<div class="scc-goals" id="sccGoals" role="group" aria-label="هدفك">${CONSULT_GOALS.map(g=>`<button type="button" class="scc-goal" aria-pressed="false" data-g="${esc(g)}">${esc(g)}</button>`).join("")}</div></div>
+<label class="f2">عايز تقول للكوتش حاجة؟ <small style="color:#8591A8;font-weight:400">(اختياري)</small><textarea id="sccNotes" rows="3" maxlength="300" placeholder="سنك، وزنك، خبرتك في التمرين…"></textarea></label>
+<p class="scc-err" id="sccErr" role="alert"></p>
+<button class="sc-btn" type="submit" id="sccBtn">📲 ابعت طلب الاستشارة</button>
+<p class="sc-note">هيفتحلك واتساب برسالة جاهزة، دوس إرسال والكوتش نفسه هيرد عليك.</p>
+</form><div class="scc-done hidden" id="sccDone"></div></div>`}
+function bindConsult(box){
+const f=box.querySelector("#scConsult"); if(!f) return;
+const goals=box.querySelector("#sccGoals");
+goals.addEventListener("click",e=>{const b=e.target.closest(".scc-goal");if(!b)return;
+[...goals.children].forEach(x=>{const on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-pressed",on)});});
+f.addEventListener("submit",e=>{
+e.preventDefault();
+const err=m=>{box.querySelector("#sccErr").textContent=m}; err("");
+const name=box.querySelector("#sccName").value.trim();
+let phone=box.querySelector("#sccPhone").value.replace(/[^\d+]/g,"");
+if(/^\+?20/.test(phone)) phone="0"+phone.replace(/^\+?20/,"");
+const goal=(goals.querySelector(".scc-goal.on")||{}).dataset?.g||"";
+const notes=box.querySelector("#sccNotes").value.trim();
+if(name.length<2) return err("اكتب اسمك الأول");
+if(!/^01[0125]\d{8}$/.test(phone)) return err("رقم الواتساب مش صحيح، لازم يكون 11 رقم ويبدأ بـ 01");
+if(!goal) return err("اختار هدفك من الاختيارات فوق");
+const msg=`السلام عليكم كوتش 👋\nأنا ${name}، جاي من موقع Mofit وعايز أحجز الاستشارة المجانية.\n🎯 هدفي: ${goal}\n📱 رقمي: ${phone}`+(notes?`\n📝 ${notes}`:"");
+const wa=`https://wa.me/${CONSULT_WA}?text=${encodeURIComponent(msg)}`;
+window.open(wa,"_blank","noopener");
+f.classList.add("hidden");
+const d=box.querySelector("#sccDone"); d.classList.remove("hidden");
+d.innerHTML=`<div class="tick"><svg viewBox="0 0 24 24" fill="none"><path d="M4.5 12.5 10 18 19.5 6.5" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+<h3>رسالتك جاهزة يا ${esc(name)} ✅</h3><p>كمّل في شات الواتساب اللي اتفتح ودوس إرسال، والكوتش هيرد عليك بنفسه ويحدد معاك ميعاد الاستشارة.<br>لو الشات مفتحش، دوس على الزرار تحت.</p>
+<a class="sc-btn" href="${esc(wa)}" target="_blank" rel="noopener">💬 افتح الواتساب تاني</a>`;
+});
+}
+
 window.drawShowcase=function(){const box=document.getElementById("showcase");if(!box||box.dataset.done)return;box.dataset.done=1;
 const hasR=(SHOWCASE.results||[]).length, hasQ=(SHOWCASE.quotes||[]).length;
-box.innerHTML=tagline()+sec("THE COACH",'مين <b>الكوتش</b>؟',"كوتش حقيقي، معتمد، وشهادته متاحة للتحقق",coach())+sec("RESULTS",'نتايج <b>حقيقية</b> من متدربينا',hasR?"اسحب وقارن قبل وبعد":"اسحب وقارن - صور التحوّلات بتتنشر هنا بموافقة كل عميل",results())+(SHOWCASE.stats&&SHOWCASE.stats.length?stats().replace('<div class="sc-stats','<div style="margin-top:22px"></div><div class="sc-stats'):"")+(hasQ?sec("VOICES","بيقولوا إيه عننا","",quotes()):"")+sec("HOW IT WORKS","إزاي <b>تبدأ</b>","تلات خطوات وبس",steps())+sec("LEAGUE",'دوري <b>الأسبوع</b>',"الكوتش بيبدأ الدوري وانت بتختار تشارك، نقاطك من تمرينك والتزامك، وأول 3 ليهم المجد",league())+sec("INVITE FRIENDS",'ادعُ صحابك <b>وخد أسبوع هدية</b>',"كل صاحب يشترك من لينكك بيضيفلك أسبوع مجاني",invite())+sec("FAQ","أسئلة <b>ممكن تكون في بالك</b>","هنا عشان تحس إنك في بيتك من أول يوم",faq())+`<div class="sc-cta sc-rv"><a class="sc-btn" href="#plans" onclick="loginTab('plans');window.scrollTo({top:0,behavior:'smooth'});return false">ابدأ رحلتك، اشترك دلوقتي</a><p class="sc-note">* النتيجة بتختلف من شخص لآخر.</p></div>`;
+box.innerHTML=tagline()+sec("THE COACH",'مين <b>الكوتش</b>؟',"كوتش حقيقي، معتمد، وشهادته متاحة للتحقق",coach())+sec("RESULTS",'نتايج <b>حقيقية</b> من متدربينا',hasR?"اسحب وقارن قبل وبعد":"اسحب وقارن - صور التحوّلات بتتنشر هنا بموافقة كل عميل",results())+(SHOWCASE.stats&&SHOWCASE.stats.length?stats().replace('<div class="sc-stats','<div style="margin-top:22px"></div><div class="sc-stats'):"")+(hasQ?sec("VOICES","بيقولوا إيه عننا","",quotes()):"")+sec("HOW IT WORKS","إزاي <b>تبدأ</b>","تلات خطوات وبس",steps())+sec("LEAGUE",'دوري <b>الأسبوع</b>',"الكوتش بيبدأ الدوري وانت بتختار تشارك، نقاطك من تمرينك والتزامك، وأول 3 ليهم المجد",league())+sec("INVITE FRIENDS",'ادعُ صحابك <b>وخد أسبوع هدية</b>',"كل صاحب يشترك من لينكك بيضيفلك أسبوع مجاني",invite())+sec("FAQ","أسئلة <b>ممكن تكون في بالك</b>","هنا عشان تحس إنك في بيتك من أول يوم",faq())+sec("FREE CONSULT",'محتاج <b>استشارة مجانية</b>؟',"سيب بياناتك وهدفك، والكوتش هيكلمك ويرد على كل أسئلتك قبل ما تشترك",consult())+`<div class="sc-cta sc-rv"><a class="sc-btn" href="#plans" onclick="loginTab('plans');window.scrollTo({top:0,behavior:'smooth'});return false">ابدأ رحلتك، اشترك دلوقتي</a><p class="sc-note">* النتيجة بتختلف من شخص لآخر.</p></div>`;
 box.querySelectorAll(".sc-ba").forEach(bindBA);
+bindConsult(box);
 const io="IntersectionObserver" in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");const b=e.target.querySelector(".sc-ba");if(b&&b._hint&&!b._h){b._h=1;setTimeout(b._hint,350)}io.unobserve(e.target)}}),{threshold:.15}):null;
 box.querySelectorAll(".sc-rv").forEach(n=>io?io.observe(n):n.classList.add("in"));
 const ws=[...box.querySelectorAll(".sc-tg .w")];if(ws.length){if(!("IntersectionObserver" in window)||matchMedia("(prefers-reduced-motion:reduce)").matches)ws.forEach(w=>w.classList.add("on"));else{const wo=new IntersectionObserver(es=>{let k=0;es.filter(e=>e.isIntersecting).sort((a,b)=>ws.indexOf(a.target)-ws.indexOf(b.target)).forEach(e=>{setTimeout(()=>e.target.classList.add("on"),Math.min(k++*70,500));wo.unobserve(e.target)})},{rootMargin:"0px 0px -38% 0px"});ws.forEach(w=>wo.observe(w));}}
@@ -212,5 +273,4 @@ async function coachPhotoProbe(){
 }
 if(document.readyState!=="loading")drawShowcase();else document.addEventListener("DOMContentLoaded",drawShowcase);
 })();
-
 
