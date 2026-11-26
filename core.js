@@ -317,3 +317,29 @@ document.addEventListener("scroll",s,{passive:true,capture:true});document.addEv
   }catch(e){} busy=false; }
   document.addEventListener("visibilitychange",()=>{ if(!document.hidden) setTimeout(check,3000); }); window.addEventListener("pageshow",()=>setTimeout(check,3000)); setTimeout(check,30000);
 })();
+
+/* ======================================================================
+   SW self-heal: an open app never re-fetches files, so when a new service
+   worker activates under it the runtime can be a stale/mixed shell (the
+   Nov-26 stuck-skeletons incident). Reload once per version onto the new
+   consistent shell; the sessionStorage guard makes a loop impossible.
+   Also nudge update+reload when the served sw.js is newer than this page.
+   ====================================================================== */
+(function(){
+  if(!("serviceWorker" in navigator)) return;
+  const reloaded=v=>sessionStorage.getItem("mofit-reloaded-"+v);
+  const mark=v=>sessionStorage.setItem("mofit-reloaded-"+v,"1");
+  navigator.serviceWorker.addEventListener("message",e=>{
+    const d=e.data||{}; if(d.type!=="mofit-sw-activated"||!d.V) return;
+    if(reloaded(d.V)) return; mark(d.V); location.reload();
+  });
+  try{
+    const pageV=([...document.scripts].map(s=>(s.src.match(/[?&]v=([0-9a-f]{8})/)||[])[1]).find(Boolean));
+    if(!pageV) return;
+    fetch("sw.js?cb="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{
+      const m=t.match(/const V="([^"]+)"/); if(!m||m[1]===pageV||reloaded(m[1])) return;
+      mark(m[1]);
+      navigator.serviceWorker.getRegistration().then(r=>(r?r.update():Promise.resolve()).finally(()=>location.reload()));
+    }).catch(()=>{});
+  }catch(_){}
+})();
