@@ -259,6 +259,7 @@ async function nudgeClient(c,a,btn){
     for(let k=0;k<adv;k++){ head=(head+1)%N; buf[head]=beat(phase)+(Math.random()-.5)*.012; }
     for(let i=0;i<N;i++) if(i!==head&&Math.abs(buf[i])>1.5) buf[i]*=.97;
     const sy=Math.min(1,(scrollY||0)/500), base=H*.19-sy*60, A=Math.min(120,H*.11)*(1+sy*.2);
+    const fd=Math.max(0,1-(scrollY||0)/(H*.7)); cv.style.opacity=fd.toFixed(3); cv.style.visibility=fd<=0?"hidden":"visible"; word.style.opacity=fd.toFixed(3); lv.style.setProperty("--stf",fd.toFixed(3));
     cx.clearRect(0,0,W,H);
     cx.lineJoin="round"; cx.lineCap="round";
     for(let pass=0;pass<2;pass++){
