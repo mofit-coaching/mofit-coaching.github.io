@@ -5,7 +5,17 @@
    instance is live, so a missing/blocked library changes nothing.
    ====================================================================== */
 (function(){
-if(typeof Chart==="undefined") return;
+if(typeof Chart==="undefined"){
+  /* Lazy: chart.min.js (206KB) is no longer in index.html. Inject it once, then re-run this module.
+     Version tag copied from our own script URL so the service worker cache stays in sync. */
+  if(!window.__mofitChartLib){ window.__mofitChartLib=1;
+    const me=document.currentScript&&document.currentScript.src||""; const v=(me.split("?v=")[1]||"").split("&")[0];
+    const s=document.createElement("script"); s.src="chart.min.js"+(v?"?v="+v:"");
+    s.onload=()=>{ const r=document.createElement("script"); r.src="charts.js"+(v?"?v="+v:""); document.head.appendChild(r); };
+    document.head.appendChild(s);
+  }
+  return;
+}
 Chart.defaults.font.family="Cairo,sans-serif";
 Chart.defaults.color="#64748B";
 const reg=new Map();
@@ -40,6 +50,6 @@ function scan(root){
 }
 new MutationObserver(recs=>{ recs.forEach(r=>r.addedNodes.forEach(n=>{ if(n.nodeType===1) scan(n); })); })
   .observe(document.body,{childList:true,subtree:true});
-document.addEventListener("DOMContentLoaded",()=>scan(document.body));
+if(document.readyState==="loading") document.addEventListener("DOMContentLoaded",()=>scan(document.body)); else scan(document.body);
 window.mofitCharts={scan};
 })();

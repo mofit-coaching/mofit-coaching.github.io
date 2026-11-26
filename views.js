@@ -333,15 +333,22 @@ async function viewTrain(el){
 /* ======================================================================
    NUTRITION (day log + coach plan) — also used as the plan editor
    ====================================================================== */
+function favFoods(){ try{ const v=JSON.parse(localStorage.getItem("mofitFavFoods")||"[]"); return Array.isArray(v)?v:[]; }catch(e){ return []; } }
+function favFoodToggle(food){ const fv=favFoods(), i=fv.findIndex(x=>x.id===food.id); if(i>=0) fv.splice(i,1); else { fv.unshift(food); if(fv.length>20) fv.length=20; } try{ localStorage.setItem("mofitFavFoods",JSON.stringify(fv)); }catch(e){} return i<0; }
 function openFoodPicker(title, onPick, opts={}){
   const body=openSheet(`<div class="between"><b>${esc(title)}</b><button class="btn sm ghost" data-close>✕</button></div>
     <input id="fpQ" placeholder="🔍 اكتب اسم الصنف (حرفين على الأقل)…" style="margin-top:10px" autocomplete="off"><div id="fpRes" style="margin-top:8px"></div>`);
   body.querySelector("[data-close]").onclick=closeSheet;
   const q=$("#fpQ"), res=$("#fpRes"); let timer; setTimeout(()=>q.focus(),100);
+  const rowHTML=x=>{ const u=unitInfo(x); return `<div class="food-r" data-id="${x.id}"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(x.name)}<small>${u.base}: <b>${fmt(u.per.kcal)} kcal</b> · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}</small></div><span class="pill">${esc(x.unit)}</span></div>`; };
+  const showFavs=()=>{ const fv=favFoods();
+    res.innerHTML=fv.length?`<div class="sub" style="margin-top:4px">⭐ مفضلتك – دوس عليها تسجّل على طول</div>`+fv.map(rowHTML).join(""):"";
+    res.querySelectorAll("[data-id]").forEach(d=>d.onclick=()=>pickQty(fv.find(x=>x.id==d.dataset.id))); };
+  showFavs();
   q.oninput=()=>{ clearTimeout(timer); timer=setTimeout(async()=>{
-    const term=q.value.trim(); if(term.length<2){ res.innerHTML=""; return; }
+    const term=q.value.trim(); if(term.length<2){ showFavs(); return; }
     const { data:f } = await sb.rpc("search_foods",{q:term});
-    res.innerHTML=(f||[]).length?f.map(x=>{ const u=unitInfo(x); return `<div class="food-r" data-id="${x.id}"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(x.name)}<small>${u.base}: <b>${fmt(u.per.kcal)} kcal</b> · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}</small></div><span class="pill">${esc(x.unit)}</span></div>`; }).join("")
+    res.innerHTML=(f||[]).length?f.map(rowHTML).join("")
       :emptyBox("🔎","مفيش نتائج","اكتب اسم الصنف بشكل تاني"+(S.me.role==="coach"?"، أو ضيفه من تبويب الأطعمة":"")+".","","es-sm");
     res.querySelectorAll("[data-id]").forEach(d=>d.onclick=()=>pickQty(f.find(x=>x.id==d.dataset.id)));
   },250); };
@@ -349,7 +356,7 @@ function openFoodPicker(title, onPick, opts={}){
   function pickQty(food){
     const u=unitInfo(food);
     body.innerHTML=`<div class="between"><button class="btn sm ghost" data-back>→ رجوع</button><button class="btn sm ghost" data-close>✕</button></div>
-      <b style="font-size:1.05rem">${esc(food.name)}</b>
+      <div class="between"><b style="font-size:1.05rem">${esc(food.name)}</b><button class="btn sm ghost" id="fpStar" title="حفظ في المفضلة">${favFoods().some(x=>x.id===food.id)?"⭐":"☆"}</button></div>
       <div class="unitbox"><span class="u">${u.base}</span> <span style="color:#CBD5E1;font-size:.8rem">${u.cnt?"القيم لكل "+esc(food.unit)+" واحد":"القيم لكل 100 "+esc(food.unit)}</span>
         <div class="g4"><div><b class="num">${fmt(u.per.kcal)}</b><small>سعرات</small></div><div><b class="num">${fmt(u.per.P,1)}</b><small>بروتين</small></div><div><b class="num">${fmt(u.per.C,1)}</b><small>كارب</small></div><div><b class="num">${fmt(u.per.F,1)}</b><small>دهون</small></div></div></div>
       <label class="f">${u.qtyLabel}</label>
@@ -358,6 +365,7 @@ function openFoodPicker(title, onPick, opts={}){
       <div class="card" style="background:var(--acc-soft);box-shadow:none;margin:10px 0" id="fpPrev"></div>
       <button class="btn primary block" id="fpAdd">إضافة</button>`;
     const qi=$("#fpQty"), step=u.cnt?1:10;
+    const starB=$("#fpStar"); if(starB) starB.onclick=()=>{ const on=favFoodToggle(food); starB.textContent=on?"⭐":"☆"; toast(on?"⭐ اتضاف للمفضلة":"اتشال من المفضلة"); };
     if(opts.match&&food.kcal>0) qi.value=roundQty(opts.match.kcal/(food.kcal/100),food.unit);
     const prev=()=>{ const qv=num(qi.value)||0, c=foodCalc(food, qv); $("#fpPrev").innerHTML=`<div class="between"><b>${fmt(qv,1)} ${esc(food.unit)}</b><b style="color:var(--acc)" class="num">${fmt(c.kcal)} kcal</b></div><div class="muted">بروتين ${fmt(c.protein,1)} · كارب ${fmt(c.carbs,1)} · دهون ${fmt(c.fat,1)} جم</div>${mineralLine(food,qv)}`; };
     qi.oninput=prev; prev();
@@ -372,15 +380,61 @@ function openFoodPicker(title, onPick, opts={}){
 }
 function qtyText(i){ return `${fmt(i.qty,COUNT_UNITS(i.unit)?2:0)} ${esc(i.unit||"جم")}`; }
 
+async function renderFoodWeek(el){
+  const p=S.client, t=targets(p);
+  const dow=(new Date(S.date+"T00:00:00Z").getUTCDay()+1)%7; /* Saturday = 0 */
+  const wkStart=addDays(S.date,-dow), wkEnd=addDays(wkStart,6);
+  el.innerHTML=`<div class="card"><div class="between"><button class="btn sm" id="wPrev">→</button><div style="text-align:center"><b>الأسبوع</b><div class="muted num">${wkStart} ← ${wkEnd}</div></div><button class="btn sm" id="wNext">←</button></div>
+    <button class="btn sm navy block" id="wDay" style="margin-top:8px">📅 رجوع ليوم ${niceDate(S.date)}</button></div>
+  <div class="card dark" id="wTot"></div><div class="card" id="wBars"></div><div class="card" id="wDays"></div>`;
+  $("#wPrev").onclick=()=>{ S.date=addDays(S.date,-7); renderFoodWeek(el); };
+  $("#wNext").onclick=()=>{ S.date=addDays(S.date,7); renderFoodWeek(el); };
+  $("#wDay").onclick=()=>renderMeals(el,{mode:"day"});
+  const { data, error }=await sb.from("meal_items").select("log_date,kcal,protein,carbs,fat").eq("client_id",p.id).gte("log_date",wkStart).lte("log_date",wkEnd);
+  if(!el.isConnected) return;
+  if(error){ toast(error.message); return; }
+  const byD={}; (data||[]).forEach(i=>{ (byD[i.log_date]=byD[i.log_date]||[]).push(i); });
+  const days=Array.from({length:7},(_,i)=>{ const d=addDays(wkStart,i); return { d, s:sumMacros(byD[d]||[]), n:(byD[d]||[]).length }; });
+  const logged=days.filter(x=>x.n);
+  const avg=k=>logged.length?logged.reduce((a,x)=>a+x.s[k],0)/logged.length:0;
+  const maxK=Math.max(t.kcal||0,...days.map(x=>x.s.kcal),1);
+  const wk=sumMacros(data||[]);
+  $("#wTot").innerHTML=`<div class="card-h"><div class="ic">🔥</div><h2>متوسط اليوم في الأسبوع<small>${logged.length} من 7 أيام متسجلة</small></h2></div>
+    <div style="display:flex;gap:16px;align-items:center">${ring(avg("kcal"),t.kcal||1,{size:104,track:"rgba(255,255,255,.15)",label:fmt(avg("kcal")),sub:"من "+(t.kcal?fmt(t.kcal):"—"),textColor:"#fff"})}
+    <div style="flex:1;color:#fff">${macroRow("بروتين",avg("P"),t.P,"جم")}${macroRow("كارب",avg("C"),t.C,"جم")}${macroRow("دهون",avg("F"),t.F,"جم")}</div></div>
+    <p style="color:#CBD5E1;font-size:.75rem;margin:8px 0 0">المتوسط محسوب على الأيام المتسجلة بس · إجمالي الأسبوع ${fmt(wk.kcal)} kcal</p>`;
+  $("#wBars").innerHTML=`<div class="card-h"><div class="ic">📊</div><h2>سعرات كل يوم<small>السبت للجمعة · الهدف ${t.kcal?fmt(t.kcal):"—"} kcal</small></h2></div>
+    <div style="display:flex;align-items:flex-end;gap:6px;direction:ltr">${days.map(x=>{ const h=x.n?Math.max(6,Math.round(x.s.kcal/maxK*110)):6; const over=t.kcal&&x.n&&x.s.kcal>t.kcal*1.08; const dn=new Date(x.d+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"short"});
+      return `<div style="flex:1;text-align:center;min-width:0"><div class="wbar" style="height:4px;background:${x.n?(over?"#e0507a":"linear-gradient(180deg,var(--acc,#ff6a13),#c2410c)"):"rgba(128,128,150,.18)"};border-radius:8px 8px 3px 3px;transition:height .9s cubic-bezier(.34,1.56,.64,1)" data-h="${h}"></div><small class="muted">${dn}</small><div class="num" style="font-size:.66rem">${x.n?fmt(x.s.kcal):"—"}</div></div>`; }).join("")}</div>
+    <p class="hint">الأيام الفاضية ملهاش تسجيل · الأحمر معناه عدّيت الهدف</p>`;
+  requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelectorAll(".wbar").forEach(b=>b.style.height=b.dataset.h+"px")));
+  $("#wDays").innerHTML=`<div class="card-h"><div class="ic">🗓</div><h2>يوم بيوم<small>دوس على يوم يفتحه</small></h2></div>`+days.slice().reverse().map(x=>`<div class="item" style="cursor:pointer" data-day="${x.d}"><div class="nm"><b>${niceDate(x.d)}</b><small class="muted num">${x.d}</small></div>${x.n?`<span class="kc num">${fmt(x.s.kcal)}</span><span class="muted" style="font-size:.72rem">ب ${fmt(x.s.P)} · ك ${fmt(x.s.C)} · د ${fmt(x.s.F)}</span>`:`<span class="muted">مفيش تسجيل</span>`}</div>`).join("");
+  el.querySelectorAll("[data-day]").forEach(r=>r.onclick=()=>{ S.date=r.dataset.day; renderMeals(el,{mode:"day"}); });
+}
+
 async function viewFood(el){ if(S.dietPending){ el.innerHTML=planningCard("food"); return; } return renderMeals(el,{mode:"day"}); }
 async function renderMeals(el,{mode}){
   const p=S.client, t=targets(p), meals=Math.max(1,Math.min(+p.meals_per_day||3,8)), planMode=mode==="plan";
   el.innerHTML=(planMode?"":`<div class="card"><div class="between"><button class="btn sm" id="dPrev">→</button><div style="text-align:center"><b>${niceDate(S.date)}</b><div class="muted num">${S.date}</div></div><button class="btn sm" id="dNext">←</button></div>
-      <label class="datejump"><input type="date" id="fDate" value="${S.date}" aria-label="اختار اليوم"><span class="datejump-txt">📅 ${new Date(S.date+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</span></label></div>`)+`<div class="card dark" id="fTot"></div><div id="meals"></div>`;
+      <label class="datejump"><input type="date" id="fDate" value="${S.date}" aria-label="اختار اليوم"><span class="datejump-txt">📅 ${new Date(S.date+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</span></label><button class="btn sm navy block" id="cpY" style="margin-top:8px">📋 نسخ أكل إمبارح</button><button class="btn sm block" id="wkV" style="margin-top:8px">📊 ملخص الأسبوع</button></div>`)+`<div class="card dark" id="fTot"></div><div id="meals"></div>`;
   if(!planMode){
     $("#fDate").onchange=e=>{S.date=e.target.value; renderMeals(el,{mode});};
     $("#dPrev").onclick=()=>{S.date=addDays(S.date,-1); renderMeals(el,{mode});};
     $("#dNext").onclick=()=>{S.date=addDays(S.date,1); renderMeals(el,{mode});};
+    $("#cpY").onclick=async()=>{ const b=$("#cpY"); b.disabled=true; b.textContent="⏳ بنسخ…";
+      const yd=addDays(S.date,-1);
+      const { data:ydItems, error:yErr }=await sb.from("meal_items").select("*").eq("client_id",p.id).eq("log_date",yd).order("created_at");
+      if(yErr){ toast(yErr.message); b.disabled=false; b.textContent="📋 نسخ أكل إمبارح"; return; }
+      if(!ydItems||!ydItems.length){ toast("مفيش أكل متسجل إمبارح"); b.disabled=false; b.textContent="📋 نسخ أكل إمبارح"; return; }
+      const have=new Set(items.map(i=>i.meal_no+"|"+i.food_id+"|"+(+i.qty)));
+      const todo=ydItems.filter(i=>!have.has(i.meal_no+"|"+i.food_id+"|"+(+i.qty)));
+      if(!todo.length){ toast("أكل إمبارح متسجل هنا بالفعل ✓"); b.disabled=false; b.textContent="📋 نسخ أكل إمبارح"; return; }
+      let done=0;
+      for(const i of todo){ const rec={id:crypto.randomUUID(),client_id:p.id,log_date:S.date,meal_no:i.meal_no,food_id:i.food_id,food_name:i.food_name,unit:i.unit,qty:i.qty,kcal:i.kcal,protein:i.protein,carbs:i.carbs,fat:i.fat}; MIN_KEYS.forEach(([k])=>{ if(i[k]!==undefined) rec[k]=i[k]; });
+        const { error:cErr }=await dbWrite({op:"insert",table:"meal_items",row:rec}); if(cErr){ toast(cErr.message); break; } done++; }
+      if(done) toast(`✓ اتنسخ ${done} صنف من إمبارح`);
+      renderMeals(el,{mode}); };
+    $("#wkV").onclick=()=>renderFoodWeek(el);
   }
   const [pl,lg]=await Promise.all([
     sb.from("diet_plan_items").select("*").eq("client_id",p.id).order("meal_no").order("position"),
@@ -555,7 +609,7 @@ async function viewMeasures(el){
   const F=[["weight","⚖ الوزن","كجم"],["waist","الوسط","سم"],["neck","الرقبة","سم"],["chest","الصدر","سم"],["arm","الذراع","سم"],["thigh","الفخذ","سم"],["hips","الأرداف","سم"],["bodyfat","الدهون","%"]];
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📏</div><h2>القياسات الأسبوعية<small>مرة في الأسبوع – نفس اليوم والتوقيت</small></h2></div>
       ${blockNavHTML(sel||1,p)}<div class="scroller">${[0,...blockWeeks(sel||wk||1,p)].map(i=>`<button class="chip ${sel===i?"on":""} ${wk===i&&i?"cur":""}" data-w="${i}">${i?"أسبوع "+i:"البداية"}${B.find(b=>b.week===i&&b.weight)?" ✓":""}</button>`).join("")}</div>
-      <div class="grid2" style="margin-top:12px"><label class="f">📅 التاريخ<input type="date" data-k="log_date" value="${esc(cur.log_date??today())}"></label>
+      <div class="grid2" style="margin-top:12px"><label class="f">📅 التاريخ${djField(`<input type="date" data-k="log_date" value="${esc(cur.log_date??today())}">`,cur.log_date??today())}</label>
       ${F.map(([k,l,u])=>{ const d=sel&&start[k]&&cur[k]?cur[k]-start[k]:null; return `<label class="f">${l} (${u})<input inputmode="decimal" data-k="${k}" value="${esc(cur[k]??"")}">${d!==null?`<span class="pill ${d<0?"acc-soft":""}" style="margin-top:4px">${d>0?"▲":"▼"} ${fmt(Math.abs(d),1)} منذ البداية</span>`:""}</label>`; }).join("")}</div>
       <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
       <button class="btn primary block" id="bSave">حفظ ${sel?"الأسبوع "+sel:"قياسات البداية"}</button></div>

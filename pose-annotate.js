@@ -250,7 +250,9 @@ function anSkeleton(ctx, W, H, s, dim, quiet) {
       ctx.font = `700 ${Math.max(12, W * 0.036)}px system-ui,sans-serif`;
       ctx.direction = "ltr"; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic"; ctx.shadowBlur = 4;
       ctx.fillStyle = j.verdict === "good" ? "#22C55E" : "#FCA5A5";
-      ctx.fillText((j.verdict === "good" ? "✓ " : "✕ ") + j.note, Math.max(4, Math.min(W - 12 - ctx.measureText(j.note).width, p.x + 10)), p.y - 10);
+      const gs = Math.max(12, W * 0.036), tx = Math.max(4, Math.min(W - 12 - ctx.measureText(j.note).width - gs, p.x + 10));
+      if (typeof mofitCanvasGlyph === "function" && mofitCanvasGlyph(ctx, j.verdict === "good" ? "check" : "x", tx + gs / 2, p.y - 10 - gs * 0.35, gs, j.verdict === "good" ? "#22C55E" : "#FCA5A5")) ctx.fillText(j.note, tx + gs * 1.2, p.y - 10);
+      else ctx.fillText((j.verdict === "good" ? "✓ " : "✕ ") + j.note, tx, p.y - 10);
     }
   }
   if (!quiet && s.angles && s.angles.length) {

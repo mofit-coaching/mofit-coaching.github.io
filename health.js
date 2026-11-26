@@ -13,7 +13,7 @@ async function healthCardHTML(p){
     <p class="hint" style="margin:0 0 8px">الأرقام دي بتتسجل عندك بس. الكوتش مش بيشوف أي نوع غير اللي تفتحه تحت، وتقدر تقفله في أي وقت.</p>
     ${HS_TYPES.map(([k,ic,l])=>`<label class="row" style="justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--soft2)"><span>${ic} ${l} <small class="muted">${con[k]?"الكوتش بيشوفها":"الكوتش مش بيشوفها"}</small></span><input type="checkbox" data-hc="${k}" ${con[k]?"checked":""} style="width:auto;min-height:0"></label>`).join("")}
     <div class="card-h" style="margin-top:14px"><div class="ic">✍️</div><h2>سجّل يدوي<small>لو مش عايز تستخدم الاختصار</small></h2></div>
-    <div class="grid3"><label class="f">التاريخ<input type="date" id="hmD" value="${today()}" max="${today()}"></label>
+    <div class="grid3"><label class="f">التاريخ${djField(`<input type="date" id="hmD" value="${today()}" max="${today()}">`,today())}</label>
       <label class="f">خطوات<input inputmode="numeric" id="hmS" placeholder="8500"></label>
       <label class="f">نبض الراحة<input inputmode="numeric" id="hmH" placeholder="62"></label></div>
     <button class="btn primary block" id="hmSave">حفظ</button>
