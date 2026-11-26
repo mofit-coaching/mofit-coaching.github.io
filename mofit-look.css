@@ -1,0 +1,47 @@
+/* MOFIT look: "iron and chalk". Replaces the repeated navy-to-orange gradient panels with
+   flat graphite plates: a ruler-tick edge, one cut corner, and a single orange plate-edge bar.
+   Orange stays the 10% accent. Loads after dark.css/fonts.css. Motion kept (ticks drift, bar breathes). */
+html body .top,
+html body .card.dark,
+html body .unitbox,
+html body .ex-h,
+html body .card.tip,
+html body .stat.dark{
+  background:var(--mf-iron,#171C25);
+  background-image:
+    linear-gradient(180deg,rgba(255,255,255,.035),transparent 38%),
+    repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 9px);
+  border:1px solid var(--mf-line,rgba(255,255,255,.09));
+  box-shadow:var(--mf-sh-2,0 22px 44px -20px rgba(0,0,0,.55));
+}
+html body .card.dark,html body .unitbox,html body .ex-h,html body .card.tip{
+  border-radius:var(--mf-r-sm,10px);
+  clip-path:polygon(0 0,calc(100% - var(--mf-cut,18px)) 0,100% var(--mf-cut,18px),100% 100%,0 100%);
+}
+html[dir=rtl] body .card.dark,html[dir=rtl] body .unitbox,html[dir=rtl] body .ex-h,html[dir=rtl] body .card.tip{
+  clip-path:polygon(var(--mf-cut,18px) 0,100% 0,100% 100%,0 100%,0 var(--mf-cut,18px));
+}
+/* plate edge: the only strong orange on the panel */
+html body .card.dark:before,html body .unitbox:before,html body .ex-h:before,html body .card.tip:before,html body .stat.dark:before{
+  content:"";position:absolute;inset:0 auto 0 0;width:4px;height:auto;opacity:1;
+  background:linear-gradient(180deg,var(--mf-acc,#FF6B1A),var(--mf-acc-2,#FFB347));
+  -webkit-mask-image:none;mask-image:none;animation:mfbreathe 3.6s ease-in-out infinite}
+html[dir=rtl] body .card.dark:before,html[dir=rtl] body .unitbox:before,html[dir=rtl] body .ex-h:before,html[dir=rtl] body .card.tip:before,html[dir=rtl] body .stat.dark:before{inset:0 0 0 auto}
+/* kill the repeated sweep, ring and glow decorations on those panels */
+html body .card.dark:after,html body .unitbox:after,html body .ex-h:after,html body .card.tip:after{
+  animation:none;background:none;border:0;box-shadow:none;width:0;height:0}
+@keyframes mfbreathe{0%,100%{opacity:.75}50%{opacity:1}}
+/* header: same plate language, tick ruler along its bottom edge, no giant ghost wordmark */
+html body .top{border-radius:0 0 var(--mf-r-lg,24px) var(--mf-r-lg,24px);padding-bottom:34px}
+html body .top:after{display:block;content:"";position:absolute;left:0;right:0;bottom:0;top:auto;width:auto;height:14px;border-radius:0;
+  background:
+    repeating-linear-gradient(90deg,rgba(255,255,255,.32) 0 1px,transparent 1px 12px) bottom/100% 6px no-repeat,
+    repeating-linear-gradient(90deg,rgba(255,107,26,.9) 0 2px,transparent 2px 60px) bottom/100% 12px no-repeat;
+  -webkit-text-stroke:0;font-size:0;animation:mfruler 18s linear infinite;pointer-events:none;opacity:.9}
+@keyframes mfruler{to{background-position:60px 100%,60px 100%}}
+html body .top:before{opacity:0}
+html body .hello h1{background:none;-webkit-text-fill-color:#fff;color:#fff}
+/* light surfaces: chalk paper, hard hairline instead of soft glow */
+html body .card:not(.dark):not(.tip){border:1px solid var(--mf-line-ink,rgba(14,17,22,.1));border-radius:var(--mf-r-md,16px)}
+html body .nav{background:var(--mf-ink,#0E1116)}
+@media(prefers-reduced-motion:reduce){html body .top:after,html body .card.dark:before{animation:none}}
