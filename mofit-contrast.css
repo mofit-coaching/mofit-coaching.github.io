@@ -67,3 +67,22 @@ html .login-art p{font-size:clamp(1rem,2.2vw,1.65rem);margin-top:clamp(10px,2vh,
 html .login-card{z-index:2;margin-top:6px}
 @media(max-width:600px){html .login-art{min-height:42svh}html .login-art::before{top:4%}}
 @media(prefers-reduced-motion:reduce){html .login::before,html .login::after,html .login-art::before,html .login-art .logo-big,html .login-art p{animation:none!important}}
+
+/* ===== MOFIT pulse stage (interactive layer) ===== */
+@keyframes stDrop{from{opacity:0;filter:blur(12px)}to{opacity:1;filter:blur(0)}}
+html .login.stageA .st-fx{position:fixed;inset:0;width:100vw;height:100vh;z-index:0;pointer-events:none}
+html .login.stageA .login-art::before{display:none!important}
+html .login.stageA::before,html .login.stageA::after{opacity:.8}
+/* ECG paper: faint millimetre grid fading toward the bottom */
+html .login.stageA{background-image:linear-gradient(rgba(255,107,26,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,107,26,.045) 1px,transparent 1px),linear-gradient(rgba(255,255,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.03) 1px,transparent 1px),radial-gradient(900px 520px at 50% -10%,rgba(91,108,255,.30),transparent 70%),radial-gradient(700px 420px at 100% 60%,rgba(255,107,26,.22),transparent 70%),linear-gradient(180deg,#05070F 0%,#0A1020 60%,#0F1424 100%);background-size:16px 16px,16px 16px,80px 80px,80px 80px,auto,auto,auto;background-attachment:fixed}
+.st-word{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);width:max-content;max-width:100vw;display:flex;direction:ltr;gap:.02em;font:900 clamp(7.5rem,31vw,30rem)/.8 var(--font-num,system-ui);letter-spacing:-.02em;pointer-events:none;z-index:0;user-select:none}
+.st-word span{display:block;color:transparent;-webkit-text-stroke:2px rgba(255,255,255,.2);animation:stDrop 1s cubic-bezier(.2,.9,.25,1) backwards;animation-delay:calc(var(--i)*.09s + .1s);will-change:transform}
+.st-word span.f{-webkit-text-stroke-color:rgba(255,140,60,.55)}
+html .login.stageA .login-art{min-height:56svh}
+html .login.stageA .login-art .logo-big{position:relative;z-index:1;margin-top:clamp(70px,16vh,150px)}
+.st-bpm{position:absolute;top:clamp(16px,3.4vh,34px);inset-inline-start:clamp(16px,4vw,48px);display:flex;align-items:baseline;gap:8px;direction:ltr;font:700 .8rem/1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.18em;color:#FFB070;z-index:1}
+.st-bpm i{width:8px;height:8px;border-radius:50%;background:#FF6B1A;box-shadow:0 0 12px #FF6B1A;align-self:center;animation:stArc 1s ease-in-out infinite}
+.st-bpm b{font-size:2rem;letter-spacing:0;color:#fff;font-variant-numeric:tabular-nums}
+@media(max-width:600px){html .login.stageA .login-art{min-height:46svh}.st-word span{-webkit-text-stroke-width:1.5px}}
+@media(prefers-reduced-motion:reduce){.st-word span,.st-bpm i{animation:none!important}}
+html .login.stageA ~ .st-top,canvas.st-top{position:fixed;inset:0;width:100vw;height:100vh;z-index:60;pointer-events:none}
