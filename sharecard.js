@@ -45,8 +45,11 @@ function _scFrame(s,t){
   // hero: pulsing flame + counting streak
   x.textAlign="center";x.direction="rtl";
   const pulse=1+0.09*Math.sin(t*2*Math.PI*2);
-  x.save();x.translate(W/2,420);x.scale(pulse,pulse);
-  x.font="150px Cairo, sans-serif";x.fillText("🔥",0,50);x.restore();
+  const fg2=x.createLinearGradient(0,335,0,525);fg2.addColorStop(0,"#FFF2B0");fg2.addColorStop(1,"#FF5A0A");
+  x.save();x.translate(W/2,430);x.scale(pulse,pulse);x.translate(-W/2,-430);
+  x.shadowColor="rgba(255,120,30,.55)";x.shadowBlur=30;
+  mofitCanvasGlyph(x,"flame",W/2,430,190,"rgba(255,255,255,.92)",fg2);
+  x.restore();
   const shown=Math.round((d.streak||0)*ease(Math.min(1,t/0.4)));
   x.fillStyle="#FF8A3D";x.font=F(800,190);
   x.fillText(String(shown),W/2,680);
@@ -63,7 +66,8 @@ function _scFrame(s,t){
     x.globalAlpha=it;
     rr(a,y0+dy,bw,bh,28);x.fillStyle="rgba(255,255,255,.07)";x.fill();
     x.strokeStyle="rgba(255,255,255,.14)";x.lineWidth=2;x.stroke();
-    x.fillStyle="#FFB347";x.font=F(800,i===2?58:76);x.fillText(String(st[0]),a+bw/2,y0+dy+95);
+    if(i===2&&CANVAS_BADGE[String(st[0])]){ mofitCanvasGlyph(x,CANVAS_BADGE[String(st[0])],a+bw/2,y0+dy+78,64,"#FFB347","#FF8A3D"); }
+    else { x.fillStyle="#FFB347";x.font=F(800,i===2?58:76);x.fillText(String(st[0]),a+bw/2,y0+dy+95); }
     x.fillStyle="rgba(255,255,255,.8)";x.font=F(600,34);x.fillText(st[1],a+bw/2,y0+dy+155);
     x.globalAlpha=1;});
   // footer
