@@ -17,11 +17,13 @@ if(self.workbox){
   wb.precaching.cleanupOutdatedCaches();
   wb.routing.registerRoute(({request})=>request.mode==="navigate",
     new wb.strategies.NetworkFirst({cacheName:"mofit-pages-"+V,networkTimeoutSeconds:8}));
+  wb.routing.registerRoute(({url})=>/cdn\.jsdelivr\.net\/npm\/@mediapipe\/tasks-vision@1\.2\.3\//.test(url.href)||/storage\.googleapis\.com\/mediapipe-models\/pose_landmarker\//.test(url.href),
+    new wb.strategies.CacheFirst({cacheName:"mofit-pose-v1"}));
   wb.routing.registerRoute(({url,request})=>request.method==="GET"&&(url.origin===location.origin||/jsdelivr|googleapis|gstatic/.test(url.hostname)),
     new wb.strategies.StaleWhileRevalidate({cacheName:"mofit-static-"+V}));
   self.addEventListener("install",e=>self.skipWaiting());
   self.addEventListener("activate",e=>{
-    e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.indexOf("mofit-")===0&&k.indexOf(V)===-1).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+    e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.indexOf("mofit-")===0&&k.indexOf("mofit-pose")!==0&&k.indexOf(V)===-1).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
   });
 }
 
