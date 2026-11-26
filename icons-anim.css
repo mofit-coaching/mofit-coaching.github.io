@@ -1,0 +1,10 @@
+/* Mofit icons: draw-in on load, ember idle, press response */
+.ico svg{display:block;transform-box:fill-box;transform-origin:center;animation:icxPop .45s cubic-bezier(.2,.9,.3,1.35) both}
+.ico svg>:not(.a){stroke-dasharray:80;stroke-dashoffset:80;animation:icxDraw .7s cubic-bezier(.4,0,.2,1) .05s forwards}
+.ico svg>:nth-child(2){animation-delay:.14s}.ico svg>:nth-child(3){animation-delay:.22s}.ico svg>:nth-child(4){animation-delay:.3s}
+.ico svg>.a:not([opacity]){opacity:0;animation:icxFade .4s ease .5s forwards}
+[data-n=flame] svg>.a,[data-n=bolt] svg>.a{animation:icxFade .4s ease .5s forwards,icxEmber 2.2s ease-in-out 1.1s infinite}
+[data-n=trophy] svg>.a,[data-n=star] svg>.a,[data-n=medal] svg>.a,[data-n=crown] svg>.a{animation:icxFade .4s ease .5s forwards,icxEmber 3.2s ease-in-out 1.1s infinite}
+[data-n=flame] svg{animation:icxPop .45s cubic-bezier(.2,.9,.3,1.35) both,icxFlick 2.2s ease-in-out 1.1s infinite}
+@keyframes icxDraw{to{stroke-dashoffset:0}}
+@keyframes icxFade{to{opacity:.95}}

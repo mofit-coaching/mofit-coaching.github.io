@@ -7,9 +7,8 @@
    If Workbox fails to load, the worker stays a passthrough (no caching).
    ====================================================================== */
 importScripts("wb/workbox-sw.js");
-const V="1126a5";
-const SHELL0=["./","index.html","styles.css?v=1126a5","design.css?v=1126a5","coachshell.css?v=1126a5","dark.css?v=1126a5","coachshell.js?v=1126a5","design.js?v=1126a5","core.js?v=1126a5","data.js?v=1126a5","data-systems2.js?v=1126a5","data-systems3.js?v=1126a5","data-systems4.js?v=1126a5",
-"data-rehab2.js?v=1126a5","media.js?v=1126a5","pro.js?v=1126a5","lab.js?v=1126a5","anatomy.js?v=1126a5","health.js?v=1126a5","posing.js?v=1126a5","minerals.js?v=1126a5","ghealth.js?v=1126a5","stepsboard.js?v=1126a5","push.js?v=1126a5","confetti.js?v=1126a5","celebrate.js?v=1126a5","lottie.min.js?v=1126a5","anims.js?v=1126a5","chart.min.js?v=1126a5","charts.js?v=1126a5","exdb-data.js?v=1126a5","exdb.js?v=1126a5","lottie-star.json","lottie-dumbbell.json","icons.js?v=1126a5","supps.js?v=1126a5","views.js?v=1126a5","coach.js?v=1126a5","signup.js?v=1126a5","qrcode.js?v=1126a5","invite.js?v=1126a5","referral.js?v=1126a5","transform.js?v=1126a5","chat.js?v=1126a5","aichat.js?v=1126a5","ai.js?v=1126a5","inbox.js?v=1126a5","screens.js?v=1126a5","showcase.js?v=1126a5","flame.js?v=1126a5","photos.js?v=1126a5","firstweek.js?v=1126a5","league.js?v=1126a5","prices.js?v=1126a5","training.js?v=1126a5","sharecard.js?v=1126a5","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","icon-maskable-512.png","404.html"];
+const V="c84d2e1f";
+const SHELL0=["./","index.html","styles.css?v=c84d2e1f","design.css?v=c84d2e1f","icons-anim.css?v=c84d2e1f","coachshell.css?v=c84d2e1f","dark.css?v=c84d2e1f","coachshell.js?v=c84d2e1f","design.js?v=c84d2e1f","core.js?v=c84d2e1f","data.js?v=c84d2e1f","data-systems2.js?v=c84d2e1f","data-systems3.js?v=c84d2e1f","data-systems4.js?v=c84d2e1f","data-rehab2.js?v=c84d2e1f","media.js?v=c84d2e1f","pro.js?v=c84d2e1f","lab.js?v=c84d2e1f","anatomy.js?v=c84d2e1f","health.js?v=c84d2e1f","posing.js?v=c84d2e1f","minerals.js?v=c84d2e1f","ghealth.js?v=c84d2e1f","stepsboard.js?v=c84d2e1f","push.js?v=c84d2e1f","confetti.js?v=c84d2e1f","celebrate.js?v=c84d2e1f","lottie.min.js?v=c84d2e1f","anims.js?v=c84d2e1f","chart.min.js?v=c84d2e1f","charts.js?v=c84d2e1f","exdb-data.js?v=c84d2e1f","exdb.js?v=c84d2e1f","lottie-star.json","lottie-dumbbell.json","icons.js?v=c84d2e1f","supps.js?v=c84d2e1f","views.js?v=c84d2e1f","coach.js?v=c84d2e1f","signup.js?v=c84d2e1f","qrcode.js?v=c84d2e1f","invite.js?v=c84d2e1f","referral.js?v=c84d2e1f","transform.js?v=c84d2e1f","chat.js?v=c84d2e1f","aichat.js?v=c84d2e1f","ai.js?v=c84d2e1f","inbox.js?v=c84d2e1f","screens.js?v=c84d2e1f","showcase.js?v=c84d2e1f","flame.js?v=c84d2e1f","photos.js?v=c84d2e1f","firstweek.js?v=c84d2e1f","league.js?v=c84d2e1f","prices.js?v=c84d2e1f","training.js?v=c84d2e1f","sharecard.js?v=c84d2e1f","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","icon-maskable-512.png","404.html"];
 const SHELL=SHELL0;
 if(self.workbox){
   const wb=self.workbox;
@@ -43,3 +42,4 @@ self.addEventListener("notificationclick",e=>{
     return clients.openWindow(url);
   }));
 });
+
