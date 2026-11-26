@@ -501,7 +501,7 @@ function wireRespond(host,after){
     try{
       const { data, error }=await sb.rpc("league_respond",{p_join:join});
       if(error||!data||!data.ok) throw error||new Error("fail");
-      if(join){ toast("🔥 اتسجلت في الليج - بالتوفيق يا بطل"); if(typeof burst==="function") burst(); }
+      if(join){ toast("🔥 اتسجلت في الليج - بالتوفيق يا بطل"); window.mofitCelebrate?mofitCelebrate.mini():(typeof burst==="function"&&burst()); }
       after(join);
     }catch(err){ b.disabled=false; b.textContent=join?"اشترك في الليج 🔥":"مش دلوقتي"; toast("تعذر الحفظ - جرب تاني"); }
   };
@@ -516,7 +516,7 @@ function wireGrant(host){
     try{
       const { error }=await sb.rpc("league_grant_reward",{p_winner_id:+b.dataset.id});
       if(error) throw error;
-      b.textContent="اتكرم ✅"; toast("✅ اتسجل التكريم");
+      b.textContent="اتكرم ✅"; toast("✅ اتسجل التكريم"); if(window.mofitCelebrate) mofitCelebrate.mini();
     }catch(err){ b.disabled=false; b.textContent="✓ سجّل التكريم"; toast("تعذر الحفظ - جرب تاني"); }
   };
 }
@@ -534,7 +534,7 @@ function wireEnd(host,btnId,crown,after){
     try{
       const { data, error }=await sb.rpc("league_end",{p_crown:crown});
       if(error||!data||!data.ok) throw error||new Error("fail");
-      toast(crown?"🏆 الأبطال اتحددوا والليج اتقفلت":"⛔ الليج اتلغت خالص");
+      toast(crown?"🏆 الأبطال اتحددوا والليج اتقفلت":"⛔ الليج اتلغت خالص"); if(crown&&window.mofitCelebrate) mofitCelebrate.win();
       LG=null; if(after) after();
     }catch(err){ armed=false; b.disabled=false; b.textContent=orig; toast("تعذر - اتأكد إن قاعدة البيانات اتحدثت"); }
   };
@@ -587,7 +587,7 @@ async function viewLeague(el){
   try{
     if(w&&LG.me&&w.nickname===LG.me.nickname){
       const key="mofit_league_win_"+w.week_start;
-      if(!localStorage.getItem(key)){ localStorage.setItem(key,"1"); if(typeof burst==="function") setTimeout(burst,450); }
+      if(!localStorage.getItem(key)){ localStorage.setItem(key,"1"); setTimeout(()=>{ window.mofitCelebrate?mofitCelebrate.win():(typeof burst==="function"&&burst()); },450); }
     }
   }catch(e){}
 }

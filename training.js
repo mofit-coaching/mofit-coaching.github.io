@@ -186,4 +186,4 @@ async function streakCardHTML(p){
     ${next?`<p class="hint" style="margin:8px 0 0">${next[0]-total} تمرين وتاخد شارة ${next[1]} ${next[2]}</p>`:""}
     <button class="btn sm ghost block" style="margin-top:10px" onclick="shareStreakCard(this)" data-streak="${streak}" data-total="${total}" data-done="${done}" data-goal="${goal}" data-badge="${earned.length?earned[earned.length-1][1]:""}" data-badgename="${earned.length?earned[earned.length-1][2]:""}">📤 شارك تقدمك</button></div>`;
 }
-function streakAfter(p){ if(window._streakNew){ try{ localStorage.setItem(window._streakKey,window._streakCount); }catch(e){} setTimeout(()=>{ if(typeof burst==="function") burst(); toast("🎖 شارة جديدة اتفتحت!"); },700); } }
+function streakAfter(p){ if(window._streakNew){ try{ localStorage.setItem(window._streakKey,window._streakCount); }catch(e){} setTimeout(()=>{ window.mofitCelebrate?mofitCelebrate.badge():(typeof burst==="function"&&burst()); toast("🎖 شارة جديدة اتفتحت!"); },700); } }
