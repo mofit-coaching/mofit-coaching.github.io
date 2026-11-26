@@ -120,7 +120,7 @@ async function drawPublicPlans(){
 }
 (function initLoginTabs(){
   document.querySelectorAll(".ltab").forEach(b=>b.onclick=()=>loginTab(b.dataset.lt));
-  const fp=$("#forgotLink"); if(fp) fp.href=waLink("السلام عليكم كوتش، نسيت كلمة السر بتاعة Mofit 🙏\nالإيميل: ");
+  const fp=$("#forgotLink"); if(fp){ fp.removeAttribute("href"); fp.style.cursor="pointer"; fp.onclick=e=>{ e.preventDefault(); if(typeof forgotPassSheet==="function") forgotPassSheet(); }; }
   const gen=$("#askLink"); if(gen) gen.href=waLink("السلام عليكم كوتش 👋 عندي استفسار عن الاشتراك في Mofit");
   // shareable links: #prices / ?prices opens the price list, #join / ?join=1 the signup form
   const urlTab=()=>{
@@ -205,7 +205,6 @@ async function nudgeClient(c,a,btn){
   if(error) return toast("تعذر الإرسال، جرّب تاني");
   btn&&btn.classList.add("sent"); toast("✓ اتبعتت في الشات");
 }
-
 
 
 
