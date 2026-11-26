@@ -45,7 +45,11 @@ function anInjectStyles() {
 .an-tools{flex:none;display:flex;align-items:center;gap:6px;padding:4px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .an-tool{flex:none;border:1px solid #2B3750;background:#162036;color:#F1F5F9;border-radius:12px;padding:7px 10px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
 .an-tool.on{background:#F97316;border-color:#F97316;color:#fff}
-.an-dot{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
+.an-tool.an-auto-primary{background:linear-gradient(135deg,#BF400B,#E2540A);border:1px solid #FB923C;color:#fff;font-size:.96rem;padding:10px 16px;min-height:44px;box-shadow:0 6px 18px rgba(226,84,10,.34);animation:anAutoGlow 2.4s ease-in-out infinite}
+@keyframes anAutoGlow{0%,100%{box-shadow:0 6px 16px rgba(226,84,10,.28);transform:translateY(0)}50%{box-shadow:0 8px 25px rgba(249,115,22,.55);transform:translateY(-1px)}}
+.an-auto-hint{flex:none;text-align:center;color:#FDBA74;font-size:.78rem;font-weight:700;padding:3px 12px 5px;animation:anHintPulse 3s ease-in-out infinite}
+@keyframes anHintPulse{0%,100%{opacity:.78}50%{opacity:1}}
+.an-scan-progress{margin:4px 12px 8px;padding:10px 12px;border:1px solid #334155;border-radius:12px;background:#111B2D;display:flex;align-items:center;gap:9px;color:#E2E8F0;font-size:.85rem}.an-scan-progress[hidden],.an-scan-error[hidden]{display:none}.an-spinner{width:16px;height:16px;border:2px solid #475569;border-top-color:#FB923C;border-radius:50%;animation:anSpin .8s linear infinite;flex:none}@keyframes anSpin{to{transform:rotate(360deg)}}.an-scan-progress b{margin-inline-start:auto;color:#FDBA74}.an-progress-track{height:5px;position:absolute;left:12px;right:12px;bottom:2px;background:#334155;border-radius:5px;overflow:hidden}.an-progress-track i{display:block;height:100%;width:0;background:#FB923C;transition:width .15s}.an-scan-progress{position:relative;padding-bottom:14px}.an-scan-error{margin:4px 12px 8px;padding:10px;border:1px solid #7F1D1D;border-radius:12px;background:#2B1116;color:#FECACA}.an-scan-error button{margin-inline-start:8px;background:#E2540A;color:white;border:0;border-radius:8px;padding:6px 10px;font-weight:700;cursor:pointer}.an-dot{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
 .an-dot.on{border-color:#fff;box-shadow:0 0 0 2px #F97316}
 .an-moms{flex:none;display:flex;align-items:center;gap:6px;padding:4px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .an-mom{flex:none;display:inline-flex;align-items:center;gap:5px;border:1px solid #2B3750;background:#162036;color:#F1F5F9;border-radius:999px;padding:5px 10px;font-size:.78rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;direction:ltr}
@@ -93,6 +97,9 @@ function anShell(title, saveLabel) {
       ${AN_SPEEDS.map(s => `<button class="an-spd${s === 1 ? " on" : ""}" data-spd="${s}">×${s}</button>`).join("")}
     </div>
     <div class="an-tools"></div>
+    <div class="an-auto-hint">اضغط 🤖 تحليل للتحليل التلقائي الكامل</div>
+    <div class="an-scan-progress" data-an="scanprogress" hidden><span class="an-spinner"></span><span data-an="scanlabel">جاري تجهيز النموذج…</span><b data-an="scanpct">0٪</b><div class="an-progress-track"><i data-an="scanbar"></i></div></div>
+    <div class="an-scan-error" data-an="scanerror" hidden></div>
     <div class="an-moms"></div>
     <div class="an-note"></div>
     <div class="an-textbar" style="display:none">
@@ -529,7 +536,7 @@ function anChartTick(root, curT) {
 function anLoadScript(src) {
   return new Promise((res, rej) => {
     const sc = document.createElement("script");
-    sc.src = src; sc.onload = res; sc.onerror = rej;
+    sc.src = src + (src.includes("?") ? "&" : "?") + "v=pose-scan-20261126"; sc.onload = res; sc.onerror = rej;
     document.head.appendChild(sc);
   });
 }
@@ -563,7 +570,7 @@ function anDrawTools(root) {
        <button class="an-tool" data-an="undo" title="تراجع">↩ تراجع</button>
        <button class="an-tool" data-an="clear" title="مسح اللقطة">🗑 مسح</button>
        <span style="flex:none;width:4px"></span>
-       <button class="an-tool" data-an="auto" title="تحليل تلقائي كامل للفيديو: زوايا، عزم، جاذبية، شدة">🤖 تحليل</button>
+       <button class="an-tool an-auto-primary" data-an="auto" title="تحليل تلقائي كامل للفيديو: زوايا، عزم، جاذبية، شدة">🤖 تحليل</button>
        <button class="an-tool" data-an="track" title="تتبع الزوايا في الفيديو كله">📈 تتبع</button>
        <button class="an-tool" data-an="photo" title="تحليل صورة من الجهاز">📷 صورة</button>
        <button class="an-tool" data-an="variant" title="دقة النموذج">⚙️ خفيف</button>
@@ -756,29 +763,51 @@ const anSyncSkel = () => {
 AN.trackGo = async () => {
   if (AN.auto.mode === "tracking") return;
   AN.auto.mode = "tracking";
-  toast("🤖 بحلّل الفيديو كله: زوايا، عزم، خط الجاذبية، شدة الحركة… ثانية واحدة بعد ما الفيديو يخلص");
+  const progress = root.querySelector('[data-an="scanprogress"]');
+  const label = root.querySelector('[data-an="scanlabel"]');
+  const pct = root.querySelector('[data-an="scanpct"]');
+  const bar = root.querySelector('[data-an="scanbar"]');
+  const errorBox = root.querySelector('[data-an="scanerror"]');
+  const go = root.querySelector('[data-an="auto"]');
+  if (errorBox) { errorBox.hidden = true; errorBox.replaceChildren(); }
+  if (progress) progress.hidden = false;
+  if (go) { go.disabled = true; go.textContent = "⏳ جاري التحليل"; }
   let track = null;
   try {
+    if (label) label.textContent = "جاري تجهيز النموذج…";
     await anEnsureAuto("VIDEO");
-    const t0 = AN.video.currentTime;
-    video.pause(); video.currentTime = 0;
-    await new Promise(r => { if (video.readyState >= 2 && !video.seeking) return r(); video.addEventListener("seeked", r, { once: true }); setTimeout(r, 1500); });
-    const res = await apTrack(video, 10, p => { const pb = root.querySelector('[data-an="play"]'); if (pb) pb.textContent = Math.round(p * 100) + "٪"; });
+    const fps = /iPhone|iPad|Android/i.test(navigator.userAgent) ? 5 : 6;
+    const res = await apTrack(video, fps, (p, stage) => {
+      if (label) label.textContent = stage === "warming" ? "جاري تجهيز النموذج…" : "جاري تحليل الفيديو";
+      if (pct) pct.textContent = Math.round(p * 100) + "٪";
+      if (bar) bar.style.width = Math.round(p * 100) + "%";
+    });
     const ar = (video.videoWidth && video.videoHeight) ? video.videoWidth / video.videoHeight : 0.5625;
-    track = { fps: res.fps, ar, frames: res.frames, series: apSeries(res.frames).map(x => ({ ...x, unit: "°" })).concat(anbSeries(res.frames, ar)) };
-    video.currentTime = t0;
-    const pb = root.querySelector('[data-an="play"]'); if (pb) pb.textContent = "▶";
+    track = { fps: res.fps, ar, frames: res.frames, errors: res.errors.length, series: apSeries(res.frames).map(x => ({ ...x, unit: "°" })).concat(anbSeries(res.frames, ar)) };
+    if (res.errors.length) console.warn("MOFIT pose scan detection errors:", res.errors.length, res.errors.slice(0, 3));
   } catch (e) {
     AN.auto.mode = "off";
-    const pb = root.querySelector('[data-an="play"]'); if (pb) pb.textContent = "▶";
-    return toast("التتبع ماكملش، جرّب تاني");
+    if (progress) progress.hidden = true;
+    if (go) { go.disabled = false; go.textContent = "🤖 تحليل"; }
+    if (errorBox) { errorBox.hidden = false; errorBox.textContent = "تعذر تحليل الفيديو أو تحميل النموذج. اتأكد من الاتصال وجرب تاني. "; const retry = document.createElement("button"); retry.textContent = "إعادة المحاولة"; retry.onclick = () => AN.trackGo(); errorBox.appendChild(retry); }
+    console.error("MOFIT pose scan failed", e);
+    return;
   }
   AN.auto.mode = "off";
-  if (!track.frames.length) return toast("مفيش جسم واضح اتحدد في الفيديو");
+  if (progress) progress.hidden = true;
+  if (go) { go.disabled = false; go.textContent = "🤖 تحليل"; }
+  if (!track.frames.length) {
+    if (errorBox) { errorBox.hidden = false; errorBox.textContent = "مفيش جسم واضح اتحدد في الفيديو. جرّب تاني بفيديو الجسم فيه واضح وكامل. "; const retry = document.createElement("button"); retry.textContent = "إعادة المحاولة"; retry.onclick = () => AN.trackGo(); errorBox.appendChild(retry); }
+    return;
+  }
   AN.auto.track = track;
   AN.chartSel = null;
   AN.dirty = true;
   anShowChart(root, video);
+  const chip = document.createElement("button"); chip.className = "an-tool"; chip.textContent = "📊 النتيجة"; chip.onclick = () => window.MofitPoseResults && MofitPoseResults.open(track, { onSeek: t => { video.currentTime = t; } });
+  root.querySelector(".an-tools")?.appendChild(chip);
+  if (window.MofitPoseResults) MofitPoseResults.open(track, { onSeek: t => { video.currentTime = t; } });
+  if (errorBox && track.errors) { errorBox.hidden = false; errorBox.textContent = `التحليل خلص مع ${track.errors} أخطاء في بعض اللقطات. ممكن تعيد المحاولة لو النتيجة ناقصة. `; const retry = document.createElement("button"); retry.textContent = "إعادة المحاولة"; retry.onclick = () => AN.trackGo(); errorBox.appendChild(retry); }
   toast("✓ التحليل خلص: " + track.frames.length + " لقطة. اختار الزاوية أو العزم أو الشدة من فوق");
 };
 

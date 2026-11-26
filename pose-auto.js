@@ -129,47 +129,52 @@ async function apDetectVideo(video, tsMs) {
   return (res && res.landmarks && res.landmarks[0]) || null;
 }
 
-/* VIDEO tracking: plays the video through once (muted, sped up) and samples
-   ~fps times per second. Returns { fps, frames:[{t, lms}] } with packed lms.
-   Seek-based sampling is unreliable across browsers, so we sample while playing. */
-function apTrack(video, fps, onProgress) {
-  fps = fps || 10;
-  return new Promise((resolve, reject) => {
-    const frames = [];
-    let lastSample = -1, done = false;
-    const finish = (err) => {
-      if (done) return; done = true;
-      video.removeEventListener("ended", onEnd);
-      video.removeEventListener("error", onErr);
-      cancelAnimationFrame(raf);
-      try { video.pause(); video.playbackRate = 1; video.muted = wasMuted; } catch (_) {}
-      if (err) reject(err); else resolve({ fps, frames });
-    };
-    const onEnd = () => finish();
-    const onErr = () => finish(new Error("video error"));
-    const wasMuted = video.muted;
-    const step = () => {
-      if (done) return;
-      const t = video.currentTime;
-      if (t - lastSample >= 1 / fps - 0.001 && video.readyState >= 2) {
-        lastSample = t;
-        let lms = null;
-        try {
-          const res = apLandmarker.detectForVideo(video, Math.round(t * 1000));
-          lms = (res && res.landmarks && res.landmarks[0]) || null;
-        } catch (_) {}
-        if (lms) frames.push({ t: +t.toFixed(2), lms: apPack(lms) });
-        if (onProgress && video.duration) onProgress(Math.min(1, t / video.duration));
-      }
-      raf = requestAnimationFrame(step);
-    };
-    let raf = requestAnimationFrame(step);
-    video.addEventListener("ended", onEnd);
-    video.addEventListener("error", onErr);
-    video.muted = true;
-    video.playbackRate = 1; // real-time play-through: most reliable across browsers
-    video.play().catch(e => finish(e));
-  });
+/* VIDEO tracking: pause and sample every time slice by seeking. detectForVideo is synchronous and may take hundreds of ms, so real-time rAF sampling skips most frames. */
+let apLastTs = -1;
+async function apTrack(video, fps, onProgress) {
+  fps = fps || 6;
+  const duration = Number(video.duration) || 0;
+  if (!duration || !Number.isFinite(duration)) throw new Error("video duration unavailable");
+  const frames = [], errors = [];
+  const wasMuted = video.muted, wasPaused = video.paused, originalTime = video.currentTime;
+  const report = (fraction, stage) => { if (onProgress) onProgress(Math.min(1, Math.max(0, fraction)), stage); };
+  const seek = async t => {
+    if (Math.abs(video.currentTime - t) < 0.005 && !video.seeking) return;
+    await new Promise((resolve, reject) => {
+      let timer;
+      const done = () => { clearTimeout(timer); video.removeEventListener("seeked", done); resolve(); };
+      const fail = () => { clearTimeout(timer); video.removeEventListener("seeked", done); reject(new Error("video seek failed")); };
+      video.addEventListener("seeked", done, { once: true });
+      video.addEventListener("error", fail, { once: true });
+      timer = setTimeout(done, 1200);
+      try { video.currentTime = Math.min(duration, Math.max(0, t)); } catch (e) { fail(); }
+    });
+  };
+  try {
+    video.pause(); video.muted = true;
+    report(0, "warming");
+    await seek(0);
+    try { apLandmarker.detectForVideo(video, Math.max(apLastTs + 1, 1)); apLastTs = Math.max(apLastTs + 1, 1); }
+    catch (e) { errors.push(String(e && e.message || e)); }
+    const total = Math.ceil(duration * fps) + 1;
+    for (let i = 0; i < total; i++) {
+      const t = Math.min(duration, i / fps);
+      if (i && t >= duration) break;
+      try {
+        await seek(t);
+        const ts = Math.max(apLastTs + 1, Math.round(t * 1000)); apLastTs = ts;
+        const res = apLandmarker.detectForVideo(video, ts);
+        const lms = (res && res.landmarks && res.landmarks[0]) || null;
+        if (lms) frames.push({ t: +t.toFixed(3), lms: apPack(lms) });
+      } catch (e) { errors.push(String(e && e.message || e)); }
+      report(Math.min(1, t / duration), "scanning");
+    }
+    return { fps, frames, errors };
+  } finally {
+    try { await seek(Math.min(originalTime, duration)); } catch (_) {}
+    video.muted = wasMuted;
+    if (!wasPaused) video.play().catch(() => {});
+  }
 }
 
 // angle series from tracked frames: [{name, pts:[[t,deg],...]}]
