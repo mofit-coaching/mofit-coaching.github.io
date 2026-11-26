@@ -1165,10 +1165,10 @@ body.scrolling *,body.scrolling *::before,body.scrolling *::after{animation-play
 }
 
 /* v7.6 touch devices: no looping decoration inside screens, rows isolated from page repaints */
-/* v7.9 smooth chat: while history renders in bulk, skip the per-bubble entrance
-   animation (dozens of simultaneous animations + a forced layout per message were
-   the chat stutter); new live messages still animate one at a time */
-.chat-l.bulk .msg,.chat-l.bulk .chat-day,.aich-l.bulk .aich-m{animation:none!important}
+/* v7.9 smooth chat: history renders instantly except a short entrance cascade on
+   the newest bubbles (dozens of simultaneous animations + a forced layout per
+   message were the chat stutter); new live messages still animate one at a time */
+.chat-l .msg.no-in,.chat-l .chat-day.no-in,.aich-l .aich-m.no-in{animation:none!important}
 @media(hover:none){
   #main *,#main *::before,#main *::after{animation-iteration-count:1!important}
   .scroller,.seg,.chat-q,.chat-l,.aich-l{contain:layout paint;will-change:scroll-position;transform:translateZ(0)}
