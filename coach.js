@@ -350,12 +350,6 @@ function setupAccount(el){
    bucket so logged-out visitors can load it. Until one is uploaded, the landing keeps
    the designed avatar. Needs assets.sql run once in Supabase. */
 const COACH_PHOTO_PATH="coach/photo.jpg";
-function cpResize(file,max){ return new Promise((res,rej)=>{ const img=new Image();
-  img.onload=()=>{ const k=Math.min(1,max/Math.max(img.width,img.height)); const c=document.createElement("canvas");
-    c.width=Math.round(img.width*k); c.height=Math.round(img.height*k);
-    c.getContext("2d").drawImage(img,0,0,c.width,c.height);
-    c.toBlob(b=>{ URL.revokeObjectURL(img.src); b?res(b):rej(new Error("image")); },"image/jpeg",.82); };
-  img.onerror=rej; img.src=URL.createObjectURL(file); }); }
 function coachPhotoUrl(){ const { data }=sb.storage.from("assets").getPublicUrl(COACH_PHOTO_PATH); return data?.publicUrl||""; }
 async function coachPhotoCard(host){
   if(!host) return;
@@ -377,7 +371,7 @@ async function coachPhotoCard(host){
   host.querySelector("#cpPick").onclick=()=>file.click();
   file.onchange=async()=>{ const f=file.files&&file.files[0]; file.value=""; if(!f) return;
     const btn=host.querySelector("#cpPick"); btn.disabled=true; btn.textContent="⏳ بيترفع…";
-    try{ const blob=await cpResize(f,512);
+    try{ const blob=await resizeBlob(f,512);
       const { error }=await sb.storage.from("assets").upload(COACH_PHOTO_PATH,blob,{contentType:"image/jpeg",cacheControl:"300",upsert:true});
       if(error) throw error;
       toast("✓ اترفعت – هتظهر على صفحة الدخول خلال دقائق"); await showCur();
@@ -545,9 +539,10 @@ async function renderStaffCard(host){
       <div class="nm"><b>${esc(a.full_name||a.email||"")}</b><small><span dir="ltr">${esc(a.email||"")}</span> · ${a.active?"مفعّل":"موقوف"}</small></div>
       <button class="btn sm" data-atg="${a.id}" data-on="${a.active?1:0}">${a.active?"⏸ إيقاف":"▶ تفعيل"}</button>
       <button class="btn sm danger" data-adel="${a.id}">حذف</button></div>`).join(""):`<p class="hint">لسه مفيش مساعدين. اعمل حساب لكل واحد بيساعدك – إيميل وكلمة سر خاصة بيه، وتقدر توقفه أو تمسحه في أي وقت.</p>`)+
-    `<p class="hint" style="margin:10px 0 0">المساعد الجديد مش بيشوف أي بيانات عملاء لوحده – إنت اللي هتحدد شغله من هنا لما نضيف المهام.</p>
-    <button class="btn navy block" id="staffAdd" style="margin-top:10px">+ إضافة مساعد</button>`;
+    `<p class="hint" style="margin:10px 0 0">المساعد مش بيشوف غير العملاء اللي بتخصّصهم له – قراءة بس، من غير أي تعديل.</p>
+    <div class="row" style="gap:8px;margin-top:10px"><button class="btn navy grow" id="staffAdd">+ إضافة مساعد</button><button class="btn primary grow" id="staffAssign">🧩 تخصيص العملاء</button></div>`;
   $("#staffAdd").onclick=()=>addAssistantSheet(host);
+  $("#staffAssign").onclick=()=>viewAssign(host.parentElement);
   host.querySelectorAll("[data-atg]").forEach(b=>b.onclick=async()=>{ b.disabled=true;
     const { error } = await sb.from("profiles").update({active:b.dataset.on!=="1"}).eq("id",b.dataset.atg);
     if(error) toast(error.message); else toast(b.dataset.on==="1"?"⏸ اتوقف – مش هيقدر يدخل":"▶ اتفعّل"); renderStaffCard(host); });
@@ -582,4 +577,74 @@ function addAssistantSheet(host){
     $("#aCopy").onclick=()=>{ navigator.clipboard?.writeText("دخول تطبيق MOFIT (مساعد):\n"+location.origin+"\nالإيميل: "+email+"\nكلمة السر: "+password); toast("✓ اتنسخت"); };
     renderStaffCard(host);
   };
+}
+
+/* ======================================================================
+   COACH: ASSIGN CLIENTS TO ASSISTANTS
+   One screen: all clients on top, a box per assistant below. Drag a client
+   card into an assistant's box to assign (touch-friendly), drag a chip out
+   or tap ✕ to unassign. Tap a client card for the no-drag fallback.
+   Default deny: access is enforced server-side by RLS (assignment.sql).
+   ====================================================================== */
+async function viewAssign(el){
+  const [{ data:A }, { data:G }] = await Promise.all([
+    sb.from("profiles").select("id,full_name,email,active").eq("role","assistant").order("created_at"),
+    sb.from("assistant_assignments").select("assistant_id,client_id") ]);
+  const asg=G||[], assistants=A||[], clients=S.coachClients||[];
+  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">🧩</div><h2>تخصيص العملاء للمساعدين<small>اسحب كارت العميل لصندوق المساعد – أو اضغط على الكارت واختار</small></h2></div>
+    <button class="btn sm ghost" id="asgBack" style="margin-bottom:10px">← رجوع للعملاء</button>
+    <div id="pool" data-drop="pool" style="display:flex;flex-direction:column;gap:6px;min-height:60px;padding:6px;border:1.5px dashed rgba(148,163,184,.5);border-radius:14px"></div>
+    <div id="boxes" style="display:flex;flex-direction:column;gap:10px;margin-top:12px"></div></div>`;
+  const pool=$("#pool"), boxes=$("#boxes");
+  const assigned=id=>asg.filter(a=>a.client_id===id).map(a=>a.assistant_id);
+  const inBox=(aid,cid)=>asg.some(a=>a.assistant_id===aid&&a.client_id===cid);
+  const chipHTML=(c,aid)=>`<div class="qr-chip" data-chip="${c.id}" data-aid="${aid}" style="touch-action:none;cursor:grab">${esc(c.full_name||c.email)}<button class="btn sm ghost" data-un="${c.id}" data-aid="${aid}" style="padding:0 4px">✕</button></div>`;
+  const cardHTML=c=>`<div class="item" data-card="${c.id}" style="padding:8px 10px;touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none"><div class="av">${initials(c)}</div>
+    <div class="nm"><b>${esc(c.full_name||c.email||"")}</b><small>${esc(c.phone||c.email||"")}</small></div>
+    <button class="btn sm navy" data-add="${c.id}">＋ لمساعد</button></div>`;
+  function paint(){
+    const free=clients.filter(c=>!assigned(c.id).length);
+    pool.innerHTML=free.length?free.map(cardHTML).join(""):`<p class="hint" style="margin:6px">كل العملاء متوزعين على المساعدين 👌</p>`;
+    boxes.innerHTML=assistants.length?assistants.map(a=>`<div data-drop="${a.id}" style="padding:10px;border:1.5px dashed rgba(148,163,184,.5);border-radius:14px">
+      <div class="between" style="margin-bottom:6px"><b>🤝 ${esc(a.full_name||a.email)}</b><small class="hint">${asg.filter(x=>x.assistant_id===a.id).length} عميل</small></div>
+      <div class="qr-row" style="flex-wrap:wrap;gap:6px">${asg.filter(x=>x.assistant_id===a.id).map(x=>{const c=clients.find(k=>k.id===x.client_id);return c?chipHTML(c,a.id):""}).join("")||'<small class="hint">فاضي – اسحب عميل هنا</small>'}</div></div>`).join(""):`<p class="hint">اعمل حساب مساعد الأول من كارت المساعدين.</p>`;
+    wire();
+  }
+  async function assign(cid,aid){ if(inBox(aid,cid)) return;    const { error } = await sb.from("assistant_assignments").insert({assistant_id:aid,client_id:cid});
+    if(error) toast(error.message); else { asg.push({assistant_id:aid,client_id:cid}); toast("✓ اتخصّص"); } paint(); }
+  async function unassign(cid,aid){
+    const { error } = await sb.from("assistant_assignments").delete().eq("assistant_id",aid).eq("client_id",cid);
+    if(error) toast(error.message); else { const i=asg.findIndex(a=>a.assistant_id===aid&&a.client_id===cid); if(i>-1) asg.splice(i,1); toast("✓ اتشال"); } paint(); }
+  function pickAssistant(cid){ const c=clients.find(x=>x.id===cid);
+    const body=openSheet(`<div class="between"><b>ضيف «${esc(c.full_name||c.email)}» لمين؟</b><button class="btn sm ghost" data-close>✕</button></div>
+      ${assistants.map(a=>`<button class="btn navy block" style="margin-top:8px" data-pick="${a.id}" ${inBox(a.id,cid)?"disabled":""}>🤝 ${esc(a.full_name||a.email)}${inBox(a.id,cid)?" ✓":""}</button>`).join("")||'<p class="hint">مفيش مساعدين لسه.</p>'}`);
+    body.querySelector("[data-close]").onclick=closeSheet;
+    body.querySelectorAll("[data-pick]").forEach(b=>b.onclick=()=>{ closeSheet(); assign(cid,b.dataset.pick); }); }
+  function wire(){
+    el.querySelectorAll("[data-add]").forEach(b=>b.onclick=()=>pickAssistant(b.dataset.add));
+    el.querySelectorAll("[data-un]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); unassign(b.dataset.un,b.dataset.aid); });
+    el.querySelectorAll("[data-card],[data-chip]").forEach(card=>{
+      card.onpointerdown=e=>{
+        if(e.target.closest("button")) return;
+        const cid=card.dataset.card||card.dataset.chip, fromAid=card.dataset.aid||null;
+        const startX=e.clientX,startY=e.clientY; let ghost=null;
+        const move=ev=>{
+          if(!ghost && Math.hypot(ev.clientX-startX,ev.clientY-startY)<10) return;
+          if(!ghost){ ghost=card.cloneNode(true); ghost.style.cssText="position:fixed;z-index:999;opacity:.85;pointer-events:none;width:"+card.offsetWidth+"px;margin:0"; document.body.appendChild(ghost); card.style.opacity=".35"; }
+          ghost.style.left=(ev.clientX-40)+"px"; ghost.style.top=(ev.clientY-24)+"px";
+          el.querySelectorAll("[data-drop]").forEach(z=>z.style.borderColor="rgba(148,163,184,.5)");
+          const over=document.elementFromPoint(ev.clientX,ev.clientY)?.closest("[data-drop]");
+          if(over) over.style.borderColor="var(--acc,#f97316)"; };
+        const up=ev=>{
+          window.removeEventListener("pointermove",move); window.removeEventListener("pointerup",up);
+          const over=ghost&&document.elementFromPoint(ev.clientX,ev.clientY)?.closest("[data-drop]");
+          const zone=over?over.dataset.drop:null;
+          ghost&&ghost.remove(); card.style.opacity="";
+          if(!zone) return;
+          if(zone==="pool"){ if(fromAid) unassign(cid,fromAid); }
+          else if(zone!==fromAid) assign(cid,zone); };
+        window.addEventListener("pointermove",move); window.addEventListener("pointerup",up); }; });
+  }
+  $("#asgBack").onclick=()=>viewClients(el);
+  paint();
 }
