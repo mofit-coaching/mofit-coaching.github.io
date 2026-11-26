@@ -51,8 +51,8 @@ const CHAT = { open:null, ch:null, unread:{}, started:false };
 })();
 
 const chatMine = () => S.me.role==="coach" ? "coach" : "client";
-const chatTime = t => { try{ return new Date(t).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}); }catch(_){ return ""; } };
-const chatDay = t => { try{ return new Date(t).toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"}); }catch(_){ return ""; } };
+const chatTime = t => { try{ return window.dTime?dTime(t):new Date(t).toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}); }catch(_){ return ""; } };
+const chatDay = t => { try{ return window.dDay?dDay(t):new Date(t).toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"}); }catch(_){ return ""; } };
 
 const CHAT_URLS={};
 async function chatUrl(path){ if(CHAT_URLS[path]) return CHAT_URLS[path]; const { data } = await sb.storage.from("checkins").createSignedUrl(path,3600); CHAT_URLS[path]=data?.signedUrl||""; return CHAT_URLS[path]; }
@@ -233,7 +233,7 @@ ICON.chats='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-wi
   const _t=tabs; tabs=function(){ const t=_t(); if(S.me&&S.me.role==="coach"&&!S.client){ const n=Object.values(CHAT.unread).reduce((a,b)=>a+b,0); t.splice(0,0,["chats","الرسايل"+(n?`<i class="nbdg">${n>9?"9+":n}</i>`:"")]); } return t; };
   const _h=viewHome; viewHome=async function(el){ if(S.me.role==="coach"&&!S.client&&S.tab==="chats") return viewChats(el); return _h.apply(this,arguments); };
 })();
-function chatWhen(t){ const d=new Date(t), n=new Date(); try{ if(d.toDateString()===n.toDateString()) return d.toLocaleTimeString("ar-EG",{hour:"2-digit",minute:"2-digit"}); if(n-d<6*864e5) return d.toLocaleDateString("ar-EG",{weekday:"short"}); return d.toLocaleDateString("ar-EG",{day:"numeric",month:"short"}); }catch(_){ return ""; } }
+function chatWhen(t){ try{ return window.dRel?dRel(t):new Date(t).toLocaleString("ar-EG"); }catch(_){ return ""; } }
 async function viewChats(el){
   el.innerHTML=`<div class="mlist"><div class="msearch"><input id="mq" type="search" placeholder="ابحث في المحادثات" aria-label="بحث"></div><div id="mrows"><div class="chat-empty">⏳ بيتحمل…</div></div></div>`;
   const { data } = await sb.from("messages").select("client_id,sender_role,body,kind,created_at").order("created_at",{ascending:false}).limit(600);
