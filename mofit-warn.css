@@ -1,0 +1,9 @@
+/* Readable warning/ok boxes in the training-system preview (coach Control tab).
+   The box used a fixed light pink with inherited text colour, so on dark surfaces the text was pale on pale. */
+.pv-meta .pv-warn{background:#FFF1DB;border:1px solid #F2B661;border-inline-start:4px solid #E8590C;color:#6B2A07;font-weight:700;line-height:1.7;padding:12px 14px}
+.pv-meta .pv-warn *{color:inherit}
+.pv-meta .pv-ok{background:#E6F7EC;border:1px solid #8ED6A5;border-inline-start:4px solid #16A34A;color:#0F4D26;font-weight:700;line-height:1.7;padding:12px 14px}
+@media (prefers-color-scheme: dark){
+  .pv-meta .pv-warn{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.5);border-inline-start-color:#FF8A3D;color:#FFE2B8}
+  .pv-meta .pv-ok{background:rgba(34,197,94,.13);border-color:rgba(34,197,94,.45);border-inline-start-color:#22C55E;color:#C9F5D6}
+}
