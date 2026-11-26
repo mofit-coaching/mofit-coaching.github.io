@@ -1,0 +1,39 @@
+/* MOFIT contrast fixes. Light tint boxes that kept their light fill with pale
+   text in dark mode, and a few low-contrast labels in light mode.
+   CSS only. */
+
+/* ---- light mode (and shared) ---- */
+html .card-h .ibtn{color:var(--navy);background:var(--soft2);border-color:var(--soft)}
+html .xl-btn{color:#0B6B33}
+html .seen.none{color:#64748B}
+html .cc-dot.checkin{background:#0284C7}
+html .cc-cell.now .cc-d{background:#E8590C}
+html .hm-title,html .hm-legend{color:#6B7588}
+
+/* ---- dark mode ---- */
+@media (prefers-color-scheme: dark){
+  html .vchip.ok{background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.5);color:#C9F5D6}
+  html .vchip.bad{background:rgba(239,68,68,.16);border-color:rgba(239,68,68,.55);color:#FFD2D2}
+  html .vchip.warn{background:rgba(245,158,11,.15);border-color:rgba(245,158,11,.5);color:#FFE2B8}
+  html .vchip b{color:inherit}
+  html .ready{color:var(--navy)}
+  html .ready.good{background:rgba(34,197,94,.13);border-color:rgba(34,197,94,.45)}
+  html .ready.mid{background:rgba(245,158,11,.14);border-color:rgba(245,158,11,.5)}
+  html .ready.low{background:rgba(239,68,68,.15);border-color:rgba(239,68,68,.5)}
+  html .ready b{color:#fff}
+  html .ready small{color:#C2CFE4}
+  html .client:hover{background:var(--soft2)}
+  html .ltabs{background:var(--soft2)}
+  html .ltab.on{background:#2A3C64;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+  /* coach messages tab (the list outside the chat sheet) was white with pale text */
+  html .mrow{background:var(--card);color:var(--navy)}
+  html .mrow:active{background:var(--raise)}
+  html .mrow.unread .mb small{color:var(--navy2)}
+  html .msearch{background:var(--base)}
+  html .msearch input{background:var(--raise);color:var(--navy);box-shadow:inset 0 0 0 1px var(--soft)}
+  html .cc-dot.substart{color:#052E16}
+  html .xl-btn{color:var(--good)}
+  /* progress tab week chip: navy text on navy */
+  html .chip.cur{border-color:var(--acc2);color:var(--acc2)}
+  html .chip.on.cur{color:#fff}
+}
