@@ -113,8 +113,6 @@ const css=`
 @keyframes scshine{0%,55%{left:-70%}100%{left:130%}}
 .sc-cphoto img{width:100%;height:100%;object-fit:cover;display:block}
 .sc-cphoto svg{width:100%;height:100%;display:block}
-.sc-cphoto .sc-cph-flag{position:absolute;inset:auto 0 6px 0;text-align:center}
-.sc-cphoto .sc-cph-flag span{font-size:8.5px;color:#8E9AB0;background:rgba(11,18,32,.8);padding:2px 6px;border-radius:99px;border:1px dashed rgba(255,255,255,.3)}
 .sc-cname{display:block;font:800 21px/1.25 var(--disp);color:#fff}
 .sc-crole{display:inline-block;margin-top:6px;padding:5px 11px;border-radius:99px;font-size:11.5px;font-weight:700;color:#0B1220;background:linear-gradient(90deg,#FFC46B,#FF8A3D)}
 .sc-ccert{display:flex;gap:12px;align-items:flex-start;margin-top:16px;padding:13px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
@@ -150,7 +148,7 @@ function invite(){return `<div class="sc-rgrid sc-rv"><div class="sc-rstep"><div
    TODO coach: fill SHOWCASE.coach.photo with his photo URL, and confirm SHOWCASE.coach.name is how he wants to appear. */
 function coachFig(){return `<svg viewBox="0 0 96 96" aria-hidden="true"><defs><linearGradient id="sccg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A2012"/><stop offset="1" stop-color="#0B1220"/></linearGradient><linearGradient id="sccf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFA24D"/><stop offset="1" stop-color="#FF6B1A"/></linearGradient></defs><rect width="96" height="96" fill="url(#sccg)"/><circle cx="48" cy="48" r="34" fill="rgba(255,107,26,.16)"/><circle cx="48" cy="36" r="13" fill="url(#sccf)"/><path d="M16 96 C18 66 32 56 48 56 C64 56 78 66 80 96Z" fill="url(#sccf)"/></svg>`}
 function coach(){const c=(SHOWCASE.coach||{});const ph=!c.photo;
-return `<div class="sc-ccard sc-rv"><div class="sc-chead"><div class="sc-cframe"><div class="sc-cphoto">${ph?coachFig()+'<div class="sc-cshine"></div><div class="sc-cph-flag"><span>صورة الكوتش بتتضاف</span></div>':`<img src="${esc(c.photo)}" alt="صورة الكوتش ${esc(c.name||"")}" loading="lazy">`}</div></div>
+return `<div class="sc-ccard sc-rv"><div class="sc-chead"><div class="sc-cframe"><div class="sc-cphoto">${ph?coachFig()+'<div class="sc-cshine"></div>':`<img src="${esc(c.photo)}" alt="صورة الكوتش ${esc(c.name||"")}" loading="lazy">`}</div></div>
 <div><b class="sc-cname">${esc(c.name||"")}</b><span class="sc-crole">مدرب لياقة معتمد دولياً</span></div></div>
 <div class="sc-ccert"><div class="ic3"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="6" stroke="#fff" stroke-width="2"/><path d="M8.5 13.5 7 21l5-2.6L17 21l-1.5-7.5" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="m9.4 9 1.8 1.8 3.4-3.6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
 <div><b>IASST · Certified Fitness Trainer</b><small>الأكاديمية الدولية لعلوم وتكنولوجيا الرياضة (IASST) · فيينا، النمسا · أكتوبر 2026</small><small>شهادة رقم C264067 · <a href="https://iasst.org/certi/find" target="_blank" rel="noopener">اتحقق من الشهادة بنفسك</a></small></div></div>
@@ -194,7 +192,24 @@ const io="IntersectionObserver" in window?new IntersectionObserver(es=>es.forEac
 box.querySelectorAll(".sc-rv").forEach(n=>io?io.observe(n):n.classList.add("in"));
 const ws=[...box.querySelectorAll(".sc-tg .w")];if(ws.length){if(!("IntersectionObserver" in window)||matchMedia("(prefers-reduced-motion:reduce)").matches)ws.forEach(w=>w.classList.add("on"));else{const wo=new IntersectionObserver(es=>{let k=0;es.filter(e=>e.isIntersecting).sort((a,b)=>ws.indexOf(a.target)-ws.indexOf(b.target)).forEach(e=>{setTimeout(()=>e.target.classList.add("on"),Math.min(k++*70,500));wo.unobserve(e.target)})},{rootMargin:"0px 0px -38% 0px"});ws.forEach(w=>wo.observe(w));}}
 
-const q=document.getElementById("scq"),d=document.querySelectorAll("#scd i");if(q)q.addEventListener("scroll",()=>{const c=q.children;let best=0,bd=1e9;const mid=q.getBoundingClientRect().left+q.clientWidth/2;[...c].forEach((x,i)=>{const r=x.getBoundingClientRect();const dd=Math.abs(r.left+r.width/2-mid);if(dd<bd){bd=dd;best=i}});d.forEach((x,i)=>x.classList.toggle("on",i===best))},{passive:true})};
+const q=document.getElementById("scq"),d=document.querySelectorAll("#scd i");if(q)q.addEventListener("scroll",()=>{const c=q.children;let best=0,bd=1e9;const mid=q.getBoundingClientRect().left+q.clientWidth/2;[...c].forEach((x,i)=>{const r=x.getBoundingClientRect();const dd=Math.abs(r.left+r.width/2-mid);if(dd<bd){bd=dd;best=i}});d.forEach((x,i)=>x.classList.toggle("on",i===best))},{passive:true});coachPhotoProbe()};
+/* Coach photo: when the coach has uploaded one (public "assets" bucket, fixed path),
+   swap the designed avatar for it. The probe fails silently - no photo yet, bucket not
+   created yet, offline - and the avatar stays. SHOWCASE.coach.photo still wins when set. */
+async function coachPhotoProbe(){
+  try{
+    if((SHOWCASE.coach||{}).photo) return;
+    if(typeof sb==="undefined"||!sb.storage) return;
+    const { data }=sb.storage.from("assets").getPublicUrl("coach/photo.jpg");
+    const base=data&&data.publicUrl; if(!base) return;
+    const url=base+"?v="+Math.floor(Date.now()/6e5);
+    const img=new Image();
+    img.onload=()=>{ const ph=document.querySelector("#showcase .sc-cphoto"); if(!ph) return; const c=SHOWCASE.coach||{};
+      ph.innerHTML=`<img src="${esc(url)}" alt="صورة الكوتش ${esc(c.name||"")}" loading="lazy">`; };
+    img.onerror=()=>{};
+    img.src=url;
+  }catch(_){}
+}
 if(document.readyState!=="loading")drawShowcase();else document.addEventListener("DOMContentLoaded",drawShowcase);
 })();
 
