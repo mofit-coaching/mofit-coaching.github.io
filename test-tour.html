@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEST — first-run tour (driver.js)</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Noto+Kufi+Arabic:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body{font-family:"Cairo",sans-serif;background:#F4F3EF;margin:0;padding:0;max-width:480px;margin-inline:auto;min-height:100vh;display:flex;flex-direction:column}
+  #testbar{background:#DC2626;color:#fff;font-weight:800;text-align:center;padding:8px;font-size:.9rem}
+  .fakecard{background:#fff;border-radius:18px;margin:12px 14px;padding:16px;box-shadow:0 6px 20px rgba(15,23,42,.06)}
+  .fakecard h3{margin:0 0 6px;font-size:.95rem}
+  .fakecard p{margin:0;font-size:.8rem;color:#64748B}
+  #nav{margin-top:auto;position:sticky;bottom:0}
+</style>
+</head>
+<body>
+<div id="testbar">⚠️ TEST PAGE — عميل وهمي، الجولة بتشتغل لوحدها بعد ثانية ⚠️</div>
+<section id="appView">
+  <header class="top" id="top">
+    <div class="top-row"><div class="logo">MO<b>FIT</b></div><div class="sp"></div>
+      <button class="ibtn" onclick="contactCoach()" title="كلّم الكوتش">💬 الكوتش</button>
+      <button class="ibtn">خروج</button></div>
+    <div class="hello"><div class="av">ع</div><div><h1>أهلاً، عميل 👋</h1><p>زيادة عضل · متوسط</p></div></div>
+  </header>
+  <main id="main">
+    <div class="fakecard"><h3>🏋️ تمرين النهارده</h3><p>محتوى تجريبي للصفحة الرئيسية.</p></div>
+    <div class="fakecard"><h3>📊 ملخص أسبوعك</h3><p>محتوى تجريبي للصفحة الرئيسية.</p></div>
+    <div class="fakecard"><h3>🔥 سلسلة الالتزام</h3><p>محتوى تجريبي للصفحة الرئيسية.</p></div>
+    <div class="row" style="padding:0 14px 14px;gap:8px">
+      <button class="btn navy grow" id="replay">🔁 شغّل الجولة من الأول</button>
+      <button class="btn grow" id="reset">مسح علامة "اتشافت"</button>
+    </div>
+  </main>
+  <nav class="nav" id="nav"></nav>
+</section>
+<div id="sheet" class="sheet hidden"><div class="sheet-bg"></div><div class="sheet-card"><div class="sheet-grab"></div><div id="sheetBody"></div></div></div>
+<script>
+/* ---- stubs: same globals the app provides ---- */
+const S={ me:{id:"test-client-1",role:"client",full_name:"عميل تجريبي"}, client:{id:"test-client-1"}, tab:"home" };
+localStorage.setItem("mofit_onb_test-client-1","1");   /* welcome sheet already done */
+localStorage.removeItem("mofit_tour_v1_test-client-1");
+document.getElementById("nav").innerHTML=[["home","🏠","الرئيسية"],["train","🏋️","التمرين"],["food","🥗","التغذية"],["habits","✅","العادات"],["body","📈","التقدم"]]
+  .map(([k,i,l])=>`<button data-tab="${k}" class="${k==="home"?"on":""}"><span style="font-size:1.2rem;display:block">${i}</span><span>${l}</span></button>`).join("");
+document.getElementById("replay").onclick=()=>mofitTour.start(true);
+document.getElementById("reset").onclick=()=>{ mofitTour.reset(); alert("اتمسحت — الجولة هتشتغل تاني عند التحديث"); };
+</script>
+<script src="tour.js"></script>
+</body>
+</html>
