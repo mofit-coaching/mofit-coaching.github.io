@@ -139,7 +139,7 @@ async function openChat(clientId, title){
   $("#chatMic").onclick=async()=>{
     if(rec&&rec.state==="recording"){ rec.stop(); return; }
     if(!navigator.mediaDevices||!window.MediaRecorder) return toast("التسجيل الصوتي مش مدعوم هنا");
-    try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); const mt=["audio/mp4","audio/webm;codecs=opus","audio/webm"].find(t=>MediaRecorder.isTypeSupported(t))||""; rec=new MediaRecorder(st,mt?{mimeType:mt}:{}); chunks=[]; cancelled=false;
+    try{ const st=await navigator.mediaDevices.getUserMedia({audio:true}); const mt=["audio/mp4","audio/webm;codecs=opus","audio/webm"].find(t=>MediaRecorder.isTypeSupported(t))||""; rec=new MediaRecorder(st,mt?{mimeType:mt,audioBitsPerSecond:32000}:{audioBitsPerSecond:32000}); chunks=[]; cancelled=false;
       rec.ondataavailable=e=>e.data.size&&chunks.push(e.data);
       rec.onstop=async()=>{ st.getTracks().forEach(t=>t.stop()); const dur=Date.now()-t0; stopUi(); if(cancelled||dur<700) return; const type=rec.mimeType||mt||"audio/mp4"; const blob=new Blob(chunks,{type}); const ext=/mp4/.test(type)?"m4a":"webm"; toast("⏳ بيبعت الصوت…"); const path=await upload(blob,ext,type.split(";")[0]); if(path) await send({kind:"voice",media_path:path,duration_ms:dur,body:"🎤 رسالة صوتية"}); };
       rec.start(); t0=Date.now(); $("#chatRec").classList.remove("hidden"); $("#chatMic").textContent="■"; $("#recT").textContent="0:00"; tick=setInterval(()=>{ const s=Math.floor((Date.now()-t0)/1000); $("#recT").textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); },250);
@@ -248,4 +248,3 @@ async function viewChats(el){
 }
 (function(){ const _c=closeSheet; closeSheet=function(){ $("#sheet").classList.remove("msgr"); _c.apply(this,arguments); if(S.me?.role==="coach"&&!S.client&&S.tab==="chats"){ try{ render(); }catch(e){} } };
   const _i=chatIncoming; chatIncoming=function(m){ _i.apply(this,arguments); if(S.me?.role==="coach"&&!S.client&&S.tab==="chats"&&$("#sheet").classList.contains("hidden")){ try{ render(); }catch(e){} } }; })();
-
