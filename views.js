@@ -555,7 +555,7 @@ async function viewMeasures(el){
   const F=[["weight","⚖ الوزن","كجم"],["waist","الوسط","سم"],["neck","الرقبة","سم"],["chest","الصدر","سم"],["arm","الذراع","سم"],["thigh","الفخذ","سم"],["hips","الأرداف","سم"],["bodyfat","الدهون","%"]];
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📏</div><h2>القياسات الأسبوعية<small>مرة في الأسبوع – نفس اليوم والتوقيت</small></h2></div>
       ${blockNavHTML(sel||1,p)}<div class="scroller">${[0,...blockWeeks(sel||wk||1,p)].map(i=>`<button class="chip ${sel===i?"on":""} ${wk===i&&i?"cur":""}" data-w="${i}">${i?"أسبوع "+i:"البداية"}${B.find(b=>b.week===i&&b.weight)?" ✓":""}</button>`).join("")}</div>
-      <div class="grid2" style="margin-top:12px"><label class="f">📅 التاريخ<input type="date" data-k="log_date" value="${esc(cur.log_date??today())}"></label>
+      <div class="grid2" style="margin-top:12px"><label class="f">📅 التاريخ${djField(`<input type="date" data-k="log_date" value="${esc(cur.log_date??today())}">`,cur.log_date??today())}</label>
       ${F.map(([k,l,u])=>{ const d=sel&&start[k]&&cur[k]?cur[k]-start[k]:null; return `<label class="f">${l} (${u})<input inputmode="decimal" data-k="${k}" value="${esc(cur[k]??"")}">${d!==null?`<span class="pill ${d<0?"acc-soft":""}" style="margin-top:4px">${d>0?"▲":"▼"} ${fmt(Math.abs(d),1)} منذ البداية</span>`:""}</label>`; }).join("")}</div>
       <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
       <button class="btn primary block" id="bSave">حفظ ${sel?"الأسبوع "+sel:"قياسات البداية"}</button></div>
