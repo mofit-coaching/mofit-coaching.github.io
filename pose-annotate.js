@@ -536,7 +536,7 @@ function anChartTick(root, curT) {
 function anLoadScript(src) {
   return new Promise((res, rej) => {
     const sc = document.createElement("script");
-    sc.src = src; sc.onload = res; sc.onerror = rej;
+    sc.src = src + (src.includes("?") ? "&" : "?") + "v=pose-scan-20261126"; sc.onload = res; sc.onerror = rej;
     document.head.appendChild(sc);
   });
 }
@@ -769,7 +769,7 @@ AN.trackGo = async () => {
   const bar = root.querySelector('[data-an="scanbar"]');
   const errorBox = root.querySelector('[data-an="scanerror"]');
   const go = root.querySelector('[data-an="auto"]');
-  if (errorBox) { errorBox.hidden = true; errorBox.textContent = ""; }
+  if (errorBox) { errorBox.hidden = true; errorBox.replaceChildren(); }
   if (progress) progress.hidden = false;
   if (go) { go.disabled = true; go.textContent = "⏳ جاري التحليل"; }
   let track = null;
