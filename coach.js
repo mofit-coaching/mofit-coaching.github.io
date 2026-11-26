@@ -88,6 +88,7 @@ async function viewClients(el){
     <div class="card" id="mlst"></div>
     <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
       ${C.length>4?`<input id="cq" placeholder="🔍 ابحث بالاسم أو الإيميل" style="margin-bottom:8px">`:""}<div id="cfl" class="qr-row" role="group" aria-label="فلتر العملاء" style="display:flex;gap:6px;overflow-x:auto;margin-bottom:8px;padding-bottom:2px"></div><div id="cl"></div></div>
+    <div class="card" id="staff" hidden></div>
     <div class="card" id="bk"></div>
     <div class="card" id="prices"></div>
     <div class="card"><div class="card-h"><div class="ic acc">✍</div><h2>برامج الكوتش المحفوظة<small>بتظهر في قائمة "برنامج الكوتش" عند اختيار النظام</small></h2></div><div id="tplList"></div></div>`;
@@ -120,6 +121,7 @@ async function viewClients(el){
     <p class="hint">ملف واحد فيه كل العملاء والبرامج والتسجيلات والأطعمة. احفظه على Google Drive كل أسبوعين.</p><button class="btn navy block" id="bkBtn">📦 نزّل نسخة احتياطية كاملة</button>`;
   $("#bkBtn").onclick=e=>exportBackup(e.currentTarget);
   coachPricesCard($("#prices"));
+  renderStaffCard($("#staff"));
 }
 function addClientSheet(el){
   const body=openSheet(`<div class="between"><b style="font-size:1.1rem">عميل جديد</b><button class="btn sm ghost" data-close>✕</button></div>
@@ -517,3 +519,61 @@ function seenHTML(c){ const s=seenSpan(c); return s?s+" · ":""; }
   }catch(e){} busy=false; }
   setInterval(refreshSeen,45000); document.addEventListener("visibilitychange",()=>{ if(!document.hidden) refreshSeen(); });
 })();
+
+/* ======================================================================
+   COACH: ASSISTANTS (staff accounts) — admin only.
+   Default deny: an assistant account has NO client access. The coach creates,
+   pauses and deletes accounts here; what assistants can do gets added later,
+   per job, with server-side policies.
+   ====================================================================== */
+async function renderStaffCard(host){
+  if(!host) return;
+  if(S.assistant){ host.hidden=true; return; }
+  host.hidden=false;
+  host.innerHTML=`<div class="card-h"><div class="ic dark">🤝</div><h2>المساعدين<small>بيحمّل…</small></h2></div>`;
+  const { data, error } = await sb.from("profiles").select("id,full_name,email,active,created_at").eq("role","assistant").order("created_at",{ascending:true});
+  const A=data||[];
+  host.innerHTML=`<div class="card-h"><div class="ic dark">🤝</div><h2>المساعدين (${A.length})<small>حسابات للي بيساعدوك لما الشغل يكبر</small></h2></div>`+
+    (error?`<p class="hint">تعذر تحميل القائمة – جرّب تاني</p>`:"")+
+    (A.length?A.map(a=>`<div class="item" style="padding:10px 0;border-top:1px solid rgba(148,163,184,.2)"><div class="av">${initials(a)}</div>
+      <div class="nm"><b>${esc(a.full_name||a.email||"")}</b><small><span dir="ltr">${esc(a.email||"")}</span> · ${a.active?"مفعّل":"موقوف"}</small></div>
+      <button class="btn sm" data-atg="${a.id}" data-on="${a.active?1:0}">${a.active?"⏸ إيقاف":"▶ تفعيل"}</button>
+      <button class="btn sm danger" data-adel="${a.id}">حذف</button></div>`).join(""):`<p class="hint">لسه مفيش مساعدين. اعمل حساب لكل واحد بيساعدك – إيميل وكلمة سر خاصة بيه، وتقدر توقفه أو تمسحه في أي وقت.</p>`)+
+    `<p class="hint" style="margin:10px 0 0">المساعد الجديد مش بيشوف أي بيانات عملاء لوحده – إنت اللي هتحدد شغله من هنا لما نضيف المهام.</p>
+    <button class="btn navy block" id="staffAdd" style="margin-top:10px">+ إضافة مساعد</button>`;
+  $("#staffAdd").onclick=()=>addAssistantSheet(host);
+  host.querySelectorAll("[data-atg]").forEach(b=>b.onclick=async()=>{ b.disabled=true;
+    const { error } = await sb.from("profiles").update({active:b.dataset.on!=="1"}).eq("id",b.dataset.atg);
+    if(error) toast(error.message); else toast(b.dataset.on==="1"?"⏸ اتوقف – مش هيقدر يدخل":"▶ اتفعّل"); renderStaffCard(host); });
+  host.querySelectorAll("[data-adel]").forEach(b=>b.onclick=async()=>{ const a=A.find(x=>x.id===b.dataset.adel);
+    if(!confirm(`حذف حساب المساعد ${a.full_name||a.email} نهائياً؟`)) return; b.disabled=true;
+    const { data, error } = await adminCall({ body:{ action:"delete_client", user_id:a.id } });
+    const msg=await fnErr(error,data); if(msg){ toast(msg); b.disabled=false; return; }
+    toast("✓ اتحذف الحساب"); renderStaffCard(host); });
+}
+function addAssistantSheet(host){
+  const body=openSheet(`<div class="between"><b style="font-size:1.1rem">مساعد جديد</b><button class="btn sm ghost" data-close>✕</button></div>
+    <p class="hint">هيتعمل حساب دخول خاص بالمساعد (إيميل + كلمة سر). الحساب الجديد مش بيشوف أي بيانات عملاء – إنت اللي هتحدد شغله بعدين.</p>
+    <label class="f">اسم المساعد<input id="aName"></label>
+    <label class="f">الإيميل (اسم الدخول)<input id="aEmail" type="email" autocomplete="off" dir="ltr"></label>
+    <label class="f">كلمة السر<div class="row"><input id="aPass" class="grow" autocomplete="new-password" value="${genPass()}" dir="ltr"><button class="btn sm" id="aGen">توليد</button></div></label>
+    <p class="err" id="aErr"></p>
+    <button class="btn primary block" id="aCreate">إنشاء الحساب ✓</button><div id="aDone"></div>`);
+  body.querySelector("[data-close]").onclick=closeSheet;
+  $("#aGen").onclick=()=>$("#aPass").value=genPass();
+  $("#aCreate").onclick=async()=>{
+    $("#aErr").textContent=""; const btn=$("#aCreate"); btn.disabled=true; btn.textContent="جارٍ الإنشاء…";
+    const email=$("#aEmail").value.trim(), password=$("#aPass").value, full_name=$("#aName").value.trim();
+    const { data, error } = await adminCall({ body:{ action:"create_client", email, password, full_name, profile:{} } });
+    const msg=await fnErr(error,data);
+    if(msg){ $("#aErr").textContent=msg; btn.disabled=false; btn.textContent="إنشاء الحساب ✓"; return; }
+    const uid=data&&(data.user_id||data.id||(data.user&&data.user.id));
+    if(!uid){ $("#aErr").textContent="اتعمل الحساب بس مقدرتش أحدده – لو ظهر كعميل امسحه وجرّب تاني."; btn.disabled=false; btn.textContent="إنشاء الحساب ✓"; return; }
+    const { error:re } = await sb.from("profiles").update({role:"assistant"}).eq("id",uid);
+    if(re){ $("#aErr").textContent="اتعمل حساب بس مقدرتش أحوّله لمساعد: "+re.message; btn.disabled=false; btn.textContent="إنشاء الحساب ✓"; return; }
+    btn.textContent="✓ اتعمل الحساب";
+    $("#aDone").innerHTML=`<div class="card" style="margin-top:12px"><b>ابعت بيانات الدخول للمساعد:</b><p style="margin:8px 0" dir="ltr">${esc(email)}<br>${esc(password)}</p><button class="btn navy block" id="aCopy">📋 انسخ البيانات</button></div>`;
+    $("#aCopy").onclick=()=>{ navigator.clipboard?.writeText("دخول تطبيق MOFIT (مساعد):\n"+location.origin+"\nالإيميل: "+email+"\nكلمة السر: "+password); toast("✓ اتنسخت"); };
+    renderStaffCard(host);
+  };
+}
