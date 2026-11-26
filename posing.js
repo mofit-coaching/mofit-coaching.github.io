@@ -13,12 +13,14 @@ async function viewPosing(el){
   const { data, error } = await sb.from("posing_checkins").select("*").eq("client_id",p.id).order("created_at",{ascending:false});
   if(error){ el.innerHTML=emptyBox("⚠️","تعذر التحميل","جرّب تاني بعد شوية.","","es-sm"); return; }
   const rows=data||[];
+  let annMap={};
+  if(rows.length){ const { data:anns, error:ae } = await sb.from("posing_annotations").select("checkin_id,moments").in("checkin_id",rows.map(r=>r.id)); if(!ae) (anns||[]).forEach(a=>{ annMap[a.checkin_id]=a.moments||[]; }); }
   el.innerHTML=`${coach?"":`<div class="card"><div class="card-h"><div class="ic acc">🎬</div><h2>فيديو بوزينج جديد<small>خاص بينك وبين الكوتش بس · بيتصغّر تلقائياً قبل الرفع · أقصى حجم 50 ميجا · mp4 / mov / webm</small></h2></div>
       <label class="f">ملاحظة (اختياري)<input id="poN" placeholder="مثلاً: البوزات الإلزامية، إضاءة الجيم"></label>
       <input type="file" id="poF" accept="video/mp4,video/quicktime,video/webm" style="margin:8px 0">
       <div class="prog" id="poP" style="display:none"><i style="width:0%"></i></div>
       <button class="btn primary block" id="poGo">رفع للكوتش</button></div>`}
-    <div id="poL">${rows.length?rows.map(r=>poseCard(r,coach)).join(""):emptyBox("🎬","لسه مفيش فيديوهات",coach?"العميل لسه مارفعش فيديوهات بوزينج.":"صوّر البوزات وارفعها من فوق عشان الكوتش يراجع وقفتك.")}</div>`;
+    <div id="poL">${rows.length?rows.map(r=>poseCard(r,coach,annMap[r.id])).join(""):emptyBox("🎬","لسه مفيش فيديوهات",coach?"العميل لسه مارفعش فيديوهات بوزينج.":"صوّر البوزات وارفعها من فوق عشان الكوتش يراجع وقفتك.")}</div>`;
   el.querySelectorAll("[data-pv]").forEach(async v=>{ const u=await poseUrl(v.dataset.pv); if(u){ v.src=u; } else v.replaceWith(Object.assign(document.createElement("p"),{className:"hint",textContent:"الفيديو مش متاح"})); });
   if(!coach){
     $("#poGo").onclick=async()=>{
@@ -52,12 +54,24 @@ async function viewPosing(el){
   el.querySelectorAll("[data-pfb]").forEach(b=>b.onclick=async()=>{
     const t=el.querySelector(`[data-pft="${b.dataset.pfb}"]`).value.trim();
     const { error } = await sb.from("posing_checkins").update({coach_feedback:t||null,reviewed_at:new Date().toISOString()}).eq("id",b.dataset.pfb); if(error) return toast("تعذر الحفظ"); toast("✓ اتبعت للعميل"); viewPosing(el); });
+  el.querySelectorAll("[data-pan]").forEach(b=>b.onclick=async()=>{
+    const r=rows.find(x=>String(x.id)===b.dataset.pan); if(!r||!r.video_path) return;
+    const u=await poseUrl(r.video_path); if(!u) return toast("الفيديو مش متاح");
+    openAnnotateStudio(r,u,annMap[r.id]||[],()=>viewPosing(el));
+  });
+  el.querySelectorAll("[data-pav]").forEach(b=>b.onclick=async()=>{
+    const r=rows.find(x=>String(x.id)===b.dataset.pav); if(!r||!r.video_path) return;
+    const u=await poseUrl(r.video_path); if(!u) return toast("الفيديو مش متاح");
+    openAnnotateViewer(r,u,annMap[r.id]||[]);
+  });
 }
-function poseCard(r,coach){
+function poseCard(r,coach,ann){
   const d=new Date(r.created_at).toLocaleDateString("ar-EG",{day:"numeric",month:"long"});
-  return `<div class="card"><div class="card-h"><div class="ic">🎬</div><h2>${d}<small>${r.reviewed_at?"✅ الكوتش راجع":"⏳ مستني مراجعة الكوتش"}</small></h2><button class="btn sm danger" data-pdel="${r.id}" title="حذف الفيديو من كل مكان">حذف</button></div>
+  const hasAnn=ann&&ann.length;
+  return `<div class="card"><div class="card-h"><div class="ic">🎬</div><h2>${d}<small>${r.reviewed_at?"✅ الكوتش راجع":"⏳ مستني مراجعة الكوتش"}</small></h2>${coach?`<button class="btn sm" data-pan="${r.id}" title="ارسم وعلّق على الفيديو">🎯 تحليل${hasAnn?" ✓":""}</button>`:""}<button class="btn sm danger" data-pdel="${r.id}" title="حذف الفيديو من كل مكان">حذف</button></div>
     ${r.video_path?`<video data-pv="${esc(r.video_path)}" controls playsinline preload="metadata" style="width:100%;border-radius:14px;background:#000;max-height:60vh"></video>`:""}
     ${r.note?`<p class="hint">📝 ${esc(r.note)}</p>`:""}
+    ${!coach&&hasAnn?`<button class="btn primary block" data-pav="${r.id}" style="margin:8px 0">🎯 شوف تحليل الكوتش بالرسم</button>`:""}
     ${coach?`<label class="f">ملاحظاتك للعميل<textarea data-pft="${r.id}" rows="3" placeholder="رأيك في البوزات، التحسينات…">${esc(r.coach_feedback||"")}</textarea></label><button class="btn primary block" data-pfb="${r.id}">حفظ وإرسال للعميل</button>`
       :(r.coach_feedback?`<div class="card" style="margin-top:8px;background:var(--acc-soft)"><b>رأي الكوتش</b><p style="margin:6px 0 0;white-space:pre-wrap">${esc(r.coach_feedback)}</p></div>`:"")}</div>`;
 }
