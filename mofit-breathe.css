@@ -1,0 +1,25 @@
+/* MOFIT client home: breathing room. Scoped to the client home screen only (the #main wrapper that holds #hN).
+   More space between cards and sections, bigger tap targets, calmer hierarchy. All motion is kept. */
+#main>div:has(>#hN){--mf-gap:24px;padding-top:6px}
+#main>div:has(>#hN) .card{margin-bottom:var(--mf-gap,24px);padding:22px 20px}
+#main>div:has(>#hN) .card.dark.hero{padding:26px 22px}
+#main>div:has(>#hN) .card-h{margin-bottom:18px;gap:14px}
+#main>div:has(>#hN) .card-h h2{line-height:1.45}
+#main>div:has(>#hN) .card-h h2 small{display:block;margin-top:4px;line-height:1.6;opacity:.8}
+#main>div:has(>#hN) .hsec{margin:44px 6px 18px}
+#main>div:has(>#hN) .hint,#main>div:has(>#hN) .muted,#main>div:has(>#hN) p{line-height:1.7}
+/* tap targets: at least 48px high, with room between neighbours */
+#main>div:has(>#hN) .btn,#main>div:has(>#hN) button.btn{min-height:48px;padding-block:12px;padding-inline:20px}
+#main>div:has(>#hN) .btn.sm{min-height:44px}
+#main>div:has(>#hN) .card.today .item,#main>div:has(>#hN) .card.today a{min-height:64px;padding-block:16px}
+#main>div:has(>#hN) .item{padding-block:14px}
+/* fewer things per row */
+#main>div:has(>#hN) .grid4{grid-template-columns:1fr 1fr;gap:14px}
+#main>div:has(>#hN) .grid3{gap:14px}
+#main>div:has(>#hN) .stat{padding:18px 14px}
+#main>div:has(>#hN) .fw-card,#main>div:has(>#hN) .fl-hero{margin-bottom:var(--mf-gap,24px)}
+#main>div:has(>#hN) .fw-card{padding:24px 20px}
+/* calmer hierarchy: secondary light cards sit quieter, the dark plates lead */
+#main>div:has(>#hN) .card:not(.dark):not(.tip){box-shadow:0 1px 0 rgba(255,255,255,.7) inset,0 4px 14px -10px rgba(14,17,22,.2)}
+#main>div:has(>#hN) .card .heat,#main>div:has(>#hN) .heatmap{margin-top:18px}
+#main>div:has(>#hN)>*+*{margin-top:0}
