@@ -1,0 +1,13 @@
+/* MOFIT design tokens. One source for colour roles, spacing, radius, depth and motion.
+   Colour roles follow the 60/30/10 rule: --mf-ink/--mf-paper (60), --mf-iron (30), --mf-acc (10).
+   Other layers read these with a fallback, so removing this file never breaks them. */
+:root{
+  --mf-ink:#0E1116; --mf-iron:#171C25; --mf-iron-2:#202734; --mf-steel:#8C97A8; --mf-chalk:#F4F1EA; --mf-paper:#FBFAF7;
+  --mf-acc:#FF6B1A; --mf-acc-2:#FFB347; --mf-line:rgba(255,255,255,.09); --mf-line-ink:rgba(14,17,22,.1);
+  --mf-s1:4px; --mf-s2:8px; --mf-s3:12px; --mf-s4:16px; --mf-s5:24px; --mf-s6:32px; --mf-s7:48px;
+  --mf-r-sm:10px; --mf-r-md:16px; --mf-r-lg:24px; --mf-cut:18px;
+  --mf-sh-1:0 1px 0 rgba(255,255,255,.7) inset,0 8px 24px -14px rgba(14,17,22,.25);
+  --mf-sh-2:0 22px 44px -20px rgba(0,0,0,.55);
+  --mf-ease:cubic-bezier(.22,.9,.24,1); --mf-spring:cubic-bezier(.34,1.45,.5,1);
+  --mf-t-fast:.18s; --mf-t-med:.34s; --mf-t-slow:.6s;
+}

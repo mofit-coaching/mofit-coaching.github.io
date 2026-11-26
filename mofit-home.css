@@ -1,0 +1,24 @@
+/* MOFIT client home in the "iron and chalk" look. Scoped to #main so no other screen changes.
+   Loads after mofit-look.css. Uses --mf-* tokens with fallbacks, so it also works alone. */
+/* section dividers: orange plate block + ruler line */
+#main .hsec{margin:26px 4px 12px;font-family:var(--disp,"Anton","Cairo",sans-serif);font-weight:400;font-size:1.05rem;letter-spacing:.02em}
+#main .hsec::before{width:14px;height:14px;border-radius:2px;background:var(--mf-acc,#FF6B1A);box-shadow:none;transform:rotate(45deg) scale(.8);animation:mfplate 3.4s ease-in-out infinite}
+#main .hsec::after{height:8px;background:repeating-linear-gradient(90deg,rgba(128,138,158,.55) 0 1px,transparent 1px 8px) center/100% 5px no-repeat,linear-gradient(90deg,var(--mf-acc,#FF6B1A) 0 24px,transparent 24px) top/100% 2px no-repeat}
+@keyframes mfplate{0%,100%{transform:rotate(45deg) scale(.8)}50%{transform:rotate(45deg) scale(1)}}
+/* card icons: iron tiles with a warm glyph instead of pastel bubbles */
+html body #main .card:not(.dark) .card-h .ic,html body #main .card:not(.dark) .card-h .ic.acc{background:var(--mf-iron,#171C25)!important;border-radius:var(--mf-r-sm,10px)!important;box-shadow:0 6px 14px -8px rgba(0,0,0,.6)!important;color:var(--mf-acc-2,#FFB347)!important;--s:#FFB347;--s2:#FF6B1A}
+html body #main .card:not(.dark) .card-h .ic .ico svg{stroke:#FFB347}
+/* stat tiles: chalk plates with an orange top stamp and display numerals */
+#main .stat{border-radius:var(--mf-r-sm,10px);border:1px solid var(--mf-line-ink,rgba(14,17,22,.1));border-top:3px solid var(--mf-acc,#FF6B1A)}
+#main .stat.dark{border-top-color:var(--mf-acc-2,#FFB347)}
+#main .stat .v{font-family:var(--disp,"Anton","Cairo",sans-serif);letter-spacing:.01em}
+/* flame + first-week hero plates: flat graphite, no radial glow, orange plate edge */
+#main .fl-hero,#main .fw-card{background:var(--mf-iron,#171C25)!important;background-image:linear-gradient(180deg,rgba(255,255,255,.035),transparent 40%),repeating-linear-gradient(90deg,rgba(255,255,255,.05) 0 1px,transparent 1px 9px)!important;
+  border:1px solid var(--mf-line,rgba(255,255,255,.09))!important;border-radius:var(--mf-r-sm,10px)!important;box-shadow:inset 4px 0 0 var(--mf-acc,#FF6B1A),var(--mf-sh-2,0 22px 44px -20px rgba(0,0,0,.55))!important}
+html[dir=rtl] #main .fl-hero,html[dir=rtl] #main .fw-card{box-shadow:inset -4px 0 0 var(--mf-acc,#FF6B1A),var(--mf-sh-2,0 22px 44px -20px rgba(0,0,0,.55))!important}
+/* today list and recap: tighter rows with a hairline rule, arrows nudge on hover/press */
+#main .card.today .item,#main .card.today a,#main .card.today button{transition:transform var(--mf-t-fast,.18s) var(--mf-ease,ease)}
+#main .card.today .item:active{transform:translateX(-4px)}
+/* chalk hairline for every light home card */
+#main .card:not(.dark):not(.tip){border:1px solid var(--mf-line-ink,rgba(14,17,22,.1));border-radius:var(--mf-r-md,16px);box-shadow:var(--mf-sh-1,0 8px 24px -14px rgba(14,17,22,.25))}
+@media(prefers-reduced-motion:reduce){#main .hsec::before{animation:none}}
