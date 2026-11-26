@@ -110,7 +110,7 @@ td.cur,th.cur{background:var(--acc-soft)} th.cur{color:var(--acc)}
 /* login */
 .login{min-height:100vh;display:flex;flex-direction:column;background:linear-gradient(160deg,var(--navy),var(--navy2) 60%,#3b1d0b)}
 .login-art{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;color:#fff;padding:40px 20px 20px;text-align:center}
-.logo-big{font-size:3.4rem;font-weight:800;letter-spacing:2px}.logo-big b{color:var(--acc)}
+.logo-big{margin:0;font-size:3.4rem;font-weight:800;letter-spacing:2px}.logo-big b{color:var(--acc)}
 .login-art p{color:#CBD5E1;margin:4px 0 0}
 .login-card{background:#fff;border-radius:28px 28px 0 0;padding:26px 22px calc(26px + env(safe-area-inset-bottom));width:100%;max-width:480px;margin:0 auto}
 .login-card h2{margin:0 0 14px}
@@ -442,11 +442,11 @@ details.card.wu>summary::after{color:#94A3B8;top:14px}
 
 /* login tabs + price list */
 .ltabs{display:flex;gap:6px;background:var(--soft2);padding:5px;border-radius:14px;margin-bottom:16px}
-.ltab{flex:1;border:0;background:transparent;border-radius:10px;padding:9px 6px;font-weight:700;font-size:.86rem;color:var(--slate);cursor:pointer;min-height:42px}
+.ltab{flex:1;border:0;background:transparent;border-radius:10px;padding:9px 6px;font-weight:700;font-size:.86rem;color:var(--slate);cursor:pointer;min-height:44px}
 .ltab.on{background:#fff;color:var(--navy);box-shadow:0 2px 8px rgba(15,23,42,.08)}
 .login-card{max-height:78vh;overflow-y:auto}
 .login-links{text-align:center;font-size:.8rem;margin:12px 0 0;color:var(--slate)}
-.login-links a{color:var(--acc);font-weight:700;text-decoration:none;cursor:pointer}
+.login-links a{color:var(--acc);font-weight:700;text-decoration:none;cursor:pointer;display:inline-block;padding:10px 3px}
 .plans{display:grid;gap:12px}
 .plan{position:relative;display:block;text-decoration:none;color:var(--navy);border:1.5px solid var(--soft);border-radius:18px;padding:16px 16px 14px;background:#fff;transition:.15s}
 .plan:active{transform:scale(.98)}

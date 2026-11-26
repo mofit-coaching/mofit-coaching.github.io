@@ -83,7 +83,7 @@
     list.forEach(el=>{ cue(el); if(!el._scc){ el._scc=1; el.addEventListener("scroll",()=>cue(el),{passive:true}); } });
   }
   let q=new Set(), raf=0;
-  function flush(){ raf=0; const items=[...q]; q.clear(); items.forEach(n=>{ if(n.isConnected){ walk(n); if(n.nodeType===1) cues(n); } }); }
+  function flush(){ raf=0; const items=[...q]; q.clear(); items.forEach(n=>{ if(n&&n.isConnected){ walk(n); if(n.nodeType===1) cues(n); } }); }
   function start(){
     const m=main(); if(!m) return setTimeout(start,200);
     walk(m); cues(m);
