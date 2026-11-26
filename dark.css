@@ -1,0 +1,189 @@
+/* ======================================================================
+   DARK THEME — follows the phone's dark mode (prefers-color-scheme: dark)
+   Same brand: deep navy surfaces, orange accent. Light theme untouched.
+   ====================================================================== */
+@media (prefers-color-scheme: dark){
+
+  /* ---- tokens ------------------------------------------------------- */
+  :root{
+    color-scheme: dark;
+    --base:#060B17;
+    --card:#101B31;
+    --raise:#182642;   /* inputs, buttons, chips sitting on a card */
+    --line:#24365C;
+    --navy:#E9EEF8;    /* main text */
+    --navy2:#C2CFE4;   /* secondary text */
+    --navy3:#9AAAC8;   /* tertiary text */
+    --slate:#8B9DBF;   /* muted text */
+    --soft:#24365C;    /* borders, bar tracks */
+    --soft2:#182642;   /* quiet fills (stats, segs, skeletons) */
+    --acc-soft:rgba(249,115,22,.13);
+    --acc-line:rgba(249,115,22,.38);
+    --good:#4ADE80; --good-soft:rgba(34,197,94,.15);
+    --bad:#F87171;  --bad-soft:rgba(239,68,68,.16);
+    --sh:0 1px 2px rgba(0,0,0,.5),0 10px 26px rgba(0,0,0,.42);
+    /* design.css 60-30-10 tokens */
+    --c60:#060B17; --c60-card:#101B31; --c60-line:#24365C;
+    --c30-tint:#1C2B4C; --c30-tint-ink:#C7D3EA;
+  }
+
+  html,body{background:var(--base);color:var(--navy)}
+
+  /* ---- components that used --navy as a SURFACE stay deep navy ------ */
+  .top{background:linear-gradient(135deg,#0B1424 0%,#16233C 100%)}
+  .top,.card.dark,.ex-h,.card.tip,.nav,.unitbox{background-image:var(--knurl),linear-gradient(135deg,#0B1424,#16233C)}
+  .nav{background:#0B1424;box-shadow:0 10px 30px rgba(0,0,0,.6),inset 0 0 0 1px #1B2A49}
+  .card-h .ic.dark{background:#0B1424;color:#fff}
+  .card.dark{background:linear-gradient(135deg,#0B1424,#16233C);color:#fff}
+  .stat.dark{background:#0B1424;color:#fff}
+  .btn.navy{background:#0B1424;border-color:#2A3C64;color:#fff}
+  .pill.navy{background:#0B1424;color:#fff;box-shadow:inset 0 0 0 1px #2A3C64}
+  .chip.on{background:linear-gradient(150deg,#101B31,#1C2B4C);border-color:#33507F;color:#fff}
+  .daycard.on{background:#16233C;border-color:#33507F;color:#fff}
+  .daycard.on small{color:var(--navy3)}
+  .bar.navy>i{background:#3D537F}
+  .login{background:#0B1424}
+  .ex-h{background:linear-gradient(135deg,#0B1424,#16233C)}
+  .timer{background:#0B1424}
+  .unitbox{background:#0B1424}
+  .toast{background:#101B31;box-shadow:0 10px 30px rgba(0,0,0,.6),inset 0 0 0 1px #2A3C64}
+  .wk-day{background:#0B1424}
+  .offbar{background:#0B1424}
+  .ready-cta{background:linear-gradient(135deg,#0B1424,#16233C)}
+  .pr-pop{background:#0B1424}
+  .wu-hero{background:linear-gradient(135deg,#0B1424,#16233C)}
+  .loadbars i{background:#3D537F}
+  .plan-price b{background:#0B1424}
+  .nudge-mini{background:#0B1424}
+
+  /* ---- white surfaces become elevated navy -------------------------- */
+  main>.card:not(.dark){background:linear-gradient(180deg,#101B31 0%,#0E1830 100%)}
+  .card{background:var(--card)}
+  input,select,textarea{background:#0C1526;border-color:var(--soft);color:var(--navy)}
+  input:focus,select:focus,textarea:focus{background:#0C1526;border-color:var(--acc);box-shadow:0 0 0 3px rgba(249,115,22,.22)}
+  input::placeholder,textarea::placeholder{color:#5E7195}
+  .btn{background:var(--raise);border-color:var(--soft);color:var(--navy);box-shadow:none}
+  .btn.danger{background:var(--raise);color:var(--bad);border-color:rgba(239,68,68,.35)}
+  .btn.ghost{color:var(--slate)}
+  .chip{background:var(--raise);border-color:var(--soft);color:var(--navy2)}
+  .seg{background:var(--soft2)}
+  .seg button{color:var(--slate)}
+  .seg button.on{background:#2A3C64;color:#fff;box-shadow:0 2px 8px rgba(0,0,0,.4)}
+  .daycard{background:var(--raise);border-color:var(--soft)}
+  .daycard small{color:var(--slate)}
+  .daycard.rest{background:var(--soft2)}
+  .ex,.meal{background:var(--card);box-shadow:var(--sh)}
+  .item{border-bottom-color:#1B2A49}
+  .item.plan{background:transparent}
+  .item:hover{background:var(--soft2)}
+  .food-r:hover{background:var(--soft2)}
+  .food-r:active,.client:active,.alert-row:active{background:var(--soft2)}
+  .sheet-card{background:linear-gradient(180deg,#121E38,#0D1730)}
+  .sheet-bg{background:rgba(2,6,16,.6)}
+  .tick{background:var(--raise);border-color:var(--soft)}
+  .stepper button{background:var(--raise);border-color:var(--soft);color:var(--navy)}
+  .fail{background:var(--raise);border-color:var(--soft)}
+  .coachbar{background:linear-gradient(180deg,#14213C,#101B31);border-color:var(--acc-line)}
+  .edit-ex{background:var(--raise);border-color:var(--soft)}
+  .wk-slot{background:var(--raise);border-color:var(--soft)}
+  .wk-slot:not(.rest){border-color:#33507F;box-shadow:none}
+  .rep-head{background:var(--card)}
+  .rep-head .logo{color:var(--navy)!important}
+  .vchip{background:var(--raise);border-color:var(--soft);color:var(--navy2)}
+  .mode{background:var(--raise);border-color:var(--soft);color:var(--navy2)}
+  .rpe button{background:var(--raise);border-color:var(--soft);color:var(--navy)}
+  .pdur-chip{background:var(--raise);border-color:var(--soft);color:var(--navy3)}
+  .card.miss{background:linear-gradient(180deg,var(--card),var(--acc-soft))}
+  .plan{background:linear-gradient(160deg,#121E38,#0E1830);border-color:var(--soft);color:var(--navy);box-shadow:0 14px 30px -18px rgba(0,0,0,.6)}
+  .plan.hot{border-color:var(--acc);background:linear-gradient(180deg,var(--acc-soft),#101B31 70%)}
+  .wu-i{background:var(--raise);border-color:var(--soft)}
+  .onb-ic{background:radial-gradient(circle at 30% 25%,#2A3C64,var(--acc-soft));box-shadow:inset 0 0 0 1.5px var(--acc-line)}
+
+  /* color-mix tints that were mixed on white now mix on the card navy */
+  .wu-tag.act{background:color-mix(in srgb,var(--mc) 22%,#101B31);color:color-mix(in srgb,var(--mc) 55%,#fff)}
+  .wu-i.on{border-color:color-mix(in srgb,var(--mc) 60%,#24365C);background:color-mix(in srgb,var(--mc) 12%,#101B31)}
+  .wu-c{border-color:color-mix(in srgb,var(--mc) 60%,#33507F)}
+
+  /* ---- light accent tints become dark glass tints -------------------- */
+  .card-h .ic.acc{background:linear-gradient(145deg,rgba(249,115,22,.22),rgba(249,115,22,.1));box-shadow:inset 0 0 0 1px rgba(249,115,22,.3)}
+  .meal-h .ic{background:linear-gradient(145deg,rgba(249,115,22,.22),rgba(249,115,22,.1))}
+  .food-r .fi{color:#FFB37A;background:linear-gradient(160deg,rgba(249,115,22,.22),rgba(249,115,22,.1))}
+  .stat.acc{background:linear-gradient(180deg,rgba(249,115,22,.2),rgba(249,115,22,.1))!important;border-color:rgba(249,115,22,.3)}
+  .stat.acc .v{color:#FFB37A}
+  .grid4>.stat:nth-child(4n){background:linear-gradient(180deg,rgba(244,63,142,.16),rgba(244,63,142,.08));border-color:rgba(244,63,142,.28)}
+  .pill.acc-soft{background:rgba(249,115,22,.16);color:#FFB37A;box-shadow:inset 0 0 0 1px rgba(249,115,22,.3)}
+  .badge.got{background:linear-gradient(160deg,rgba(249,115,22,.28),rgba(249,115,22,.14))}
+  .del-warn{background:linear-gradient(180deg,rgba(239,68,68,.18),rgba(239,68,68,.1));border-color:rgba(239,68,68,.4);color:#FDA4A4}
+  .empty .big{background:radial-gradient(circle at 30% 25%,#2A3C64,#3A2A18);box-shadow:0 14px 30px -12px rgba(255,107,26,.4),0 0 0 8px rgba(255,107,26,.08),0 0 0 18px rgba(255,107,26,.05)}
+  .card-h .ic:has(.ico){background:var(--soft2)!important;box-shadow:inset 0 0 0 1px var(--soft)!important}
+  .onb-ic:has(.ico[data-g=train]){background:radial-gradient(circle at 30% 25%,#2A3C64,#4A2A12)}
+  .onb-ic:has(.ico[data-g=habit]){background:radial-gradient(circle at 30% 25%,#2A3C64,#123A33)}
+  .onb-ic:has(.ico[data-g=prog]){background:radial-gradient(circle at 30% 25%,#2A3C64,#26204A)}
+
+  /* ---- design.css token-driven rules --------------------------------- */
+  .pill.acc{background:#16233C;color:#fff;box-shadow:inset 0 0 0 1px #33507F}
+  .chip.cur{border-color:var(--acc2);color:var(--acc2)}
+  .chip.on.cur{background:var(--acc-ink);border-color:var(--acc-ink);color:#fff}
+  .mode.on{background:var(--c30-tint);border-color:#4A648F;color:#E9EEF8}
+  .pp-chip.on{background:var(--c30-tint);border-color:#4A648F;color:#E9EEF8}
+  html td.cur,html th.cur{background:var(--c30-tint)}
+  html th.cur{color:#E9EEF8}
+  html input:focus,html select:focus,html textarea:focus{border-color:var(--acc);box-shadow:0 0 0 3px rgba(249,115,22,.22)}
+  .vchip.warn{background:var(--c30-tint);border-color:#33507F}
+  .warm{background:var(--c30-tint);border-color:#33507F}
+  main>.card .card-h .ic:not(.dark):not(.acc){color:var(--c30-tint-ink)!important;background:var(--c30-tint)!important;box-shadow:none!important}
+
+  /* ---- tables, bars, misc -------------------------------------------- */
+  .bar{background:#1B2A49}
+  .pill{background:var(--soft2);color:var(--navy3);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+  .client-del{background:rgba(239,68,68,.16);color:#F87171}
+  .client-del:hover{background:rgba(239,68,68,.28)}
+  .stat{background:var(--soft2)}
+  html .grid2>.stat,html .grid3>.stat,html .grid4>.stat{background:var(--soft2)!important;border-color:rgba(255,255,255,.06)!important}
+  .badge{background:var(--soft2)}
+  .card-h .ic:has(.ico[data-g]){background:var(--c30-tint)!important;box-shadow:inset 0 0 0 1px var(--soft)!important}
+  .ic:has(.ico[data-g]){background:var(--c30-tint);box-shadow:inset 0 0 0 1px var(--soft)}
+  .meal-f{background:var(--soft2)}
+  .meal-h{border-bottom-color:#1B2A49}
+  .set input,.set select{background:#0C1526;color:var(--navy)}
+  .set .no{background:var(--soft2);color:var(--navy2)}
+  .sheet-grab{background:#33507F}
+  html .es-art{background:linear-gradient(160deg,#2A3C64,#3A2A18)}
+  text[fill="#0F172A"]{fill:#E9EEF8}
+  .stat .l,.stat .s{color:var(--slate)}
+  .hint,.muted{color:var(--slate)}
+  label.f{color:var(--slate)}
+  .card-h h2 small{color:var(--slate)}
+  table{color:var(--navy2)}
+  th{color:var(--slate)}
+  td,th{border-color:var(--soft)}
+  .stack{background:#1B2A49}
+  .legend span{color:var(--slate)}
+  .nav button{color:#7C8FB3}
+  .nav button.on{color:#fff}
+  .ibtn{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.14);color:#fff}
+
+  /* tstep keyframes mixed on white -> mix on navy card */
+  @keyframes tstep{0%,22%{background:color-mix(in srgb,var(--mc,#FF6B1A) 45%,#101B31);transform:translateY(-3px)}30%,100%{background:#1B2A49;transform:none}}
+
+  /* ---- JS-injected surfaces (chat messenger sheet, health sync) ------ */
+  html #sheet.msgr .sheet-bg{background:rgba(2,6,16,.6)}
+  html #sheet.msgr .sheet-card{background:var(--base)}
+  html #sheet.msgr .chat-h{background:var(--card);border-bottom-color:var(--soft)}
+  html #sheet.msgr .chat-l{background:var(--base)}
+  html #sheet.msgr .chat-f{background:var(--card);border-top-color:var(--soft)}
+  html #sheet.msgr .msg.them{background:var(--raise);color:var(--navy)}
+  html #sheet.msgr .msearch input{background:var(--raise);color:var(--navy);box-shadow:inset 0 0 0 1px var(--soft)}
+  html #sheet.msgr .mrow{background:var(--card)}
+  html #sheet.msgr .mrow.unread .mb small{color:var(--navy2)}
+  html #sheet.msgr input,html #sheet.msgr textarea{background:var(--raise);color:var(--navy)}
+  .gh-btn{background:var(--raise);border-color:var(--soft);color:var(--navy)}
+  .gh-hero-btn{background:#E9EEF8;color:#0B1424}
+
+  /* steps board "needs activation" box was a light orange tint */
+  .stp-need{background:rgba(249,115,22,.12)!important;border-color:rgba(249,115,22,.35)!important}
+  .stp-need b{color:#FFB37A!important}
+
+  /* scrollbars */
+  *{scrollbar-color:#33507F transparent}
+}
