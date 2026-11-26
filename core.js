@@ -45,18 +45,24 @@ async function adminCall(opts){
 /* Weeks are absolute from start_date (1, 2 … 13, 14 …) and are shown in blocks of 12.
    Program length follows the subscription end date (min 12 weeks); with no end date it keeps counting. */
 const BLOCK=12, MAX_WEEKS=260;
-function maxWeek(p){ if(p?.start_date&&p?.sub_end){ const w=Math.ceil((daysBetween(p.start_date,p.sub_end)+1)/7); return Math.min(Math.max(w,BLOCK),MAX_WEEKS); } return MAX_WEEKS; }
+/* Plan length in weeks: 1 month=4, 3=12, 6=26, 12=52 (other lengths ~4.33 weeks/month), taken from sub_start→sub_end.
+   Bonus (gift) weeks from profiles.bonus_weeks (when that column exists) are added on top. No end date = no limit. */
+function planBaseWeeks(p){ if(!(p?.sub_start&&p?.sub_end)) return null; const m=Math.max(1,Math.round((daysBetween(p.sub_start,p.sub_end)+1)/30.44)); return m<=3?m*4:m===6?26:m===12?52:Math.round(m*52/12); }
+function maxWeek(p){ const b=planBaseWeeks(p); if(b===null) return MAX_WEEKS; return Math.min(b+Math.max(0,Math.floor(+p.bonus_weeks||0)),MAX_WEEKS); }
 function currentWeek(p){ if(!p?.start_date) return 1; return Math.min(Math.max(Math.floor(daysBetween(p.start_date,today())/7)+1,1),maxWeek(p)); }
 function weekOfDate(p,iso){ if(!p?.start_date) return null; const w=Math.floor(daysBetween(p.start_date,iso)/7)+1; return w>=1&&w<=MAX_WEEKS?w:null; }
 const blockOf=w=>Math.ceil(Math.max(+w||1,1)/BLOCK), wInBlock=w=>((Math.max(+w||1,1)-1)%BLOCK)+1;
-function blockWeeks(w){ const b=blockOf(w); return [...Array(BLOCK)].map((_,i)=>(b-1)*BLOCK+i+1); }
+function blockWeeks(w,p){ const b=blockOf(w), mx=p?maxWeek(p):MAX_WEEKS; return [...Array(BLOCK)].map((_,i)=>(b-1)*BLOCK+i+1).filter(x=>x<=mx); }
+/* keep the week chips where they were after a re-render (RTL scroller resets to the start otherwise); no saved spot = centre the selected chip */
+function restoreWeekChips(root,saved){ const sc=[...(root||document).querySelectorAll(".scroller")].find(s=>s.querySelector("[data-w]")); if(!sc) return; if(saved!=null&&saved!==undefined){ sc.scrollLeft=saved; return; } const on=sc.querySelector(".chip.on"); if(on){ const dr=sc.getBoundingClientRect(), sr=on.getBoundingClientRect(); sc.scrollLeft=sc.scrollLeft+(sr.left-dr.left)-(sc.clientWidth-sr.width)/2; } }
+function weekChipsX(root){ const sc=[...(root||document).querySelectorAll(".scroller")].find(s=>s.querySelector("[data-w]")); return sc?sc.scrollLeft:null; }
 /* "‹ block N ›" switcher; buttons carry data-w so every existing [data-w] handler works. Hidden while the client is still in block 1. */
 function blockNavHTML(sel,p){
   const now=currentWeek(p), b=blockOf(sel), last=Math.max(blockOf(now),b);
   if(last===1) return "";
-  const go=x=> blockOf(now)===x? now : (x-1)*BLOCK+1, r=blockWeeks(sel);
+  const go=x=> blockOf(now)===x? now : (x-1)*BLOCK+1, r=blockWeeks(sel,p);
   return `<div class="blocknav"><button class="chip" ${b>1?`data-w="${go(b-1)}"`:"disabled"}>→ السابق</button>
-    <b>البلوك ${b}<small>أسابيع ${r[0]}–${r[BLOCK-1]}</small></b>
+    <b>البلوك ${b}<small>أسابيع ${r[0]}–${r[r.length-1]}</small></b>
     <button class="chip" ${b<last?`data-w="${go(b+1)}"`:"disabled"}>التالي ←</button></div>`;
 }
 function targets(p){
@@ -128,13 +134,14 @@ function lineChart(pts, unit, color="#0F172A"){
   const X=x=>pl+(x-x0)/((x1-x0)||1)*(W-pl-pr), Y=y=>pt+(1-(y-y0)/(y1-y0))*(H-pt-pb);
   const d=pts.map((p,i)=>(i?"L":"M")+X(p.x).toFixed(1)+" "+Y(p.y).toFixed(1)).join(" ");
   const gid="g"+Math.random().toString(36).slice(2,7);
+  const cj=`<div class="cj-w" style="display:none;position:relative;height:172px;direction:ltr"><canvas class="cj" data-pts="${esc(JSON.stringify(pts)).replace(/"/g,"&quot;")}" data-unit="${esc(unit)}" data-color="${esc(color)}"></canvas></div>`;
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;margin-top:6px" direction="ltr">
     <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F97316" stop-opacity=".28"/><stop offset="1" stop-color="#F97316" stop-opacity="0"/></linearGradient></defs>
     ${[0,.5,1].map(t=>{const v=y0+(y1-y0)*(.15+.7*t);return `<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#E2E8F0" stroke-dasharray="3 4"/><text x="${pl-5}" y="${Y(v)+3}" font-size="9" fill="#64748B" text-anchor="end">${v.toFixed(1)}</text>`}).join("")}
     <path d="${d} L${X(pts[pts.length-1].x)} ${H-pb} L${X(pts[0].x)} ${H-pb}Z" fill="url(#${gid})"/>
     <path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>
     ${pts.map((p,i)=>`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="${i===pts.length-1?5:3.5}" fill="${i===pts.length-1?"#F97316":"#fff"}" stroke="${i===pts.length-1?"#fff":color}" stroke-width="2"/><text x="${X(p.x)}" y="${H-7}" font-size="9" fill="#64748B" text-anchor="middle">${p.x===0?"Start":"W"+p.x}</text>`).join("")}
-  </svg><p class="hint" style="margin:0">${unit}</p>`;
+  </svg>${cj}<p class="hint" style="margin:0">${unit}</p>`;
 }
 function emptyBox(icon, text){ return `<div class="empty"><div class="big">${icon}</div>${text}</div>`; }
 

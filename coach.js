@@ -181,6 +181,7 @@ function setupData(el){
       <label class="f">من<input type="date" id="sStart" value="${esc(p.sub_start??"")}"></label>
       <label class="f">إلى<input type="date" id="sEnd" value="${esc(p.sub_end??"")}"></label></div>
       <div class="row" style="margin-bottom:10px">${[[1,0],[3,1],[6,2],[12,6]].map(([m,f])=>`<button class="chip" data-sm="${m+f}" data-plan="${f?esc(planTitle({months:m,free_months:f})):"شهري"}">${f?`${m}+${f} 🎁`:"+1 شهر"}</button>`).join("")}<label class="row" style="gap:6px;margin-inline-start:auto;font-weight:700"><input type="checkbox" id="sPaid" style="width:auto;min-height:0" ${p.sub_paid?"checked":""}> مدفوع</label></div>
+      ${"bonus_weeks" in p?`<label class="f">🎁 أسابيع هدية (بتتضاف على أسابيع الباقة)<input id="sBonus" inputmode="numeric" value="${esc(p.bonus_weeks??0)}"></label><p class="hint">الباقة: ${planBaseWeeks(p)??"—"} أسبوع · الإجمالي للعميل: ${planBaseWeeks(p)===null?"مفتوح":maxWeek(p)} أسبوع</p>`:`<p class="hint">الأسابيع الظاهرة للعميل: ${planBaseWeeks(p)===null?"مفتوحة (حدد التواريخ)":planBaseWeeks(p)+" أسبوع"}</p>`}
       <label class="f">ملاحظات الدفع<input id="sNotes" value="${esc(p.sub_notes??"")}"></label>
       <label class="f">📱 رقم واتساب العميل (للتذكيرات)<input id="sPhone" inputmode="tel" dir="ltr" placeholder="01xxxxxxxxx" value="${esc(p.phone??"")}"></label>
       <button class="btn navy block" id="sSave">حفظ الاشتراك</button></div>
@@ -193,7 +194,7 @@ function setupData(el){
   if(typeof aiClientCard==="function") aiClientCard(p);
   el.querySelectorAll("[data-pres]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("client_events").update({resolved_at:new Date().toISOString()}).eq("id",b.dataset.pres); if(error) return toast("تعذر الحفظ"); await loadEvents(); toast("تم ✓"); setupData(el); });
   $("#hClear")&&($("#hClear").onclick=async()=>{ const { error } = await sb.from("health_screens").update({cleared_at:new Date().toISOString()}).eq("client_id",p.id); if(error) return toast("تعذر الحفظ"); await loadHealth(); toast("تم ✓"); setupData(el); });
-  $("#sSave").onclick=async()=>{ if($("#sPhone").value.trim()&&!normPhone($("#sPhone").value)) return toast("رقم الواتساب مش صحيح"); const { error } = await sb.from("profiles").update({sub_plan:$("#sPlan").value.trim()||null, sub_price:num($("#sPrice").value), sub_start:$("#sStart").value||null, sub_end:$("#sEnd").value||null, sub_paid:$("#sPaid").checked, sub_notes:$("#sNotes").value.trim()||null, phone:normPhone($("#sPhone").value)}).eq("id",p.id);
+  $("#sSave").onclick=async()=>{ if($("#sPhone").value.trim()&&!normPhone($("#sPhone").value)) return toast("رقم الواتساب مش صحيح"); const { error } = await sb.from("profiles").update({sub_plan:$("#sPlan").value.trim()||null, sub_price:num($("#sPrice").value), sub_start:$("#sStart").value||null, sub_end:$("#sEnd").value||null, sub_paid:$("#sPaid").checked, sub_notes:$("#sNotes").value.trim()||null, phone:normPhone($("#sPhone").value), ...($("#sBonus")?{bonus_weeks:Math.max(0,Math.floor(+$("#sBonus").value)||0)}:{})}).eq("id",p.id);
     if(error) return toast(error.message); await refreshClient(); toast("✓ اتحفظ الاشتراك"); setupData(el); };
   $("#pSave").onclick=async()=>{
     const upd={...readProfile(el), full_name:el.querySelector('[data-x="full_name"]').value.trim(), };

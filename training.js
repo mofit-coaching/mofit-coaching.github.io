@@ -147,7 +147,7 @@ function blockAlert(c){
 async function blockReviewHTML(p){
   const wk=currentWeek(p), b=blockOf(wk), a=blockAlert(p);
   if(!a) return "";
-  const wks=blockWeeks(wk), ids=S.program.map(e=>e.id);
+  const wks=blockWeeks(wk,p), ids=S.program.map(e=>e.id);
   const { data } = ids.length ? await sb.from("set_logs").select("exercise_id,week,reps,weight,rir").in("exercise_id",ids).gte("week",wks[0]).lte("week",wks[BLOCK-1]) : {data:[]};
   const L=data||[], rows=S.program.map(ex=>{ const m=L.filter(s=>s.exercise_id===ex.id&&e1rm(s)); if(!m.length) return null;
       const ws=[...new Set(m.map(s=>s.week))].sort((x,y)=>x-y), best=w=>Math.max(...m.filter(s=>s.week===w).map(e1rm));
@@ -186,4 +186,4 @@ async function streakCardHTML(p){
     ${next?`<p class="hint" style="margin:8px 0 0">${next[0]-total} تمرين وتاخد شارة ${next[1]} ${next[2]}</p>`:""}
     <button class="btn sm ghost block" style="margin-top:10px" onclick="shareStreakCard(this)" data-streak="${streak}" data-total="${total}" data-done="${done}" data-goal="${goal}" data-badge="${earned.length?earned[earned.length-1][1]:""}" data-badgename="${earned.length?earned[earned.length-1][2]:""}">📤 شارك تقدمك</button></div>`;
 }
-function streakAfter(p){ if(window._streakNew){ try{ localStorage.setItem(window._streakKey,window._streakCount); }catch(e){} setTimeout(()=>{ if(typeof burst==="function") burst(); toast("🎖 شارة جديدة اتفتحت!"); },700); } }
+function streakAfter(p){ if(window._streakNew){ try{ localStorage.setItem(window._streakKey,window._streakCount); }catch(e){} setTimeout(()=>{ window.mofitCelebrate?mofitCelebrate.badge():(typeof burst==="function"&&burst()); toast("🎖 شارة جديدة اتفتحت!"); },700); } }

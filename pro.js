@@ -150,7 +150,7 @@ async function viewCheckin(el){
   const C=all||[]; S.ciWeek=S.ciWeek||Math.max(1,wkNow);
   const cur=C.find(c=>c.week===S.ciWeek)||{}, rec={...cur}, first=C.find(c=>c.photo_front||c.photo_side||c.photo_back);
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>المتابعة الأسبوعية<small>مرة في الأسبوع: وزن + صور + إحساسك</small></h2></div>
-      ${blockNavHTML(S.ciWeek,p)}<div class="scroller">${blockWeeks(S.ciWeek).map(w=>{ const c=C.find(x=>x.week===w); return `<button class="chip ${S.ciWeek===w?"on":""} ${wkNow===w?"cur":""}" data-w="${w}">${w}${c?(c.reviewed_at?" ✓✓":" ✓"):""}</button>`; }).join("")}</div>
+      ${blockNavHTML(S.ciWeek,p)}<div class="scroller">${blockWeeks(S.ciWeek,p).map(w=>{ const c=C.find(x=>x.week===w); return `<button class="chip ${S.ciWeek===w?"on":""} ${wkNow===w?"cur":""}" data-w="${w}">${w}${c?(c.reviewed_at?" ✓✓":" ✓"):""}</button>`; }).join("")}</div>
       <p class="hint">✓ اتبعتت · ✓✓ الكوتش رد عليها</p></div>
     ${cur.coach_reply?`<div class="card dark"><div class="card-h"><div class="ic">💬</div><h2>رد الكوتش<small>الأسبوع ${S.ciWeek}</small></h2></div><p style="margin:0;white-space:pre-wrap">${esc(cur.coach_reply)}</p></div>`:""}
     <div class="card"><div class="card-h"><div class="ic dark">📝</div><h2>أسبوع ${S.ciWeek}<small>${cur.id?"اتبعتت "+esc(cur.checkin_date):"لسه ما اتبعتتش"}</small></h2></div>
@@ -166,7 +166,8 @@ async function viewCheckin(el){
       <textarea rows="4" id="ciReply" placeholder="ملاحظاتك وتعديلات الأسبوع الجاي…">${esc(cur.coach_reply??"")}</textarea>
       <button class="btn navy block" id="ciReplySave" style="margin-top:8px" ${cur.id?"":"disabled"}>حفظ الرد ✓✓</button></div>`:""}
     ${first&&cur.id&&first.week!==cur.week?`<div class="card"><div class="card-h"><div class="ic">🔁</div><h2>قبل وبعد<small>أسبوع ${first.week} ← أسبوع ${cur.week}</small></h2></div><div id="cmp" class="ba-grid"></div></div>`:""}<div id="cArchive"></div>`;
-  el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ S.ciWeek=+b.dataset.w; viewCheckin(el); });
+  restoreWeekChips(el,window._wsX); window._wsX=null;
+  el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ window._wsX=weekChipsX(el); S.ciWeek=+b.dataset.w; viewCheckin(el); });
   el.querySelectorAll("[data-rate]").forEach(g=>g.querySelectorAll("[data-v]").forEach(b=>b.onclick=()=>{ g.querySelectorAll("[data-v]").forEach(x=>x.classList.remove("on")); b.classList.add("on"); rec[g.dataset.rate]=+b.dataset.v; }));
   const files={};
   for(const [k] of POSES){ const path=cur["photo_"+k]; if(path) photoUrl(path).then(u=>{ if(u) el.querySelector(`[data-img="${k}"]`).innerHTML=`<img src="${u}" alt="">`; }); }
