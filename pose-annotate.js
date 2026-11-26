@@ -45,6 +45,10 @@ function anInjectStyles() {
 .an-tools{flex:none;display:flex;align-items:center;gap:6px;padding:4px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
 .an-tool{flex:none;border:1px solid #2B3750;background:#162036;color:#F1F5F9;border-radius:12px;padding:7px 10px;font-size:.82rem;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap}
 .an-tool.on{background:#F97316;border-color:#F97316;color:#fff}
+.an-tool.an-auto-primary{background:linear-gradient(135deg,#BF400B,#E2540A);border:1px solid #FB923C;color:#fff;font-size:.96rem;padding:10px 16px;min-height:44px;box-shadow:0 6px 18px rgba(226,84,10,.34);animation:anAutoGlow 2.4s ease-in-out infinite}
+@keyframes anAutoGlow{0%,100%{box-shadow:0 6px 16px rgba(226,84,10,.28);transform:translateY(0)}50%{box-shadow:0 8px 25px rgba(249,115,22,.55);transform:translateY(-1px)}}
+.an-auto-hint{flex:none;text-align:center;color:#FDBA74;font-size:.78rem;font-weight:700;padding:3px 12px 5px;animation:anHintPulse 3s ease-in-out infinite}
+@keyframes anHintPulse{0%,100%{opacity:.78}50%{opacity:1}}
 .an-dot{flex:none;width:22px;height:22px;border-radius:50%;border:2px solid transparent;cursor:pointer;padding:0}
 .an-dot.on{border-color:#fff;box-shadow:0 0 0 2px #F97316}
 .an-moms{flex:none;display:flex;align-items:center;gap:6px;padding:4px 12px;overflow-x:auto;-webkit-overflow-scrolling:touch}
@@ -93,6 +97,7 @@ function anShell(title, saveLabel) {
       ${AN_SPEEDS.map(s => `<button class="an-spd${s === 1 ? " on" : ""}" data-spd="${s}">×${s}</button>`).join("")}
     </div>
     <div class="an-tools"></div>
+    <div class="an-auto-hint">اضغط 🤖 تحليل للتحليل التلقائي الكامل</div>
     <div class="an-moms"></div>
     <div class="an-note"></div>
     <div class="an-textbar" style="display:none">
@@ -563,7 +568,7 @@ function anDrawTools(root) {
        <button class="an-tool" data-an="undo" title="تراجع">↩ تراجع</button>
        <button class="an-tool" data-an="clear" title="مسح اللقطة">🗑 مسح</button>
        <span style="flex:none;width:4px"></span>
-       <button class="an-tool" data-an="auto" title="تحليل تلقائي كامل للفيديو: زوايا، عزم، جاذبية، شدة">🤖 تحليل</button>
+       <button class="an-tool an-auto-primary" data-an="auto" title="تحليل تلقائي كامل للفيديو: زوايا، عزم، جاذبية، شدة">🤖 تحليل</button>
        <button class="an-tool" data-an="track" title="تتبع الزوايا في الفيديو كله">📈 تتبع</button>
        <button class="an-tool" data-an="photo" title="تحليل صورة من الجهاز">📷 صورة</button>
        <button class="an-tool" data-an="variant" title="دقة النموذج">⚙️ خفيف</button>
