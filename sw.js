@@ -23,7 +23,7 @@ if(self.workbox){
     new wb.strategies.StaleWhileRevalidate({cacheName:"mofit-static-"+V}));
   self.addEventListener("install",e=>self.skipWaiting());
   self.addEventListener("activate",e=>{
-    e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.indexOf("mofit-")===0&&k.indexOf("mofit-pose")!==0&&k.indexOf(V)===-1).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+    e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.indexOf("mofit-")===0&&k.indexOf("mofit-pose")!==0&&k.indexOf(V)===-1).map(k=>caches.delete(k)))).then(()=>self.clients.claim()).then(()=>clients.matchAll({type:"window",includeUncontrolled:true})).then(list=>{ for(const c of list) c.postMessage({type:"mofit-sw-activated",V}); }));
   });
 }
 
