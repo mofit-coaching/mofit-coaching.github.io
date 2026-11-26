@@ -28,6 +28,7 @@
   }
 
   html,body{background:var(--base);color:var(--navy)}
+  body::before{display:none}
 
   /* ---- components that used --navy as a SURFACE stay deep navy ------ */
   .top{background:linear-gradient(135deg,#0B1424 0%,#16233C 100%)}
