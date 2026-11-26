@@ -583,6 +583,7 @@ async function viewLeague(el){
   LG=await fetchBoard();
   if(!joinedNow()){ S.tab="home"; render(); return; }
   el.innerHTML=`<div class="lg-card">${tabHTML(LG)}</div>`;
+  if(window.mofitLottie) mofitLottie.scan(el);
   const w=LG.podium&&LG.podium.find(p=>p.rank===1);
   try{
     if(w&&LG.me&&w.nickname===LG.me.nickname){
@@ -635,6 +636,7 @@ if(typeof viewClients==="function"&&!viewClients._lg){
     const names=Object.fromEntries((S.coachClients||[]).map(c=>[c.id,c.full_name||c.email||"عميل"]));
     const paint=async()=>{ const b2=await fetchBoard(); if(b2) board=b2;
       host.innerHTML=`<div class="lg-card">${coachHTML(board,names)}</div>`;
+      if(window.mofitLottie) mofitLottie.scan(host);
       wireCfg(host,board); wireGrant(host);
       wireStart(host,"#lgStart",paint); wireStart(host,"#lgRestart",paint);
       wireEnd(host,"#lgFinish",true,paint); wireEnd(host,"#lgCancel",false,paint);

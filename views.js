@@ -241,7 +241,7 @@ async function viewTrain(el){
   const tt=$("#tTools"); if(allEx.length&&S.me.role!=="coach"&&S.week===wkNow){ tt.classList.remove("hidden"); tt.innerHTML=trainToolsHTML();
     tt.querySelectorAll("[data-mode]").forEach(b=>b.onclick=()=>{ setTrainMode(trainMode()===b.dataset.mode?"":b.dataset.mode); viewTrain(el); });
     $("#rdyBtn").onclick=()=>openReadiness(()=>viewTrain(el)); }
-  if(!exs.length){ list.innerHTML=`<div class="card">${emptyBox("😴","يوم راحة واستشفاء","الراحة جزء من التطور – سجّل نومك ومياهك وخطواتك النهارده.",{label:"✅ سجّل عاداتك",go:"habits"})}</div>`; $("#failCard").remove(); return; }
+  if(!exs.length){ list.innerHTML=`<div class="card">${emptyBox("😴","يوم راحة واستشفاء","الراحة جزء من التطور – سجّل نومك ومياهك وخطواتك النهارده.",{label:"✅ سجّل عاداتك",go:"habits"})}</div>`; $("#failCard").remove(); if(window.mofitLottie) mofitLottie.empty(list); return; }
   const ids=exs.map(e=>e.id);
   const { data, error:le } = await sb.from("set_logs").select("*").in("exercise_id",ids).in("week",[S.week,S.week-1].filter(w=>w>=1));
   const ck="logs_"+p.id+"_"+S.day+"_"+S.week, logs=le? (cacheGet(ck)||[]) : (data||[]); if(!le) cacheSet(ck,logs);
