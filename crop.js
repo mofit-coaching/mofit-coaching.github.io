@@ -30,7 +30,7 @@ function open(file){ return new Promise(async resolve=>{
   const bg=document.createElement("div"); bg.id="crpBg";
   bg.innerHTML=`<div class="chips"><button data-r="0.8" class="on">4:5</button><button data-r="1">1:1</button><button data-r="0.75">3:4</button></div>
     <div id="crpBox"><canvas></canvas></div><input type="range" min="1" max="4" step="0.01" value="1" aria-label="تكبير">
-    <div class="act"><button class="x">إلغاء</button><button class="sk">استخدم الأصلية</button><button class="go">قص واستخدم ✂️</button></div>`;
+    <div class="act"><button class="x">إلغاء</button><button class="sk">استخدم الأصلية</button><button class="go">قص ✂️</button></div>`;
   document.body.appendChild(bg);
   const box=bg.querySelector("#crpBox"), cv=bg.querySelector("canvas"), rg=bg.querySelector("input"), g=cv.getContext("2d");
   let ratio=.8, z=1, cx=nw/2, cy=nh/2, W=0,H=0;
