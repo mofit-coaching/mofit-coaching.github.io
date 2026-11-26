@@ -119,7 +119,13 @@ async function openChat(clientId, title){
   L.innerHTML="";
   if(error){ L.innerHTML=`<div class="chat-empty">تعذر تحميل الرسايل</div>`; return; }
   if(!data.length) L.innerHTML=emptyBox("👋","ابدأ المحادثة",S.me.role==="coach"?"ابعت أول رسالة لعميلك – كلمة تشجيع في الأول بتفرق.":"الرسايل بتوصل للكوتش مباشرة – اسأل عن تمرينك أو أكلك في أي وقت.","","es-sm");
-  if(data.length){ L.classList.add("bulk"); data.reverse().forEach(chatAppend); L.classList.remove("bulk"); L.scrollTop=L.scrollHeight; }
+  if(data.length){
+    L.classList.add("bulk"); data.reverse().forEach(chatAppend); L.classList.remove("bulk");
+    /* entrance cascade: only the newest 10 bubbles animate, with a short stagger; the rest pop in instantly */
+    const bb=[...L.querySelectorAll(".msg,.chat-day")], K=Math.max(0,bb.length-10);
+    bb.forEach((b,i)=>{ if(i<K) b.classList.add("no-in"); else b.style.animationDelay=((i-K)*45)+"ms"; });
+    L.scrollTop=L.scrollHeight;
+  }
   chatMarkRead(clientId);
   const send=async(f)=>{ const { data:m, error:er } = await sb.from("messages").insert({client_id:clientId, sender_role:chatMine(), ...f}).select().single(); if(er){ toast("تعذر الإرسال، جرّب تاني"); return null; } chatAppend(m); return m; };
   $("#chatF").onsubmit=async e=>{
