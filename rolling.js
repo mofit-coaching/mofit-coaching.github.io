@@ -29,7 +29,7 @@ function roll(el){
   const fmt=v=>{ let s=v.toFixed(dec); if(comma){ const p=s.split("."); p[0]=p[0].replace(/\B(?=(\d{3})+(?!\d))/g,","); s=p.join("."); } return s; };
   const dur=Math.min(1400,500+Math.log10(Math.abs(to)+1)*250), t0=performance.now();
   el.style.fontVariantNumeric="tabular-nums";
-  (function f(t){ const k=Math.min(1,(t-t0)/dur);
+  (function f(t){ const k=Math.max(0,Math.min(1,(t-t0)/dur));
     if(!el.isConnected){ return; }
     el.textContent=m[1]+fmt(to*ease(k))+rest;
     if(k<1) requestAnimationFrame(f); else el.textContent=txt; })(t0);
