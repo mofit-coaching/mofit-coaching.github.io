@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEST — Plyr video player</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Noto+Kufi+Arabic:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<style>
+  body{font-family:"Cairo",sans-serif;background:#F4F3EF;margin:0;padding:14px;max-width:480px;margin-inline:auto}
+  #testbar{background:#DC2626;color:#fff;font-weight:800;text-align:center;border-radius:12px;padding:8px;margin-bottom:12px;font-size:.9rem}
+
+</style>
+</head>
+<body>
+<div id="testbar">⚠️ TEST PAGE — فيديو عام تجريبي، مفيش عميل حقيقي ⚠️</div>
+<div class="card">
+  <div class="card-h"><div class="ic acc">🎬</div><h2>مشغل الفيديو الجديد<small>دوس على أي زرار يفتح الفيديو</small></h2></div>
+  <div class="row" style="flex-direction:column;gap:8px">
+    <button class="btn primary block" id="b1">▶ فيديو يوتيوب (Plyr)</button>
+    <button class="btn navy block" id="b2">▶ فيديو يوتيوب + ملاحظات الكوتش</button>
+    <button class="btn block" id="b3">🔗 رابط مش يوتيوب (fallback القديم)</button>
+  </div>
+</div>
+<div id="sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="نافذة"><div class="sheet-bg"></div><div class="sheet-card"><div class="sheet-grab"></div><div id="sheetBody"></div></div></div>
+<script>
+/* ---- stubs: same globals core.js provides ---- */
+const S={videos:{}};
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function toast(m){ const t=document.createElement("div"); t.style.cssText="position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#0F172A;color:#fff;padding:10px 18px;border-radius:99px;font-weight:700;font-size:.85rem;z-index:99;width:max-content;height:auto;min-height:0"; t.textContent=m; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
+function videoFor(ex){ return ex.video_url||S.videos[(ex.name||"").toUpperCase()]||null; }
+function ytId(url){ const m=String(url).match(/(?:youtube\.com\/(?:watch\?v=|shorts\/|embed\/)|youtu\.be\/)([\w-]{11})/); return m?m[1]:null; }
+function openSheet(html){ $("#sheetBody").innerHTML=html; $("#sheet").classList.remove("hidden"); document.body.style.overflow="hidden"; return $("#sheetBody"); }
+function closeSheet(){ $("#sheet").classList.add("hidden"); $("#sheetBody").innerHTML=""; document.body.style.overflow=""; }
+document.addEventListener("click",e=>{ if(e.target.classList?.contains("sheet-bg")) closeSheet(); });
+
+document.getElementById("b1").onclick=()=>openVideo({name:"BARBELL BACK SQUAT",video_url:"https://youtu.be/aqz-KE-bpKQ"});
+document.getElementById("b2").onclick=()=>openVideo({name:"INCLINE DB PRESS",video_url:"https://www.youtube.com/watch?v=aqz-KE-bpKQ",notes:"نزّل ببطء 3 ثواني، ووقفة ثانية تحت قبل ما تطلع."});
+document.getElementById("b3").onclick=()=>openVideo({name:"EXTERNAL LINK DEMO",video_url:"https://example.com/some-video"});
+</script>
+<script src="plyrwrap.js"></script>
+</body>
+</html>
