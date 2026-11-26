@@ -24,7 +24,7 @@ const pct = v => v === null || v === undefined || isNaN(v) ? "—" : Math.round(
 function today(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
 function addDays(iso,n){ const d=new Date(iso+"T00:00:00Z"); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); }
 function daysBetween(a,b){ return Math.round((new Date(b+"T00:00:00Z")-new Date(a+"T00:00:00Z"))/864e5); }
-function niceDate(iso){ if(iso===today()) return "النهارده"; if(iso===addDays(today(),-1)) return "امبارح"; return new Date(iso+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"}); }
+function niceDate(iso){ if(iso===today()) return "النهارده"; if(iso===addDays(today(),-1)) return "امبارح"; return window.dayjs?dayjs(iso+"T00:00:00").format("dddd D MMMM"):new Date(iso+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"}); }
 function toast(msg){ document.querySelectorAll(".toast").forEach(t=>t.remove()); const t=document.createElement("div"); t.className="toast"; t.textContent=msg; document.body.appendChild(t); setTimeout(()=>t.remove(),2200); }
 function avg(a){ const x=a.filter(v=>v!==null&&v!==undefined&&!isNaN(v)); return x.length? x.reduce((s,v)=>s+ +v,0)/x.length : null; }
 function genPass(){ const c="ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789"; const a=new Uint32Array(10); crypto.getRandomValues(a); return [...a].map(x=>c[x%c.length]).join(""); }
