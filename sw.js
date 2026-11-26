@@ -7,8 +7,8 @@
    If Workbox fails to load, the worker stays a passthrough (no caching).
    ====================================================================== */
 importScripts("wb/workbox-sw.js");
-const V="c84d2e1f";
-const SHELL0=["./","index.html","styles.css?v=c84d2e1f","design.css?v=c84d2e1f","fonts.css?v=c84d2e1f","fonts/Anton-400-latin.woff2","fonts/Changa-700-arabic.woff2","fonts/Changa-700-latin.woff2","fonts/Changa-800-arabic.woff2","fonts/Changa-800-latin.woff2","fonts/IBMPlexSansArabic-400-arabic.woff2","fonts/IBMPlexSansArabic-400-latin.woff2","fonts/IBMPlexSansArabic-600-arabic.woff2","fonts/IBMPlexSansArabic-600-latin.woff2","fonts/IBMPlexSansArabic-700-arabic.woff2","fonts/IBMPlexSansArabic-700-latin.woff2","fonts/Outfit-600-latin.woff2","fonts/Outfit-700-latin.woff2","fonts/Outfit-800-latin.woff2","icons-anim.css?v=c84d2e1f","coachshell.css?v=c84d2e1f","dark.css?v=c84d2e1f","coachshell.js?v=c84d2e1f","design.js?v=c84d2e1f","core.js?v=c84d2e1f","data.js?v=c84d2e1f","data-systems2.js?v=c84d2e1f","data-systems3.js?v=c84d2e1f","data-systems4.js?v=c84d2e1f","data-rehab2.js?v=c84d2e1f","media.js?v=c84d2e1f","pro.js?v=c84d2e1f","lab.js?v=c84d2e1f","anatomy.js?v=c84d2e1f","health.js?v=c84d2e1f","posing.js?v=c84d2e1f","pose-annotate.js?v=c84d2e1f","minerals.js?v=c84d2e1f","ghealth.js?v=c84d2e1f","stepsboard.js?v=c84d2e1f","push.js?v=c84d2e1f","confetti.js?v=c84d2e1f","celebrate.js?v=c84d2e1f","lottie.min.js?v=c84d2e1f","anims.js?v=c84d2e1f","chart.min.js?v=c84d2e1f","charts.js?v=c84d2e1f","exdb-data.js?v=c84d2e1f","exdb.js?v=c84d2e1f","dayjs.min.js","dayjs-relative.js","dayjs-ar.js","swiper.js","vendor/swiper-bundle.min.js","vendor/swiper-bundle.min.css","dates.js?v=c84d2e1f","lottie-star.json","lottie-dumbbell.json","icons.js?v=c84d2e1f","supps.js?v=c84d2e1f","views.js?v=c84d2e1f","coach.js?v=c84d2e1f","signup.js?v=c84d2e1f","qrcode.js?v=c84d2e1f","invite.js?v=c84d2e1f","referral.js?v=c84d2e1f","transform.js?v=c84d2e1f","chat.js?v=c84d2e1f","aichat.js?v=c84d2e1f","ai.js?v=c84d2e1f","inbox.js?v=c84d2e1f","screens.js?v=c84d2e1f","showcase.js?v=c84d2e1f","flame.js?v=c84d2e1f","photos.js?v=c84d2e1f","firstweek.js?v=c84d2e1f","league.js?v=c84d2e1f","prices.js?v=c84d2e1f","training.js?v=c84d2e1f","sharecard.js?v=c84d2e1f","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","icon-maskable-512.png","404.html"];
+const V="7fa31c94";
+const SHELL0=["./","index.html","styles.css?v=7fa31c94","design.css?v=7fa31c94","fonts.css?v=7fa31c94","fonts/Anton-400-latin.woff2","fonts/Changa-700-arabic.woff2","fonts/Changa-700-latin.woff2","fonts/Changa-800-arabic.woff2","fonts/Changa-800-latin.woff2","fonts/IBMPlexSansArabic-400-arabic.woff2","fonts/IBMPlexSansArabic-400-latin.woff2","fonts/IBMPlexSansArabic-600-arabic.woff2","fonts/IBMPlexSansArabic-600-latin.woff2","fonts/IBMPlexSansArabic-700-arabic.woff2","fonts/IBMPlexSansArabic-700-latin.woff2","fonts/Outfit-600-latin.woff2","fonts/Outfit-700-latin.woff2","fonts/Outfit-800-latin.woff2","icons-anim.css?v=7fa31c94","coachshell.css?v=7fa31c94","dark.css?v=7fa31c94","coachshell.js?v=7fa31c94","design.js?v=7fa31c94","core.js?v=7fa31c94","data.js?v=7fa31c94","data-systems2.js?v=7fa31c94","data-systems3.js?v=7fa31c94","data-systems4.js?v=7fa31c94","data-rehab2.js?v=7fa31c94","media.js?v=7fa31c94","pro.js?v=7fa31c94","lab.js?v=7fa31c94","anatomy.js?v=7fa31c94","health.js?v=7fa31c94","posing.js?v=7fa31c94","pose-annotate.js?v=7fa31c94","minerals.js?v=7fa31c94","ghealth.js?v=7fa31c94","stepsboard.js?v=7fa31c94","push.js?v=7fa31c94","confetti.js?v=7fa31c94","celebrate.js?v=7fa31c94","lottie.min.js?v=7fa31c94","anims.js?v=7fa31c94","chart.min.js?v=7fa31c94","charts.js?v=7fa31c94","exdb-data.js?v=7fa31c94","exdb.js?v=7fa31c94","dayjs.min.js","dayjs-relative.js","dayjs-ar.js","swiper.js","vendor/swiper-bundle.min.js","vendor/swiper-bundle.min.css","barcode.js","vendor/zxing.min.js","dates.js?v=7fa31c94","lottie-star.json","lottie-dumbbell.json","icons.js?v=7fa31c94","supps.js?v=7fa31c94","views.js?v=7fa31c94","coach.js?v=7fa31c94","signup.js?v=7fa31c94","qrcode.js?v=7fa31c94","invite.js?v=7fa31c94","referral.js?v=7fa31c94","transform.js?v=7fa31c94","chat.js?v=7fa31c94","aichat.js?v=7fa31c94","ai.js?v=7fa31c94","inbox.js?v=7fa31c94","screens.js?v=7fa31c94","showcase.js?v=7fa31c94","flame.js?v=7fa31c94","photos.js?v=7fa31c94","firstweek.js?v=7fa31c94","league.js?v=7fa31c94","prices.js?v=7fa31c94","training.js?v=7fa31c94","sharecard.js?v=7fa31c94","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","icon-maskable-512.png","404.html"];
 const SHELL=SHELL0;
 if(self.workbox){
   const wb=self.workbox;
@@ -17,11 +17,13 @@ if(self.workbox){
   wb.precaching.cleanupOutdatedCaches();
   wb.routing.registerRoute(({request})=>request.mode==="navigate",
     new wb.strategies.NetworkFirst({cacheName:"mofit-pages-"+V,networkTimeoutSeconds:8}));
+  wb.routing.registerRoute(({url})=>/cdn\.jsdelivr\.net\/npm\/@mediapipe\/tasks-vision@1\.2\.3\//.test(url.href)||/storage\.googleapis\.com\/mediapipe-models\/pose_landmarker\//.test(url.href),
+    new wb.strategies.CacheFirst({cacheName:"mofit-pose-v1"}));
   wb.routing.registerRoute(({url,request})=>request.method==="GET"&&(url.origin===location.origin||/jsdelivr|googleapis|gstatic/.test(url.hostname)),
     new wb.strategies.StaleWhileRevalidate({cacheName:"mofit-static-"+V}));
   self.addEventListener("install",e=>self.skipWaiting());
   self.addEventListener("activate",e=>{
-    e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.indexOf("mofit-")===0&&k.indexOf(V)===-1).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
+    e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.indexOf("mofit-")===0&&k.indexOf("mofit-pose")!==0&&k.indexOf(V)===-1).map(k=>caches.delete(k)))).then(()=>self.clients.claim()));
   });
 }
 
@@ -42,4 +44,8 @@ self.addEventListener("notificationclick",e=>{
     return clients.openWindow(url);
   }));
 });
+
+
+
+
 

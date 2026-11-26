@@ -712,11 +712,13 @@ th{letter-spacing:.02em;text-transform:none}
 
 /* ---------- v5.2: bolder, richer, layered ---------- */
 :root{--c1:#FF6B1A;--c2:#5B6CFF;--c3:#14B8A6;--c4:#F43F8E;--c5:#F5B301}
-body{background:
+body{background:var(--base)}
+/* the gradient wash sits on its own fixed layer: composited once instead of repainted every scroll frame (background-attachment:fixed is a repaint magnet on iOS) */
+body::before{content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;background:
   radial-gradient(700px 380px at 105% -60px,rgba(255,107,26,.16),transparent 60%),
   radial-gradient(620px 420px at -10% 38%,rgba(91,108,255,.09),transparent 62%),
   radial-gradient(540px 380px at 100% 78%,rgba(20,184,166,.08),transparent 60%),
-  var(--base);background-attachment:fixed}
+  var(--base)}
 
 /* hero header: big decorative rings + watermark */
 .top{padding-bottom:30px;border-radius:0 0 40px 40px;
@@ -1154,6 +1156,7 @@ main>*{animation:rise2 .7s cubic-bezier(.2,.9,.25,1) both;animation-delay:calc(v
 
 /* v7.5 smooth scrolling everywhere: fewer repaints while a finger is moving */
 .scroller,.seg,.chat-q,.scrollx{-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scroll-snap-type:none;scroll-behavior:auto;touch-action:pan-x pan-y}
+.chat-l,.aich-l{-webkit-overflow-scrolling:touch;touch-action:pan-y}
 .scroller>*,.seg>*,.chat-q>*{backface-visibility:hidden;-webkit-backface-visibility:hidden}
 body.scrolling *,body.scrolling *::before,body.scrolling *::after{animation-play-state:paused!important}
 @media(hover:none){
@@ -1166,9 +1169,19 @@ body.scrolling *,body.scrolling *::before,body.scrolling *::after{animation-play
 }
 
 /* v7.6 touch devices: no looping decoration inside screens, rows isolated from page repaints */
+/* v7.9 smooth chat: history renders instantly except a short entrance cascade on
+   the newest bubbles (dozens of simultaneous animations + a forced layout per
+   message were the chat stutter); new live messages still animate one at a time */
+.chat-l .msg.no-in,.chat-l .chat-day.no-in,.aich-l .aich-m.no-in{animation:none!important}
+
+/* v8.0 AI chat: drop the heavy card surface behind the scrolling bubbles so the
+   panel blends into the page background (gradient + shadow + border over the
+   decorated body background was the repaint cost while scrolling on iPhone).
+   Bubbles keep their own backgrounds; position and spacing unchanged */
+main>.card.aich-card{background:transparent!important;border:0!important;box-shadow:none!important;backdrop-filter:none!important}
 @media(hover:none){
   #main *,#main *::before,#main *::after{animation-iteration-count:1!important}
-  .scroller,.seg,.chat-q{contain:layout paint;will-change:scroll-position;transform:translateZ(0)}
+  .scroller,.seg,.chat-q,.chat-l,.aich-l{contain:layout paint;will-change:scroll-position;transform:translateZ(0)}
 }
 
 /* v7.7 logo: keep wide letter spacing after the intro animation (it used to end at .5px, so letters collided) */
@@ -1380,3 +1393,8 @@ input[type=url],input[placeholder*="youtu"]{direction:ltr;text-align:left}
   .login-card .ltab.on,.login-card .chip.on,.login-card .err:not(:empty),
   .login-card input:focus,.login-card select:focus,.login-card textarea:focus,#suForm .btn.primary{animation:none!important}
        }
+
+/* home section headers */
+.hsec{display:flex;align-items:center;gap:10px;margin:22px 4px 10px;font-weight:800;font-size:.95rem;letter-spacing:.2px;color:var(--navy,#0F172A)}
+.hsec::before{content:"";width:5px;height:18px;border-radius:3px;background:#F97316;box-shadow:0 0 12px rgba(249,115,22,.55)}
+.hsec::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(249,115,22,.45),transparent)}
