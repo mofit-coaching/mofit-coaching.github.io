@@ -13,7 +13,7 @@ async function viewPosing(el){
   const { data, error } = await sb.from("posing_checkins").select("*").eq("client_id",p.id).order("created_at",{ascending:false});
   if(error){ el.innerHTML=emptyBox("⚠️","تعذر التحميل","جرّب تاني بعد شوية.","","es-sm"); return; }
   const rows=data||[];
-  el.innerHTML=`${coach?"":`<div class="card"><div class="card-h"><div class="ic acc">🎬</div><h2>فيديو بوزينج جديد<small>خاص بينك وبين الكوتش بس · أقصى حجم 50 ميجا · mp4 / mov / webm</small></h2></div>
+  el.innerHTML=`${coach?"":`<div class="card"><div class="card-h"><div class="ic acc">🎬</div><h2>فيديو بوزينج جديد<small>خاص بينك وبين الكوتش بس · بيتصغّر تلقائياً قبل الرفع · أقصى حجم 50 ميجا · mp4 / mov / webm</small></h2></div>
       <label class="f">ملاحظة (اختياري)<input id="poN" placeholder="مثلاً: البوزات الإلزامية، إضاءة الجيم"></label>
       <input type="file" id="poF" accept="video/mp4,video/quicktime,video/webm" style="margin:8px 0">
       <div class="prog" id="poP" style="display:none"><i style="width:0%"></i></div>
@@ -22,12 +22,21 @@ async function viewPosing(el){
   el.querySelectorAll("[data-pv]").forEach(async v=>{ const u=await poseUrl(v.dataset.pv); if(u){ v.src=u; } else v.replaceWith(Object.assign(document.createElement("p"),{className:"hint",textContent:"الفيديو مش متاح"})); });
   if(!coach){
     $("#poGo").onclick=async()=>{
-      const f=$("#poF").files[0]; if(!f) return toast("اختار فيديو الأول");
-      if(f.size>POSE_MAX) return toast("الفيديو أكبر من 50 ميجا");
+      const f0=$("#poF").files[0]; if(!f0) return toast("اختار فيديو الأول");
+      let f=f0;
+      if(!/^video\//.test(f.type||"") && !/\.(mp4|mov|webm|m4v)$/i.test(f.name||"")) return toast("النوع ده مش مدعوم (mp4 / mov / webm)");
+      const btn=$("#poGo"); btn.disabled=true; $("#poP").style.display="";
+      if(f.size>6*1024*1024){
+        btn.textContent="جاري تصغير الفيديو… سيب الشاشة مفتوحة"; const bar=$("#poP i");
+        try{ if(!window.mlShrinkVideo) await new Promise((ok,no)=>{ const s=document.createElement("script"); s.src="videoshrink.js?v=1"; s.onload=ok; s.onerror=no; document.head.appendChild(s); }); }catch(e){}
+        if(window.mlShrinkVideo) f=await mlShrinkVideo(f,x=>{ if(bar) bar.style.width=Math.round(x*100)+"%"; });
+        if(bar) bar.style.width="0%";
+      }
+      if(f.size>POSE_MAX){ btn.disabled=false; btn.textContent="رفع للكوتش"; $("#poP").style.display="none"; return toast("الفيديو أكبر من 50 ميجا"); }
       const ext=(f.name.split(".").pop()||"mp4").toLowerCase().replace(/[^a-z0-9]/g,"").slice(0,5)||"mp4";
       const ct=f.type||(ext==="mov"?"video/quicktime":"video/mp4");
-      if(!/^video\/(mp4|quicktime|webm)$/.test(ct)) return toast("النوع ده مش مدعوم (mp4 / mov / webm)");
-      const btn=$("#poGo"); btn.disabled=true; btn.textContent="جاري الرفع…"; $("#poP").style.display="";
+      if(!/^video\/(mp4|quicktime|webm)$/.test(ct)){ btn.disabled=false; btn.textContent="رفع للكوتش"; $("#poP").style.display="none"; return toast("النوع ده مش مدعوم (mp4 / mov / webm)"); }
+      btn.textContent="جاري الرفع…";
       const path=`${p.id}/${Date.now()}.${ext}`;
       const { error:ue } = await sb.storage.from("posing").upload(path,f,{contentType:ct,upsert:false});
       if(ue){ btn.disabled=false; btn.textContent="رفع للكوتش"; $("#poP").style.display="none"; return toast("تعذر الرفع"); }
