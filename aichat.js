@@ -34,7 +34,7 @@ ICON.ai='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width
 
 const st=document.createElement("style");
 st.textContent=`
-.aich-l{height:min(52vh,480px);overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:6px 2px;overscroll-behavior:contain}
+.aich-l{height:var(--aich-h,min(52vh,480px));overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:6px 2px;overscroll-behavior:contain}
 .aich-m{max-width:85%;padding:9px 12px;border-radius:16px;line-height:1.6;font-size:14.5px;word-break:break-word}
 .aich-m p{margin:0;white-space:pre-wrap}
 .aich-m.me{align-self:flex-start;background:#F97316;color:#fff;border-bottom-right-radius:4px}
@@ -52,6 +52,7 @@ st.textContent=`
 .aich-dots i{width:6px;height:6px;border-radius:50%;background:#F97316;animation:aichd 1s ease-in-out infinite}
 .aich-dots i:nth-child(2){animation-delay:.15s}.aich-dots i:nth-child(3){animation-delay:.3s}
 @keyframes aichd{50%{opacity:.25}}
+body.aich-typing .nav{display:none}
 .aich-m{animation:aichin .3s ease both}
 @keyframes aichin{from{opacity:0;transform:translateY(6px)}}
 @media(prefers-reduced-motion:reduce){.aich-m{animation:none}.aich-dots i{animation:none;opacity:.5}}
@@ -106,6 +107,29 @@ function aichHand(q){
   const w=document.createElement("div"); w.className="aich-hw"; w.append(b); L.append(w); L.scrollTop=L.scrollHeight;
 }
 
+
+/* fit the message list to the visible screen so the input and send button never sit under the floating nav or the Safari bar */
+function aichFit(){
+  const L=document.getElementById("aichL"); if(!L) return;
+  const vv=window.visualViewport, vh=vv?vv.height:window.innerHeight;
+  const nav=document.getElementById("nav"), typing=document.body.classList.contains("aich-typing");
+  const navH=(!typing&&nav&&nav.offsetHeight)?nav.offsetHeight+26:12;
+  let below=0; for(let n=L.nextElementSibling;n;n=n.nextElementSibling) below+=n.offsetHeight+10;
+  const top=L.getBoundingClientRect().top+window.scrollY;
+  const h=Math.max(140,Math.min(640,Math.round(vh-top-below-navH-14)));
+  const atEnd=L.scrollHeight-L.scrollTop-L.clientHeight<80;
+  L.style.setProperty("--aich-h",h+"px");
+  if(atEnd) L.scrollTop=L.scrollHeight;
+}
+if(!window.__aichFit){
+  window.__aichFit=1;
+  const f=()=>requestAnimationFrame(aichFit);
+  window.addEventListener("resize",f); window.addEventListener("orientationchange",f);
+  if(window.visualViewport) window.visualViewport.addEventListener("resize",f);
+  document.addEventListener("focusin",e=>{ if(e.target&&e.target.id==="aichI"){ document.body.classList.add("aich-typing"); f(); } });
+  document.addEventListener("focusout",e=>{ if(e.target&&e.target.id==="aichI"){ document.body.classList.remove("aich-typing"); setTimeout(f,60); } });
+}
+
 /* the tab screen (registered in the render map in views.js) */
 window.viewAiChat=async function(el){
   el.innerHTML=`<div class="card aich-card"><div class="card-h"><div class="ic acc">🤖</div><h2>المساعد الذكي<small>ردود فورية من برنامجك · متاح ٢٤ ساعة</small></h2></div>
@@ -131,6 +155,7 @@ window.viewAiChat=async function(el){
     bb.forEach((b,i)=>{ if(i<K) b.classList.add("no-in"); else b.style.animationDelay=((i-K)*45)+"ms"; });
     L.scrollTop=L.scrollHeight;
   }
+  requestAnimationFrame(aichFit); setTimeout(aichFit,350);
   document.getElementById("aichChips").querySelectorAll(".qr").forEach(c=>c.onclick=()=>{ const i=document.getElementById("aichI"); if(i){ i.value=c.dataset.q||c.textContent.trim(); i.focus(); } });
   document.getElementById("aichF").onsubmit=async e=>{
     e.preventDefault();
@@ -150,3 +175,4 @@ render=function(){ _renderAich.apply(this,arguments);
   }
 };
 })();
+
