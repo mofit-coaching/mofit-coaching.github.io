@@ -30,13 +30,40 @@ async function boot(){
   render();
   (async()=>{ if(me.role==="client"){ try{ await ensureHealth(); }catch(e){} } setTimeout(maybeOnboard,400); })();
 }
-/* Assistants land here until the coach assigns them work. No client data is loaded or shown. */
+/* Assistants land here. They see ONLY the clients the coach assigned to them,
+   read-only (profile summary, check-ins, messages). RLS enforces this server-side. */
 function renderAssistantHome(){
   const nv=$("#nav"); if(nv) nv.classList.add("hidden");
   $("#top").innerHTML=`<div class="top-row"><div class="logo">MO<b>FIT</b></div><span class="pill glass">حساب مساعد</span><div class="sp"></div><button class="ibtn" onclick="logout()">خروج</button></div>`;
-  $("#main").innerHTML=`<div class="card" style="text-align:center;padding:30px 20px;margin-top:18px"><div style="font-size:2.6rem;margin-bottom:8px">🤝</div>
+  assistantList();
+}
+async function assistantList(){
+  $("#main").innerHTML=`<div class="card" style="text-align:center;padding:26px"><p class="hint">بيحمّل…</p></div>`;
+  const { data:G } = await sb.from("assistant_assignments").select("client_id");
+  const ids=(G||[]).map(g=>g.client_id);
+  if(!ids.length){ $("#main").innerHTML=`<div class="card" style="text-align:center;padding:30px 20px;margin-top:18px"><div style="font-size:2.6rem;margin-bottom:8px">🤝</div>
     <h2 style="margin:0 0 6px">أهلاً ${esc((S.me.full_name||"").split(" ")[0])} 👋</h2>
-    <p class="hint" style="margin:0">حسابك كمساعد في MOFIT جاهز.<br>الكوتش هيحدد شغلك من لوحته – أول ما تتكلّف بمهمة هتظهر لك هنا.</p></div>`;
+    <p class="hint" style="margin:0">الكوتش لسه مخصّصش لك عملاء.<br>أول ما يضيفك لعميل هيظهر هنا.</p></div>`; return; }
+  const { data:cs } = await sb.from("profiles").select("id,full_name,email,phone,sex,age,goal").in("id",ids);
+  $("#main").innerHTML=`<div class="card" style="margin-top:14px"><div class="card-h"><div class="ic dark">👥</div><h2>العملاء المخصّصين لك (${(cs||[]).length})<small>قراءة بس</small></h2></div>
+    ${(cs||[]).map(c=>`<div class="item" data-ac="${c.id}" style="padding:10px 0;cursor:pointer"><div class="av">${initials(c)}</div>
+      <div class="nm"><b>${esc(c.full_name||c.email||"")}</b><small>${esc(c.phone||c.email||"")}</small></div><span class="hint">‹</span></div>`).join("")}</div>`;
+  $("#main").querySelectorAll("[data-ac]").forEach(r=>r.onclick=()=>assistantClient(ids.find(i=>i===r.dataset.ac),(cs||[]).find(c=>c.id===r.dataset.ac)));
+}
+async function assistantClient(cid,c){
+  $("#main").innerHTML=`<div class="card" style="text-align:center;padding:26px"><p class="hint">بيحمّل…</p></div>`;
+  const [{ data:ci }, { data:ms }] = await Promise.all([
+    sb.from("checkins").select("*").eq("client_id",cid).order("created_at",{ascending:false}).limit(10),
+    sb.from("messages").select("*").eq("client_id",cid).order("created_at",{ascending:false}).limit(50) ]);
+  $("#main").innerHTML=`<button class="btn sm ghost" id="acBack" style="margin:10px 0">← كل العملاء</button>
+    <div class="card"><div class="card-h"><div class="ic dark">👤</div><h2>${esc(c.full_name||c.email||"")}<small>ملف العميل – قراءة بس</small></h2></div>
+      <p class="hint" style="margin:0">${[c.sex,c.age?c.age+" سنة":"",c.goal].filter(Boolean).map(esc).join(" · ")||"—"}<br><span dir="ltr">${esc(c.phone||"")}</span></p></div>
+    <div class="card"><div class="card-h"><div class="ic dark">✅</div><h2>آخر التشيك إن (${(ci||[]).length})</h2></div>
+      ${(ci||[]).length?(ci||[]).map(x=>`<div class="item" style="padding:8px 0"><div class="nm"><b>${esc(x.date||x.log_date||(x.created_at||"").slice(0,10))}</b><small>${esc([x.weight?x.weight+" كجم":"",x.notes||x.coach_reply||""].filter(Boolean).join(" · "))}</small></div></div>`).join(""):'<p class="hint">مفيش تشيك إن لسه.</p>'}</div>
+    <div class="card"><div class="card-h"><div class="ic dark">💬</div><h2>الرسايل (${(ms||[]).length})<small>قراءة بس</small></h2></div>
+      ${(ms||[]).length?(ms||[]).reverse().map(m=>`<div class="msg ${m.sender_role==="coach"?"mine":""}" style="margin:6px 0"><small class="hint">${esc(m.sender_role||"")} · ${esc((m.created_at||"").slice(0,16).replace("T"," "))}</small><div>${esc(m.body||m.text||"")}</div></div>`).join(""):'<p class="hint">مفيش رسايل.</p>'}</div>`;
+  $("#acBack").onclick=assistantList;
+  window.scrollTo(0,0);
 }
 async function openClient(p){
   S.client=p; S.week=currentWeek(p); S.date=today(); S.bodyWeek=null;

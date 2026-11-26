@@ -7,9 +7,8 @@
    If Workbox fails to load, the worker stays a passthrough (no caching).
    ====================================================================== */
 importScripts("wb/workbox-sw.js");
-const V="1126a4";
-const SHELL0=["./","index.html","styles.css?v=1126a4","design.css?v=1126a4","coachshell.css?v=1126a4","dark.css?v=1126a4","coachshell.js?v=1126a4","design.js?v=1126a4","core.js?v=1126a4","data.js?v=1126a4","data-systems2.js?v=1126a4","data-systems3.js?v=1126a4","data-systems4.js?v=1126a4",
-"data-rehab2.js?v=1126a4","media.js?v=1126a4","pro.js?v=1126a4","lab.js?v=1126a4","anatomy.js?v=1126a4","health.js?v=1126a4","posing.js?v=1126a4","minerals.js?v=1126a4","ghealth.js?v=1126a4","stepsboard.js?v=1126a4","push.js?v=1126a4","confetti.js?v=1126a4","celebrate.js?v=1126a4","lottie.min.js?v=1126a4","anims.js?v=1126a4","chart.min.js?v=1126a4","charts.js?v=1126a4","lottie-star.json","lottie-dumbbell.json","icons.js?v=1126a4","supps.js?v=1126a4","views.js?v=1126a4","coach.js?v=1126a4","signup.js?v=1126a4","qrcode.js?v=1126a4","invite.js?v=1126a4","referral.js?v=1126a4","transform.js?v=1126a4","chat.js?v=1126a4","aichat.js?v=1126a4","ai.js?v=1126a4","inbox.js?v=1126a4","screens.js?v=1126a4","showcase.js?v=1126a4","flame.js?v=1126a4","photos.js?v=1126a4","firstweek.js?v=1126a4","league.js?v=1126a4","prices.js?v=1126a4","training.js?v=1126a4","sharecard.js?v=1126a4","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","icon-maskable-512.png","404.html"];
+const V="c84d2e1f";
+const SHELL0=["./","index.html","styles.css?v=c84d2e1f","design.css?v=c84d2e1f","icons-anim.css?v=c84d2e1f","coachshell.css?v=c84d2e1f","dark.css?v=c84d2e1f","coachshell.js?v=c84d2e1f","design.js?v=c84d2e1f","core.js?v=c84d2e1f","data.js?v=c84d2e1f","data-systems2.js?v=c84d2e1f","data-systems3.js?v=c84d2e1f","data-systems4.js?v=c84d2e1f","data-rehab2.js?v=c84d2e1f","media.js?v=c84d2e1f","pro.js?v=c84d2e1f","lab.js?v=c84d2e1f","anatomy.js?v=c84d2e1f","health.js?v=c84d2e1f","posing.js?v=c84d2e1f","minerals.js?v=c84d2e1f","ghealth.js?v=c84d2e1f","stepsboard.js?v=c84d2e1f","push.js?v=c84d2e1f","confetti.js?v=c84d2e1f","celebrate.js?v=c84d2e1f","lottie.min.js?v=c84d2e1f","anims.js?v=c84d2e1f","chart.min.js?v=c84d2e1f","charts.js?v=c84d2e1f","lottie-star.json","lottie-dumbbell.json","icons.js?v=c84d2e1f","supps.js?v=c84d2e1f","views.js?v=c84d2e1f","coach.js?v=c84d2e1f","signup.js?v=c84d2e1f","qrcode.js?v=c84d2e1f","invite.js?v=c84d2e1f","referral.js?v=c84d2e1f","transform.js?v=c84d2e1f","chat.js?v=c84d2e1f","aichat.js?v=c84d2e1f","ai.js?v=c84d2e1f","inbox.js?v=c84d2e1f","screens.js?v=c84d2e1f","showcase.js?v=c84d2e1f","flame.js?v=c84d2e1f","photos.js?v=c84d2e1f","firstweek.js?v=c84d2e1f","league.js?v=c84d2e1f","prices.js?v=c84d2e1f","training.js?v=c84d2e1f","sharecard.js?v=c84d2e1f","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","icon-maskable-512.png","404.html"];
 const SHELL=SHELL0;
 if(self.workbox){
   const wb=self.workbox;
@@ -43,3 +42,4 @@ self.addEventListener("notificationclick",e=>{
     return clients.openWindow(url);
   }));
 });
+
