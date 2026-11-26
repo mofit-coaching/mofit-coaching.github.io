@@ -128,13 +128,14 @@ function lineChart(pts, unit, color="#0F172A"){
   const X=x=>pl+(x-x0)/((x1-x0)||1)*(W-pl-pr), Y=y=>pt+(1-(y-y0)/(y1-y0))*(H-pt-pb);
   const d=pts.map((p,i)=>(i?"L":"M")+X(p.x).toFixed(1)+" "+Y(p.y).toFixed(1)).join(" ");
   const gid="g"+Math.random().toString(36).slice(2,7);
+  const cj=`<div class="cj-w" style="display:none;position:relative;height:172px;direction:ltr"><canvas class="cj" data-pts="${esc(JSON.stringify(pts)).replace(/"/g,"&quot;")}" data-unit="${esc(unit)}" data-color="${esc(color)}"></canvas></div>`;
   return `<svg viewBox="0 0 ${W} ${H}" style="width:100%;margin-top:6px" direction="ltr">
     <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#F97316" stop-opacity=".28"/><stop offset="1" stop-color="#F97316" stop-opacity="0"/></linearGradient></defs>
     ${[0,.5,1].map(t=>{const v=y0+(y1-y0)*(.15+.7*t);return `<line x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}" stroke="#E2E8F0" stroke-dasharray="3 4"/><text x="${pl-5}" y="${Y(v)+3}" font-size="9" fill="#64748B" text-anchor="end">${v.toFixed(1)}</text>`}).join("")}
     <path d="${d} L${X(pts[pts.length-1].x)} ${H-pb} L${X(pts[0].x)} ${H-pb}Z" fill="url(#${gid})"/>
     <path d="${d}" fill="none" stroke="${color}" stroke-width="2.5" stroke-linejoin="round"/>
     ${pts.map((p,i)=>`<circle cx="${X(p.x)}" cy="${Y(p.y)}" r="${i===pts.length-1?5:3.5}" fill="${i===pts.length-1?"#F97316":"#fff"}" stroke="${i===pts.length-1?"#fff":color}" stroke-width="2"/><text x="${X(p.x)}" y="${H-7}" font-size="9" fill="#64748B" text-anchor="middle">${p.x===0?"Start":"W"+p.x}</text>`).join("")}
-  </svg><p class="hint" style="margin:0">${unit}</p>`;
+  </svg>${cj}<p class="hint" style="margin:0">${unit}</p>`;
 }
 function emptyBox(icon, text){ return `<div class="empty"><div class="big">${icon}</div>${text}</div>`; }
 
