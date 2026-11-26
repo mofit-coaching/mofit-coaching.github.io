@@ -228,12 +228,12 @@ async function viewTrain(el){
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📅</div><h2>${esc(p.split_name||"برنامج التمرين")}<small>${p.level?LEVELS[p.level]?.icon+" "+esc(p.level)+" · ":""}${days.length} أيام في الأسبوع</small></h2></div>
       <div class="scroller" id="dayCards">${[...Array(7)].map((_,i)=>{ const d=i+1, has=days.includes(d); return `<button class="daycard ${S.day===d?"on":""} ${has?"":"rest"}" data-d="${d}">${d===tdn?'<span class="dot"></span>':""}<b>${has?"يوم "+d:"راحة"}</b><small>${has?esc(dayLabel(d)||S.program.filter(e=>e.day_no===d).length+" تمارين"):"😴 استشفاء"}</small>${has?`<span class="dmus">${Object.entries(muscleVol(S.program.filter(e=>e.day_no===d).map(e=>[e.name,e.sets]))).sort((a,b)=>b[1]-a[1]).slice(0,5).map(([m])=>`<i style="background:${mColor(m)}" title="${m}"></i>`).join("")}</span>`:""}</button>`; }).join("")}</div>
       <div class="muted" style="margin:8px 0 6px;font-weight:700">الأسبوع</div>
-      ${blockNavHTML(S.week,p)}<div class="scroller" id="wkChips">${blockWeeks(S.week).map(w=>`<button class="chip ${S.week===w?"on":""} ${wkNow===w?"cur":""}" data-w="${w}">${w}${isDeload(p,w)?" 🔄":""}</button>`).join("")}</div></div>
+      ${blockNavHTML(S.week,p)}<div class="scroller" id="wkChips">${blockWeeks(S.week,p).map(w=>`<button class="chip ${S.week===w?"on":""} ${wkNow===w?"cur":""}" data-w="${w}">${w}${isDeload(p,w)?" 🔄":""}</button>`).join("")}</div></div>
     <div class="card tools hidden" id="tTools"></div><div id="tPrep"></div><div id="exList"></div><div class="card" id="failCard"></div>`;
   { const dc=$("#dayCards"), wc=$("#wkChips"), sel=dc&&dc.querySelector(".daycard.on");
     [dc,wc].forEach(r=>{ if(!r) return; let x0=0; r.addEventListener("pointerdown",e=>{x0=e.clientX;r._drag=false;},{passive:true}); r.addEventListener("pointermove",e=>{ if(Math.abs(e.clientX-x0)>8) r._drag=true; },{passive:true}); const end=()=>setTimeout(()=>{r._drag=false;},140); r.addEventListener("pointerup",end,{passive:true}); r.addEventListener("pointercancel",()=>{r._drag=true;end();},{passive:true}); r.addEventListener("click",e=>{ if(r._drag){ e.stopPropagation(); e.preventDefault(); } },true); });
     if(dc){ if(window._dcX!=null) dc.scrollLeft=window._dcX; else if(sel){ const dr=dc.getBoundingClientRect(), sr=sel.getBoundingClientRect(), t=dc.scrollLeft+(sr.left-dr.left)-(dc.clientWidth-sr.width)/2; if(sr.left<dr.left||sr.right>dr.right) dc.scrollLeft=t; } }
-    if(wc){ if(window._wcX!=null) wc.scrollLeft=window._wcX; }
+    if(wc){ if(window._wcX!=null) wc.scrollLeft=window._wcX; else restoreWeekChips(el); }
     window._dcX=null; window._wcX=null; }
   el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{ window._dcX=$("#dayCards")?.scrollLeft; S.day=+b.dataset.d; viewTrain(el);});
   el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ window._wcX=$("#wkChips")?.scrollLeft; S.week=+b.dataset.w; viewTrain(el);});
@@ -511,7 +511,7 @@ async function viewHabits(el){
   };
   const wk=currentWeek(p), by={}; H.forEach(h=>{ const x=weekOfDate(p,h.log_date); if(x) (by[x]=by[x]||[]).push(h); });
   $("#hWeeks").innerHTML=`<div class="card-h"><div class="ic">📊</div><h2>المتوسط الأسبوعي</h2></div><div class="scrollx"><table><tr><th>أسبوع</th><th>دايت</th><th>تمرين</th><th>كارديو</th><th>نوم</th><th>ساعات</th><th>خطوات</th><th>أيام</th></tr>
-    ${blockWeeks(wk).filter(w=>w<=Math.max(wk,BLOCK)).map(w=>{ const a=by[w]||[], c=w===wk?"cur":""; return `<tr><td class="${c}"><b>${w}</b></td><td class="${c}">${pct(avg(a.map(h=>h.diet)))}</td><td class="${c}">${pct(avg(a.map(h=>h.training)))}</td><td class="${c}">${pct(avg(a.map(h=>h.cardio)))}</td><td class="${c}">${pct(avg(a.map(h=>h.sleep_quality)))}</td><td class="${c} num">${fmt(avg(a.map(h=>h.sleep_hours)),1)}</td><td class="${c} num">${fmt(avg(a.map(h=>h.steps)))}</td><td class="${c}">${a.length||""}</td></tr>`; }).join("")}</table></div>`;
+    ${blockWeeks(wk,p).filter(w=>w<=Math.max(wk,BLOCK)).map(w=>{ const a=by[w]||[], c=w===wk?"cur":""; return `<tr><td class="${c}"><b>${w}</b></td><td class="${c}">${pct(avg(a.map(h=>h.diet)))}</td><td class="${c}">${pct(avg(a.map(h=>h.training)))}</td><td class="${c}">${pct(avg(a.map(h=>h.cardio)))}</td><td class="${c}">${pct(avg(a.map(h=>h.sleep_quality)))}</td><td class="${c} num">${fmt(avg(a.map(h=>h.sleep_hours)),1)}</td><td class="${c} num">${fmt(avg(a.map(h=>h.steps)))}</td><td class="${c}">${a.length||""}</td></tr>`; }).join("")}</table></div>`;
 }
 
 /* ======================================================================
@@ -550,7 +550,7 @@ async function viewMeasures(el){
   const cur=B.find(b=>b.week===sel)||{}, start=B.find(b=>b.week===0)||{};
   const F=[["weight","⚖ الوزن","كجم"],["waist","الوسط","سم"],["neck","الرقبة","سم"],["chest","الصدر","سم"],["arm","الذراع","سم"],["thigh","الفخذ","سم"],["hips","الأرداف","سم"],["bodyfat","الدهون","%"]];
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic dark">📏</div><h2>القياسات الأسبوعية<small>مرة في الأسبوع – نفس اليوم والتوقيت</small></h2></div>
-      ${blockNavHTML(sel||1,p)}<div class="scroller">${[0,...blockWeeks(sel||wk||1)].map(i=>`<button class="chip ${sel===i?"on":""} ${wk===i&&i?"cur":""}" data-w="${i}">${i?"أسبوع "+i:"البداية"}${B.find(b=>b.week===i&&b.weight)?" ✓":""}</button>`).join("")}</div>
+      ${blockNavHTML(sel||1,p)}<div class="scroller">${[0,...blockWeeks(sel||wk||1,p)].map(i=>`<button class="chip ${sel===i?"on":""} ${wk===i&&i?"cur":""}" data-w="${i}">${i?"أسبوع "+i:"البداية"}${B.find(b=>b.week===i&&b.weight)?" ✓":""}</button>`).join("")}</div>
       <div class="grid2" style="margin-top:12px"><label class="f">📅 التاريخ<input type="date" data-k="log_date" value="${esc(cur.log_date??today())}"></label>
       ${F.map(([k,l,u])=>{ const d=sel&&start[k]&&cur[k]?cur[k]-start[k]:null; return `<label class="f">${l} (${u})<input inputmode="decimal" data-k="${k}" value="${esc(cur[k]??"")}">${d!==null?`<span class="pill ${d<0?"acc-soft":""}" style="margin-top:4px">${d>0?"▲":"▼"} ${fmt(Math.abs(d),1)} منذ البداية</span>`:""}</label>`; }).join("")}</div>
       <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
@@ -558,7 +558,8 @@ async function viewMeasures(el){
     ${weightTrendCard(B,p)}
     <div class="card"><div class="card-h"><div class="ic acc">⚖</div><h2>منحنى الوزن</h2></div>${lineChart(B.filter(b=>b.weight).map(b=>({x:b.week,y:+b.weight})),"كجم")}</div>
     <div class="card"><div class="card-h"><div class="ic">📐</div><h2>منحنى الوسط</h2></div>${lineChart(B.filter(b=>b.waist).map(b=>({x:b.week,y:+b.waist})),"سم")}</div>`;
-  el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{S.bodyWeek=+b.dataset.w; viewMeasures(el);});
+  restoreWeekChips(el,window._wsX); window._wsX=null;
+  el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ window._wsX=weekChipsX(el); S.bodyWeek=+b.dataset.w; viewMeasures(el);});
   $("#bSave").onclick=async()=>{
     const v=k=>el.querySelector(`[data-k="${k}"]`).value;
     const rec={client_id:p.id,week:sel,log_date:v("log_date")||null,notes:v("notes").trim()||null,updated_at:new Date().toISOString()};

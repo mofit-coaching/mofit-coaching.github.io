@@ -147,7 +147,7 @@ function blockAlert(c){
 async function blockReviewHTML(p){
   const wk=currentWeek(p), b=blockOf(wk), a=blockAlert(p);
   if(!a) return "";
-  const wks=blockWeeks(wk), ids=S.program.map(e=>e.id);
+  const wks=blockWeeks(wk,p), ids=S.program.map(e=>e.id);
   const { data } = ids.length ? await sb.from("set_logs").select("exercise_id,week,reps,weight,rir").in("exercise_id",ids).gte("week",wks[0]).lte("week",wks[BLOCK-1]) : {data:[]};
   const L=data||[], rows=S.program.map(ex=>{ const m=L.filter(s=>s.exercise_id===ex.id&&e1rm(s)); if(!m.length) return null;
       const ws=[...new Set(m.map(s=>s.week))].sort((x,y)=>x-y), best=w=>Math.max(...m.filter(s=>s.week===w).map(e1rm));
