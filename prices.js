@@ -222,7 +222,7 @@ async function nudgeClient(c,a,btn){
   "MOFIT".split("").forEach((ch,i)=>{ const s=document.createElement("span"); s.textContent=ch; s.style.setProperty("--i",i); if(i>1) s.className="f"; word.appendChild(s); });
   art.insertBefore(word,art.firstChild);
   const bpm=document.createElement("div"); bpm.className="st-bpm"; bpm.setAttribute("aria-hidden","true"); bpm.innerHTML='<i></i><b>72</b><span>BPM</span>';
-  art.appendChild(bpm); const bpmN=bpm.querySelector("b");
+  const bpmN={}; /* BPM readout removed */
   const cv=document.createElement("canvas"); cv.className="st-fx"; cv.setAttribute("aria-hidden","true"); lv.insertBefore(cv,lv.firstChild);
   const cv2=document.createElement("canvas"); cv2.className="st-fx st-top"; cv2.setAttribute("aria-hidden","true"); document.body.appendChild(cv2); const cx2=cv2.getContext("2d");
   const cx=cv.getContext("2d"); let W=0,H=0,dpr=1,N=0,buf=null,head=0;
