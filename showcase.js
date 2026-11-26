@@ -103,7 +103,14 @@ const css=`
 .sc-ccard{position:relative;border-radius:24px;padding:22px 18px 18px;background:linear-gradient(165deg,rgba(255,255,255,.1),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.12);overflow:hidden}
 .sc-ccard:before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,#FF6B1A,transparent)}
 .sc-chead{display:flex;gap:16px;align-items:center}
-.sc-cphoto{flex:0 0 auto;width:96px;height:96px;border-radius:26px;overflow:hidden;position:relative;background:#0B1220;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 26px -12px rgba(0,0,0,.7)}
+.sc-cphoto{flex:0 0 auto;width:96px;height:96px;border-radius:26px;overflow:hidden;position:relative;background:#0B1220;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 26px -12px rgba(0,0,0,.7);animation:scglow 3.2s ease-in-out infinite}
+.sc-cframe{position:relative;flex:0 0 auto;width:101px;height:101px;padding:2.5px;border-radius:29px;overflow:hidden}
+.sc-cframe:before{content:"";position:absolute;inset:-55%;background:conic-gradient(from 0deg,transparent 0deg,rgba(255,138,61,0) 70deg,#FF8A3D 130deg,#FFC46B 180deg,#FF8A3D 230deg,rgba(255,138,61,0) 290deg,transparent 360deg);animation:scspin 5.5s linear infinite}
+.sc-cframe .sc-cphoto{position:relative;z-index:1;width:100%;height:100%}
+.sc-cphoto .sc-cshine{position:absolute;top:0;bottom:0;left:-70%;width:45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.3),transparent);transform:skewX(-18deg);animation:scshine 3.8s ease-in-out infinite;z-index:1}
+@keyframes scspin{to{transform:rotate(1turn)}}
+@keyframes scglow{0%,100%{box-shadow:0 12px 26px -12px rgba(0,0,0,.7),0 0 0 0 rgba(255,138,61,.12)}50%{box-shadow:0 12px 26px -12px rgba(0,0,0,.7),0 0 24px 3px rgba(255,138,61,.5)}}
+@keyframes scshine{0%,55%{left:-70%}100%{left:130%}}
 .sc-cphoto img{width:100%;height:100%;object-fit:cover;display:block}
 .sc-cphoto svg{width:100%;height:100%;display:block}
 .sc-cphoto .sc-cph-flag{position:absolute;inset:auto 0 6px 0;text-align:center}
@@ -119,7 +126,7 @@ const css=`
 .sc-cchips{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
 .sc-cchips span{padding:6px 11px;border-radius:99px;font-size:11px;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#D9E1EE}
 @media(prefers-reduced-motion:reduce){.sc-tg .w{transition:none;color:#fff}.sc-faq summary:after,.sc-faq details{transition:none}}
-@media(prefers-reduced-motion:reduce){.sc-rv{opacity:1;transform:none;transition:none}.sc-btn:after{animation:none;display:none}}
+@media(prefers-reduced-motion:reduce){.sc-rv{opacity:1;transform:none;transition:none}.sc-btn:after{animation:none;display:none}.sc-cframe:before,.sc-cphoto .sc-cshine{animation:none;display:none}.sc-cphoto{animation:none}}
 `;
 const st=document.createElement("style");st.textContent=css;document.head.appendChild(st);
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -143,8 +150,8 @@ function invite(){return `<div class="sc-rgrid sc-rv"><div class="sc-rstep"><div
    TODO coach: fill SHOWCASE.coach.photo with his photo URL, and confirm SHOWCASE.coach.name is how he wants to appear. */
 function coachFig(){return `<svg viewBox="0 0 96 96" aria-hidden="true"><defs><linearGradient id="sccg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A2012"/><stop offset="1" stop-color="#0B1220"/></linearGradient><linearGradient id="sccf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFA24D"/><stop offset="1" stop-color="#FF6B1A"/></linearGradient></defs><rect width="96" height="96" fill="url(#sccg)"/><circle cx="48" cy="48" r="34" fill="rgba(255,107,26,.16)"/><circle cx="48" cy="36" r="13" fill="url(#sccf)"/><path d="M16 96 C18 66 32 56 48 56 C64 56 78 66 80 96Z" fill="url(#sccf)"/></svg>`}
 function coach(){const c=(SHOWCASE.coach||{});const ph=!c.photo;
-return `<div class="sc-ccard sc-rv"><div class="sc-chead"><div class="sc-cphoto">${ph?coachFig()+'<div class="sc-cph-flag"><span>صورة الكوتش بتتضاف</span></div>':`<img src="${esc(c.photo)}" alt="صورة الكوتش ${esc(c.name||"")}" loading="lazy">`}</div>
-<div><b class="sc-cname">الكوتش ${esc(c.name||"")}</b><span class="sc-crole">مدرب لياقة معتمد دولياً</span></div></div>
+return `<div class="sc-ccard sc-rv"><div class="sc-chead"><div class="sc-cframe"><div class="sc-cphoto">${ph?coachFig()+'<div class="sc-cshine"></div><div class="sc-cph-flag"><span>صورة الكوتش بتتضاف</span></div>':`<img src="${esc(c.photo)}" alt="صورة الكوتش ${esc(c.name||"")}" loading="lazy">`}</div></div>
+<div><b class="sc-cname">${esc(c.name||"")}</b><span class="sc-crole">مدرب لياقة معتمد دولياً</span></div></div>
 <div class="sc-ccert"><div class="ic3"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="6" stroke="#fff" stroke-width="2"/><path d="M8.5 13.5 7 21l5-2.6L17 21l-1.5-7.5" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="m9.4 9 1.8 1.8 3.4-3.6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
 <div><b>IASST · Certified Fitness Trainer</b><small>الأكاديمية الدولية لعلوم وتكنولوجيا الرياضة (IASST) · فيينا، النمسا · أكتوبر 2026</small><small>شهادة رقم C264067 · <a href="https://iasst.org/certi/find" target="_blank" rel="noopener">اتحقق من الشهادة بنفسك</a></small></div></div>
 <div class="sc-cchips"><span>فسيولوجيا التمرين</span><span>التشريح الوظيفي</span><span>البيوميكانيكا</span><span>التغذية</span><span>تدريب القوة</span><span>تصميم البرامج</span></div></div>`}
@@ -190,4 +197,5 @@ const ws=[...box.querySelectorAll(".sc-tg .w")];if(ws.length){if(!("Intersection
 const q=document.getElementById("scq"),d=document.querySelectorAll("#scd i");if(q)q.addEventListener("scroll",()=>{const c=q.children;let best=0,bd=1e9;const mid=q.getBoundingClientRect().left+q.clientWidth/2;[...c].forEach((x,i)=>{const r=x.getBoundingClientRect();const dd=Math.abs(r.left+r.width/2-mid);if(dd<bd){bd=dd;best=i}});d.forEach((x,i)=>x.classList.toggle("on",i===best))},{passive:true})};
 if(document.readyState!=="loading")drawShowcase();else document.addEventListener("DOMContentLoaded",drawShowcase);
 })();
+
 
