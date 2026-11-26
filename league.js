@@ -11,6 +11,10 @@
      settings - weekly champion reward (reward_note, overrides the mode)
      plus clearer free-text prize fields. No SQL change (set_config
      already takes p_note).
+   - v7 (Nov 26, Mohammed): custom MOFIT SVG medal set (no emoji),
+     redesigned prize strip, rank-movement chips, richer one-shot
+     animations (podium drop, winner/button shine sweep, medal shine).
+     iPhone-safe: transform/opacity only, reduced-motion respected.
    - Every active client gets an in-app invite on their home screen and
      chooses to join or not (league_respond). Only joined members get the
      "الليج" tab and appear on the board.
@@ -172,6 +176,35 @@ const st=document.createElement("style"); st.textContent=`
 .lg-ovl .lg-card{width:100%;max-width:400px;max-height:88vh;overflow-y:auto;margin-bottom:0;animation:lgPop .5s cubic-bezier(.2,1.4,.4,1) both}
 .lg-x{position:absolute;top:12px;inset-inline-end:12px;z-index:2;width:32px;height:32px;border-radius:10px;border:1px solid rgba(255,255,255,.14);
   background:rgba(255,255,255,.06);color:#94A3B8;font-size:.9rem;cursor:pointer;display:grid;place-items:center;font-family:"Cairo",sans-serif}
+.lg-medal{width:26px;height:26px;flex:none;filter:drop-shadow(0 3px 8px rgba(0,0,0,.45))}
+.lg-rank.top .lg-medal{width:28px;height:28px;margin:0 auto}
+.lg-pod .lg-medal{width:34px;height:34px;transform-origin:50% 0;animation:lgDrop .7s cubic-bezier(.2,1.5,.4,1) both}
+.lg-p1 .lg-medal{width:46px;height:46px}
+.lg-p2 .lg-medal{animation-delay:.1s}.lg-p3 .lg-medal{animation-delay:.2s}
+.lg-trow .lg-medal{width:16px;height:16px;display:inline-block;vertical-align:-3px;filter:none}
+.lg-me .rk.md{background:none;box-shadow:none;padding:2px}
+.lg-me .rk.md .lg-medal{width:44px;height:44px}
+.lg-ic svg{width:24px;height:24px}
+.lg-win .crown svg{width:36px;height:36px}
+.lg-shine{animation:lgShineX 7s ease-in-out infinite}
+.lg-prizes2{margin-top:12px;padding:12px 12px 10px;border-radius:18px;background:rgba(255,179,0,.06);border:1px solid rgba(255,194,26,.28);animation:lgIn .7s cubic-bezier(.2,.8,.2,1) .1s both}
+.lg-prizes2-t{display:flex;align-items:center;gap:7px;font-family:"Noto Kufi Arabic","Cairo",sans-serif;font-weight:800;font-size:.8rem;color:#FFE680;margin-bottom:4px}
+.lg-prizes2-t svg{width:16px;height:16px}
+.lg-prize{display:flex;align-items:center;gap:10px;padding:7px 9px;border-radius:13px;background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.07);margin-top:7px;animation:lgPrizePop .55s cubic-bezier(.2,1.4,.4,1) both;animation-delay:calc(var(--i)*90ms + .2s)}
+.lg-prize span{flex:1;min-width:0;font-family:"Cairo",sans-serif;font-size:.78rem;font-weight:700;color:#E2E8F0;line-height:1.7}
+.lg-prize.p1{background:rgba(255,179,0,.10);border-color:rgba(255,194,26,.4)}
+.lg-delta{flex:none;font-size:.62rem;font-weight:800;font-family:"Cairo",sans-serif;padding:2px 7px;border-radius:999px;animation:lgPrizePop .5s cubic-bezier(.2,1.4,.4,1) .3s both}
+.lg-delta.up{color:#6EE7B7;background:rgba(16,185,129,.14);border:1px solid rgba(16,185,129,.45)}
+.lg-delta.down{color:#FDA4AF;background:rgba(244,63,94,.12);border:1px solid rgba(244,63,94,.4)}
+.lg-win{position:relative;overflow:hidden}
+.lg-win::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.13) 48%,transparent 64%);transform:translateX(-130%);animation:lgSweep 1.3s .55s cubic-bezier(.3,.6,.3,1) both}
+.lg-btn{position:relative;overflow:hidden}
+.lg-btn::after{content:"";position:absolute;inset:0;pointer-events:none;background:linear-gradient(115deg,transparent 32%,rgba(255,255,255,.20) 48%,transparent 64%);transform:translateX(-130%);animation:lgSweep 1.4s .8s cubic-bezier(.3,.6,.3,1) both}
+.lg-trow{animation:lgIn .5s cubic-bezier(.2,.8,.2,1) both}
+@keyframes lgDrop{0%{transform:translateY(-16px) scale(.4);opacity:0}62%{transform:translateY(3px) scale(1.06);opacity:1}100%{transform:none;opacity:1}}
+@keyframes lgPrizePop{0%{transform:scale(.72) translateY(8px);opacity:0}100%{transform:none;opacity:1}}
+@keyframes lgSweep{0%{transform:translateX(-130%)}100%{transform:translateX(130%)}}
+@keyframes lgShineX{0%,58%{transform:translateX(0);opacity:0}66%{opacity:.9}86%,100%{transform:translateX(62px);opacity:0}}
 @keyframes lgFade{from{opacity:0}to{opacity:1}}
 @keyframes lgPop{0%{transform:scale(.8) translateY(20px);opacity:0}100%{transform:scale(1) translateY(0);opacity:1}}
 @media(prefers-reduced-motion:reduce){.lg-ovl,.lg-ovl .lg-card{animation:none!important}}
@@ -181,11 +214,22 @@ const st=document.createElement("style"); st.textContent=`
 @keyframes lgBar{from{width:0}}
 @media(prefers-reduced-motion:reduce){
   .lg-card,.lg-win,.lg-row,.lg-inv,.lg-me,.lg-p1,.lg-p2,.lg-p3,.lg-win .crown{animation:none!important}
-  .lg-bar i{animation:none!important}}
+  .lg-bar i,.lg-shine,.lg-pod .lg-medal,.lg-prize,.lg-delta,.lg-win::after,.lg-btn::after,.lg-trow,.lg-prizes2{animation:none!important}}
 `;
 document.head.appendChild(st);
 
-const MEDALS=["🥇","🥈","🥉"];
+/* custom MOFIT medal set (navy/orange/gold) - original SVGs, no emoji */
+function medalSVG(r){
+  const ring=r===1?["#FFE680","#FFB300"]:r===2?["#F1F5F9","#94A3B8"]:["#F0B27A","#A5693F"];
+  const rib =r===1?"#FF5A0A":r===2?"#475569":"#8D5524";
+  return `<svg class="lg-medal m${r}" viewBox="0 0 48 48" fill="none" aria-hidden="true"><defs><linearGradient id="lgmG${r}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${ring[0]}"/><stop offset="1" stop-color="${ring[1]}"/></linearGradient><linearGradient id="lgmS${r}" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".55"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient><clipPath id="lgmC${r}"><circle cx="24" cy="28" r="15"/></clipPath></defs><path d="M17 3l7 12 7-12h8l-9.5 16h-11L9 3h8z" fill="${rib}"/><path d="M17 3l7 12 7-12h2.5l-7 12h-5L15 3h2z" fill="rgba(255,255,255,.22)"/><circle cx="24" cy="28" r="15" fill="url(#lgmG${r})"/><circle cx="24" cy="28" r="11.5" fill="#0B1220"/><circle cx="24" cy="28" r="11.5" fill="none" stroke="${ring[0]}" stroke-opacity=".5" stroke-width="1"/><text x="24" y="33.5" text-anchor="middle" font-family="Anton,sans-serif" font-size="14" fill="${ring[0]}">${r}</text><g clip-path="url(#lgmC${r})"><g class="lg-shine"><rect x="-14" y="10" width="9" height="38" fill="url(#lgmS${r})" transform="rotate(22 -9 28)"/></g></g></svg>`;
+}
+function crownSVG(){
+  return `<svg viewBox="0 0 48 48" fill="none" aria-hidden="true"><defs><linearGradient id="lgcG" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE680"/><stop offset="1" stop-color="#FFB300"/></linearGradient></defs><path d="M7 34L4 14l10 7L24 8l10 13 10-7-3 20H7z" fill="url(#lgcG)"/><rect x="7" y="36" width="34" height="5" rx="2.5" fill="url(#lgcG)"/><circle cx="24" cy="21" r="2.6" fill="#0B1220"/><circle cx="12" cy="27" r="2" fill="#0B1220"/><circle cx="36" cy="27" r="2" fill="#0B1220"/></svg>`;
+}
+function trophySVG(){
+  return `<svg viewBox="0 0 24 24" fill="none" stroke="#FFC21A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 21h8M12 17v4M7 4h10v6a5 5 0 0 1-10 0z"/><path d="M7 6H4a1 1 0 0 0-1 1c0 2 1.5 3.5 4 3.5M17 6h3a1 1 0 0 1 1 1c0 2-1.5 3.5-4 3.5"/></svg>`;
+}
 const REWARD_TXT={
   manual:"🎖 الكوتش بيكرّم البطل بنفسه",
   free_week:"🎁 مكافأة البطل: أسبوع مجاني",
@@ -202,8 +246,10 @@ function countdown(endsAt){
   }catch(e){ return {d:0,h:0}; }
 }
 function escAr(s){ return typeof esc==="function"?esc(s):String(s); }
-function rowHTML(r,i,isCoach,names,leaderPts){
-  const rank=i<3?`<span class="lg-rank top">${MEDALS[i]}</span>`:`<span class="lg-rank">${i+1}</span>`;
+function rowHTML(r,i,isCoach,names,leaderPts,deltas){
+  const rank=i<3?`<span class="lg-rank top">${medalSVG(i+1)}</span>`:`<span class="lg-rank">${i+1}</span>`;
+  const dlt=deltas&&deltas[r.nickname]?deltas[r.nickname]:0;
+  const dchip=dlt>0?`<span class="lg-delta up">▲${dlt}</span>`:dlt<0?`<span class="lg-delta down">▼${-dlt}</span>`:"";
   const realName=isCoach&&r.client_id&&names&&names[r.client_id]?names[r.client_id]:null;
   const stats=`🏋️ ${r.workouts} · ✅ ${r.habit_days}${r.checkins?` · 📸 ${r.checkins}`:""}`;
   const sub=realName?escAr(realName)+" · "+stats:stats;
@@ -213,13 +259,13 @@ function rowHTML(r,i,isCoach,names,leaderPts){
     <div class="lg-nm"><b>${escAr(r.nickname)}${r.me?`<span class="lg-tag">انت</span>`:""}</b>
       <small>${sub}</small>
       <div class="lg-bar" style="--i:${Math.min(i,8)}"><i style="width:${w}%"></i></div></div>
-    ${r.streak>0?`<span class="lg-streak">🔥 ${r.streak}</span>`:""}
+    ${r.streak>0?`<span class="lg-streak">🔥 ${r.streak}</span>`:""}${dchip}
     <div class="lg-pts"><b>${r.points}</b><small>نقطة</small></div>
   </div>`;
 }
 function podHTML(pod,names,isCoach){
   if(!pod||!pod.length) return "";
-  const cell=p=>p?`<div class="lg-p${p.rank}"><div class="m">${MEDALS[p.rank-1]||"🏅"}</div>
+  const cell=p=>p?`<div class="lg-p${p.rank}"><div class="m">${medalSVG(p.rank)}</div>
       <b>${escAr(p.nickname)}</b><small>${p.points} نقطة${isCoach&&p.client_id&&names[p.client_id]?" · "+escAr(names[p.client_id]):""}</small></div>`:"";
   const one=pod.find(p=>p.rank===1)||pod[0], two=pod.find(p=>p.rank===2), three=pod.find(p=>p.rank===3);
   return `<div class="lg-pod">${cell(two)}${cell(one)}${cell(three)}</div>`;
@@ -231,7 +277,7 @@ function trophyHTML(trophies){
   const weeks=Object.keys(byWeek).sort().reverse();
   return `<div class="lg-tro"><h4>🏆 قاعة الأبطال</h4>
     ${weeks.map(w=>`<div class="lg-trow"><span class="wk">أسبوع ${w.slice(5).split("-").reverse().join("/")}</span>
-      <span class="p">${byWeek[w].sort((a,b)=>a.rank-b.rank).map(t=>`${MEDALS[t.rank-1]||"🏅"} <b>${escAr(t.nickname)}</b>`).join(" · ")}</span></div>`).join("")}
+      <span class="p">${byWeek[w].sort((a,b)=>a.rank-b.rank).map(t=>`${medalSVG(t.rank)} <b>${escAr(t.nickname)}</b>`).join(" · ")}</span></div>`).join("")}
   </div>`;
 }
 function lastPodiumHTML(board,names){
@@ -249,13 +295,14 @@ const DAYS=["الأحد","الاثنين","الثلاثاء","الأربعاء",
 function prizeLineHTML(board){
   const p=[board.prize_1,board.prize_2,board.prize_3].map(x=>(x||"").trim());
   if(!p[0]&&!p[1]&&!p[2]) return "";
-  const parts=p.map((t,i)=>t?MEDALS[i]+" "+escAr(t):null).filter(Boolean);
-  return `<div class="lg-pz">🎁 جوائز الأسبوع ده: ${parts.join(" · ")}</div>`;
+  return `<div class="lg-prizes2"><div class="lg-prizes2-t">${trophySVG()}<span>جوائز الأسبوع ده</span></div>
+    ${p.map((x,i)=>x?`<div class="lg-prize p${i+1}" style="--i:${i}">${medalSVG(i+1)}<span>${escAr(x)}</span></div>`:"").join("")}
+  </div>`;
 }
 function headHTML(board,isCoach){
   const cd=countdown(board.ends_at);
   return `<div class="lg-h">
-    <div class="lg-ic">🏆</div>
+    <div class="lg-ic">${trophySVG()}</div>
     <div class="lg-ht"><h3>الليج الأسبوعي${board.season>1?" · الموسم "+board.season:""}</h3>
       <small>${isCoach?"الترتيب بالأسماء الحقيقية - العملاء شايفين ألقاب بس":"نافس باسمك المستعار.. محدش يعرف مين انت 😉"}</small></div>
     <div class="lg-cd"><b>${cd.d>0?cd.d:cd.h}</b><small>${cd.d>0?"يوم":"ساعة"} على القفل</small></div>
@@ -281,7 +328,7 @@ function inviteHTML(board){
 function teaserHTML(board){
   const rows=board.rows||[], meIdx=rows.findIndex(r=>r.me), me=meIdx>=0?rows[meIdx]:null;
   return `${headHTML(board,false)}
-  ${me?`<div class="lg-me"><div class="rk">${meIdx<3?MEDALS[meIdx]:meIdx+1}</div>
+  ${me?`<div class="lg-me"><div class="rk${meIdx<3?" md":""}">${meIdx<3?medalSVG(meIdx+1):meIdx+1}</div>
     <div class="mt"><b>${meIdx===0?"انت المتصدر يا وحش! 🔥":"مركزك "+(meIdx+1)+" من "+rows.length}</b>
     <small>${escAr(board.me.nickname)} · ${me.points} نقطة · 🔥 ${me.streak||0} يوم</small></div></div>`:""}
   ${podHTML(board.podium,{},false)}
@@ -294,15 +341,15 @@ function tabHTML(board){
   const pod=board.podium||[], first=pod.find(p=>p.rank===1)||pod[0];
   const firstIsMe=!!(first&&board.me&&first.nickname===board.me.nickname);
   return `${headHTML(board,false)}
-  ${me?`<div class="lg-me"><div class="rk">${meIdx<3?MEDALS[meIdx]:meIdx+1}</div>
+  ${me?`<div class="lg-me"><div class="rk${meIdx<3?" md":""}">${meIdx<3?medalSVG(meIdx+1):meIdx+1}</div>
     <div class="mt"><b>${meIdx===0?"انت المتصدر يا وحش! 🔥":meIdx<3?"انت على المنصة! كمّل 💪":"مركزك "+(meIdx+1)+" من "+rows.length}</b>
     <small>${escAr(board.me.nickname)} · ${me.points} نقطة · 🏋️ ${me.workouts} تمرين · 🔥 ${me.streak||0} يوم</small></div></div>`:""}
-  ${first?`<div class="lg-win${firstIsMe?" me":""}"><div class="crown">👑</div>
+  ${first?`<div class="lg-win${firstIsMe?" me":""}"><div class="crown">${crownSVG()}</div>
     <div class="lg-win-t"><b>${firstIsMe?"انت بطل الأسبوع اللي فات يا وحش! 🏆":"أبطال الأسبوع اللي فات"}</b>
     <small>${escAr(rewardText(board.reward_mode,board.reward_note))}</small></div></div>`:""}
   ${podHTML(pod,{},false)}
   ${prizeLineHTML(board)}
-  <div class="lg-rows">${rows.map((r,i)=>rowHTML(r,i,false,null,leaderPts)).join("")}
+  <div class="lg-rows">${rows.map((r,i)=>rowHTML(r,i,false,null,leaderPts,board._deltas)).join("")}
     ${!rows.length?`<p style="text-align:center;font-family:Cairo;font-size:.78rem;color:#64748B;margin:8px 0">لسه محدش سجّل - كون أول واحد 🔥</p>`:""}</div>
   ${trophyHTML(board.trophies)}
   ${explainHTML()}`;
@@ -310,7 +357,7 @@ function tabHTML(board){
 /* ------- coach card ------- */
 function coachHTML(board,names){
   if(!board.started){
-    return `<div class="lg-h"><div class="lg-ic">🏆</div>
+    return `<div class="lg-h"><div class="lg-ic">${trophySVG()}</div>
       <div class="lg-ht"><h3>الليج الأسبوعي</h3><small>لسه ما بدأتش - ابدأ وكل عملائك المفعّلين هيوصلهم الدعوة</small></div></div>
       <div class="lg-inv"><b>🔥 ابدأ الليج</b>
       <p>أول ما تبدأ: كل عميل مفعّل هيلاقي دعوة على الرئيسية يختار يشترك أو لأ، ونقاط كل مشترك بتتحسب من يوم اشتراكه بس (السجل القديم مش بيتحسب).</p>
@@ -321,13 +368,13 @@ function coachHTML(board,names){
   const rows=board.rows||[], leaderPts=rows.length?rows[0].points:0;
   const pod=board.podium||[], first=pod.find(p=>p.rank===1)||pod[0];
   return `${headHTML(board,true)}
-  ${first?`<div class="lg-win"><div class="crown">👑</div>
+  ${first?`<div class="lg-win"><div class="crown">${crownSVG()}</div>
     <div class="lg-win-t"><b>بطل الأسبوع اللي فات: ${escAr(first.nickname)}${first.client_id&&names[first.client_id]?" ("+escAr(names[first.client_id])+")":""}</b>
     <small>${first.points} نقطة من ${first.workouts} تمرين · ${escAr(rewardText(board.reward_mode,board.reward_note))}</small></div>
     <button class="lg-grant" id="lgGrant" data-id="${first.winner_id}" ${first.reward_granted?"disabled":""}>${first.reward_granted?"اتكرم ✅":"✓ سجّل التكريم"}</button></div>`:""}
   ${podHTML(pod,names,true)}
   ${prizeLineHTML(board)}
-  <div class="lg-rows">${rows.map((r,i)=>rowHTML(r,i,true,names,leaderPts)).join("")}
+  <div class="lg-rows">${rows.map((r,i)=>rowHTML(r,i,true,names,leaderPts,board._deltas)).join("")}
     ${!rows.length?`<p style="text-align:center;font-family:Cairo;font-size:.78rem;color:#64748B;margin:8px 0">مفيش مشتركين سجّلوا لسه</p>`:""}</div>
   <div class="lg-meta">الموسم ${board.season} · ${board.members} مشترك</div>
   <div class="lg-tro"><h4>⚙️ إدارة الليج</h4>
@@ -495,10 +542,19 @@ function wireEnd(host,btnId,crown,after){
 
 /* ------- module state + fetch ------- */
 let LG=null;                 // last board payload
+let LGPrevRanks=null;       // nickname -> last shown rank, for the ▲▼ movement chips
 async function fetchBoard(){
   try{
     const { data, error }=await sb.rpc("league_board");
     if(error||!data||data.error) return null;
+    const rows=data.rows||[], deltas={}, next={};
+    rows.forEach((r,i)=>{
+      next[r.nickname]=i;
+      if(LGPrevRanks&&LGPrevRanks[r.nickname]!==undefined&&LGPrevRanks[r.nickname]!==i)
+        deltas[r.nickname]=LGPrevRanks[r.nickname]-i;  // positive = moved up
+    });
+    if(rows.length) LGPrevRanks=next;
+    data._deltas=deltas;
     return data;
   }catch(e){ return null; }
 }
