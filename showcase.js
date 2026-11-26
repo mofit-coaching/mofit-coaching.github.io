@@ -3,6 +3,7 @@
    results[]:{before:"img url",after:"img url",name:"اسم أو أول اسم",stat:"-12 كجم في 10 أسابيع"}  (publish only with client consent)
    quotes[]:{text:"...",name:"...",meta:"... (اختياري)"}   stats[]:{n:"120",unit:"+",label:"عميل"} */
 window.SHOWCASE=window.SHOWCASE||{
+  coach:{name:"محمد علي",photo:""},
   stats:[],
   results:[],
   quotes:[],
@@ -99,8 +100,31 @@ const css=`
 .sc-faq summary:focus-visible,.sc-btn:focus-visible{outline:3px solid #FFB070;outline-offset:3px;border-radius:12px}
 .sc-faq p{margin:0 0 14px;color:#B6C0D2;font-size:13.5px;line-height:1.8;text-wrap:pretty}
 .sc-btn:active{transform:scale(.98)}
+.sc-ccard{position:relative;border-radius:24px;padding:22px 18px 18px;background:linear-gradient(165deg,rgba(255,255,255,.1),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.12);overflow:hidden}
+.sc-ccard:before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,#FF6B1A,transparent)}
+.sc-chead{display:flex;gap:16px;align-items:center}
+.sc-cphoto{flex:0 0 auto;width:96px;height:96px;border-radius:26px;overflow:hidden;position:relative;background:#0B1220;border:1px solid rgba(255,255,255,.14);box-shadow:0 12px 26px -12px rgba(0,0,0,.7);animation:scglow 3.2s ease-in-out infinite}
+.sc-cframe{position:relative;flex:0 0 auto;width:101px;height:101px;padding:2.5px;border-radius:29px;overflow:hidden}
+.sc-cframe:before{content:"";position:absolute;inset:-55%;background:conic-gradient(from 0deg,transparent 0deg,rgba(255,138,61,0) 70deg,#FF8A3D 130deg,#FFC46B 180deg,#FF8A3D 230deg,rgba(255,138,61,0) 290deg,transparent 360deg);animation:scspin 5.5s linear infinite}
+.sc-cframe .sc-cphoto{position:relative;z-index:1;width:100%;height:100%}
+.sc-cphoto .sc-cshine{position:absolute;top:0;bottom:0;left:-70%;width:45%;background:linear-gradient(100deg,transparent,rgba(255,255,255,.3),transparent);transform:skewX(-18deg);animation:scshine 3.8s ease-in-out infinite;z-index:1}
+@keyframes scspin{to{transform:rotate(1turn)}}
+@keyframes scglow{0%,100%{box-shadow:0 12px 26px -12px rgba(0,0,0,.7),0 0 0 0 rgba(255,138,61,.12)}50%{box-shadow:0 12px 26px -12px rgba(0,0,0,.7),0 0 24px 3px rgba(255,138,61,.5)}}
+@keyframes scshine{0%,55%{left:-70%}100%{left:130%}}
+.sc-cphoto img{width:100%;height:100%;object-fit:cover;display:block}
+.sc-cphoto svg{width:100%;height:100%;display:block}
+.sc-cname{display:block;font:800 21px/1.25 var(--disp);color:#fff}
+.sc-crole{display:inline-block;margin-top:6px;padding:5px 11px;border-radius:99px;font-size:11.5px;font-weight:700;color:#0B1220;background:linear-gradient(90deg,#FFC46B,#FF8A3D)}
+.sc-ccert{display:flex;gap:12px;align-items:flex-start;margin-top:16px;padding:13px 14px;border-radius:16px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1)}
+.sc-ccert .ic3{flex:0 0 auto;width:38px;height:38px;border-radius:12px;display:grid;place-items:center;background:linear-gradient(135deg,#FF6B1A,#FFA24D);box-shadow:0 6px 16px rgba(255,107,26,.4)}
+.sc-ccert .ic3 svg{width:20px;height:20px}
+.sc-ccert b{font-size:13.5px;color:#fff;display:block;line-height:1.5}
+.sc-ccert small{display:block;font-size:11.5px;color:#9AA6BA;margin-top:2px;line-height:1.6}
+.sc-ccert a{color:#FFB070;font-weight:700;text-decoration:none;border-bottom:1px dashed rgba(255,176,112,.6)}
+.sc-cchips{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}
+.sc-cchips span{padding:6px 11px;border-radius:99px;font-size:11px;font-weight:700;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);color:#D9E1EE}
 @media(prefers-reduced-motion:reduce){.sc-tg .w{transition:none;color:#fff}.sc-faq summary:after,.sc-faq details{transition:none}}
-@media(prefers-reduced-motion:reduce){.sc-rv{opacity:1;transform:none;transition:none}.sc-btn:after{animation:none;display:none}}
+@media(prefers-reduced-motion:reduce){.sc-rv{opacity:1;transform:none;transition:none}.sc-btn:after{animation:none;display:none}.sc-cframe:before,.sc-cphoto .sc-cshine{animation:none;display:none}.sc-cphoto{animation:none}}
 `;
 const st=document.createElement("style");st.textContent=css;document.head.appendChild(st);
 const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -120,6 +144,15 @@ return `<div class="sc-rv"><div class="sc-q" id="scq">${list.map(q=>`<div class=
 function steps(){return `<div class="sc-steps">${(SHOWCASE.steps||[]).map((s,i)=>`<div class="sc-step sc-rv"><div class="no">${i+1}</div><div><b>${esc(s.t)}</b><span>${esc(s.d)}</span></div></div>`).join("")}</div>`}
 function league(){return `<div class="sc-podium sc-rv"><div class="sc-pod p2"><div class="tr">🥈</div><div class="bk">التاني</div></div><div class="sc-pod p1"><div class="tr">🥇</div><div class="bk">الأول</div></div><div class="sc-pod p3"><div class="tr">🥉</div><div class="bk">التالت</div></div></div><div class="sc-chips sc-rv"><span class="sc-chip2">🏆 مكافآت لأول 3</span><span class="sc-chip2">📊 ترتيب بيتحدث أول بأول</span><span class="sc-chip2">🎯 المشاركة اختيارية</span></div>`}
 function invite(){return `<div class="sc-rgrid sc-rv"><div class="sc-rstep"><div class="ic2">🔗</div><b>شارك لينكك</b><span>لينك وQR خاصين بيك من تبويب الإحالة</span></div><div class="sc-rstep"><div class="ic2">✍️</div><b>صاحبك يسجّل</b><span>يفتح اللينك ويعمل حسابه في دقيقة</span></div><div class="sc-rstep"><div class="ic2">🎁</div><b>الأسبوع علينا</b><span>أول ما الكوتش يفعّله، ليك أسبوع مجاني</span></div></div>`}
+/* Coach identity: real certification only (IASST certificate C264067, Oct 2026).
+   TODO coach: fill SHOWCASE.coach.photo with his photo URL, and confirm SHOWCASE.coach.name is how he wants to appear. */
+function coachFig(){return `<svg viewBox="0 0 96 96" aria-hidden="true"><defs><linearGradient id="sccg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3A2012"/><stop offset="1" stop-color="#0B1220"/></linearGradient><linearGradient id="sccf" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFA24D"/><stop offset="1" stop-color="#FF6B1A"/></linearGradient></defs><rect width="96" height="96" fill="url(#sccg)"/><circle cx="48" cy="48" r="34" fill="rgba(255,107,26,.16)"/><circle cx="48" cy="36" r="13" fill="url(#sccf)"/><path d="M16 96 C18 66 32 56 48 56 C64 56 78 66 80 96Z" fill="url(#sccf)"/></svg>`}
+function coach(){const c=(SHOWCASE.coach||{});const ph=!c.photo;
+return `<div class="sc-ccard sc-rv"><div class="sc-chead"><div class="sc-cframe"><div class="sc-cphoto">${ph?coachFig()+'<div class="sc-cshine"></div>':`<img src="${esc(c.photo)}" alt="صورة الكوتش ${esc(c.name||"")}" loading="lazy">`}</div></div>
+<div><b class="sc-cname">${esc(c.name||"")}</b><span class="sc-crole">مدرب لياقة معتمد دولياً</span></div></div>
+<div class="sc-ccert"><div class="ic3"><svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="9" r="6" stroke="#fff" stroke-width="2"/><path d="M8.5 13.5 7 21l5-2.6L17 21l-1.5-7.5" stroke="#fff" stroke-width="2" stroke-linejoin="round"/><path d="m9.4 9 1.8 1.8 3.4-3.6" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+<div><b>IASST · Certified Fitness Trainer</b><small>الأكاديمية الدولية لعلوم وتكنولوجيا الرياضة (IASST) · فيينا، النمسا · أكتوبر 2026</small><small>شهادة رقم C264067 · <a href="https://iasst.org/certi/find" target="_blank" rel="noopener">اتحقق من الشهادة بنفسك</a></small></div></div>
+<div class="sc-cchips"><span>فسيولوجيا التمرين</span><span>التشريح الوظيفي</span><span>البيوميكانيكا</span><span>التغذية</span><span>تدريب القوة</span><span>تصميم البرامج</span></div></div>`}
 function tagline(){const t="تمرينك وأكلك ومتابعتك كلهم في مكان واحد. ومعاك كوتش حقيقي بيتابعك كل أسبوع ويعدّل معاك على حسب نتيجتك.";const hl=new Set(["كوتش","حقيقي","مكان","واحد."]);
 return `<div class="sc-tg" aria-label="${esc(t)}"><p aria-hidden="true">${t.split(" ").map(w=>`<span class="w${hl.has(w)?" hl":""}">${esc(w)}</span>`).join(" ")}</p></div>`}
 /* FAQ content. Entries with a:null are NOT shown until the coach supplies the real answer (policy items).
@@ -153,13 +186,31 @@ hd.addEventListener("keydown",e=>{const v=+hd.getAttribute("aria-valuenow");if(e
 el._hint=()=>{if(matchMedia("(prefers-reduced-motion:reduce)").matches)return;const t0=performance.now();const f=t=>{const k=(t-t0)/1500;if(k>=1||drag){if(!drag)set(50);return}set(50+Math.sin(k*Math.PI*2)*22*(1-k));requestAnimationFrame(f)};requestAnimationFrame(f)}}
 window.drawShowcase=function(){const box=document.getElementById("showcase");if(!box||box.dataset.done)return;box.dataset.done=1;
 const hasR=(SHOWCASE.results||[]).length, hasQ=(SHOWCASE.quotes||[]).length;
-box.innerHTML=tagline()+(hasR?sec("RESULTS",'نتايج <b>حقيقية</b> من متدربينا',"اسحب وقارن قبل وبعد",results()):"")+(SHOWCASE.stats&&SHOWCASE.stats.length?stats().replace('<div class="sc-stats','<div style="margin-top:22px"></div><div class="sc-stats'):"")+(hasQ?sec("VOICES","بيقولوا إيه عننا","",quotes()):"")+sec("HOW IT WORKS","إزاي <b>تبدأ</b>","تلات خطوات وبس",steps())+sec("LEAGUE",'دوري <b>الأسبوع</b>',"الكوتش بيبدأ الدوري وانت بتختار تشارك، نقاطك من تمرينك والتزامك، وأول 3 ليهم المجد",league())+sec("INVITE FRIENDS",'ادعُ صحابك <b>وخد أسبوع هدية</b>',"كل صاحب يشترك من لينكك بيضيفلك أسبوع مجاني",invite())+sec("FAQ","أسئلة <b>ممكن تكون في بالك</b>","هنا عشان تحس إنك في بيتك من أول يوم",faq())+`<div class="sc-cta sc-rv"><a class="sc-btn" href="#plans" onclick="loginTab('plans');window.scrollTo({top:0,behavior:'smooth'});return false">ابدأ رحلتك، اشترك دلوقتي</a><p class="sc-note">* النتيجة بتختلف من شخص لآخر.</p></div>`;
+box.innerHTML=tagline()+sec("THE COACH",'مين <b>الكوتش</b>؟',"كوتش حقيقي، معتمد، وشهادته متاحة للتحقق",coach())+(hasR?sec("RESULTS",'نتايج <b>حقيقية</b> من متدربينا',"اسحب وقارن قبل وبعد",results()):"")+(SHOWCASE.stats&&SHOWCASE.stats.length?stats().replace('<div class="sc-stats','<div style="margin-top:22px"></div><div class="sc-stats'):"")+(hasQ?sec("VOICES","بيقولوا إيه عننا","",quotes()):"")+sec("HOW IT WORKS","إزاي <b>تبدأ</b>","تلات خطوات وبس",steps())+sec("LEAGUE",'دوري <b>الأسبوع</b>',"الكوتش بيبدأ الدوري وانت بتختار تشارك، نقاطك من تمرينك والتزامك، وأول 3 ليهم المجد",league())+sec("INVITE FRIENDS",'ادعُ صحابك <b>وخد أسبوع هدية</b>',"كل صاحب يشترك من لينكك بيضيفلك أسبوع مجاني",invite())+sec("FAQ","أسئلة <b>ممكن تكون في بالك</b>","هنا عشان تحس إنك في بيتك من أول يوم",faq())+`<div class="sc-cta sc-rv"><a class="sc-btn" href="#plans" onclick="loginTab('plans');window.scrollTo({top:0,behavior:'smooth'});return false">ابدأ رحلتك، اشترك دلوقتي</a><p class="sc-note">* النتيجة بتختلف من شخص لآخر.</p></div>`;
 box.querySelectorAll(".sc-ba").forEach(bindBA);
 const io="IntersectionObserver" in window?new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add("in");const b=e.target.querySelector(".sc-ba");if(b&&b._hint&&!b._h){b._h=1;setTimeout(b._hint,350)}io.unobserve(e.target)}}),{threshold:.15}):null;
 box.querySelectorAll(".sc-rv").forEach(n=>io?io.observe(n):n.classList.add("in"));
 const ws=[...box.querySelectorAll(".sc-tg .w")];if(ws.length){if(!("IntersectionObserver" in window)||matchMedia("(prefers-reduced-motion:reduce)").matches)ws.forEach(w=>w.classList.add("on"));else{const wo=new IntersectionObserver(es=>{let k=0;es.filter(e=>e.isIntersecting).sort((a,b)=>ws.indexOf(a.target)-ws.indexOf(b.target)).forEach(e=>{setTimeout(()=>e.target.classList.add("on"),Math.min(k++*70,500));wo.unobserve(e.target)})},{rootMargin:"0px 0px -38% 0px"});ws.forEach(w=>wo.observe(w));}}
 
-const q=document.getElementById("scq"),d=document.querySelectorAll("#scd i");if(q)q.addEventListener("scroll",()=>{const c=q.children;let best=0,bd=1e9;const mid=q.getBoundingClientRect().left+q.clientWidth/2;[...c].forEach((x,i)=>{const r=x.getBoundingClientRect();const dd=Math.abs(r.left+r.width/2-mid);if(dd<bd){bd=dd;best=i}});d.forEach((x,i)=>x.classList.toggle("on",i===best))},{passive:true})};
+const q=document.getElementById("scq"),d=document.querySelectorAll("#scd i");if(q)q.addEventListener("scroll",()=>{const c=q.children;let best=0,bd=1e9;const mid=q.getBoundingClientRect().left+q.clientWidth/2;[...c].forEach((x,i)=>{const r=x.getBoundingClientRect();const dd=Math.abs(r.left+r.width/2-mid);if(dd<bd){bd=dd;best=i}});d.forEach((x,i)=>x.classList.toggle("on",i===best))},{passive:true});coachPhotoProbe()};
+/* Coach photo: when the coach has uploaded one (public "assets" bucket, fixed path),
+   swap the designed avatar for it. The probe fails silently - no photo yet, bucket not
+   created yet, offline - and the avatar stays. SHOWCASE.coach.photo still wins when set. */
+async function coachPhotoProbe(){
+  try{
+    if((SHOWCASE.coach||{}).photo) return;
+    if(typeof sb==="undefined"||!sb.storage) return;
+    const { data }=sb.storage.from("assets").getPublicUrl("coach/photo.jpg");
+    const base=data&&data.publicUrl; if(!base) return;
+    const url=base+"?v="+Math.floor(Date.now()/6e5);
+    const img=new Image();
+    img.onload=()=>{ const ph=document.querySelector("#showcase .sc-cphoto"); if(!ph) return; const c=SHOWCASE.coach||{};
+      ph.innerHTML=`<img src="${esc(url)}" alt="صورة الكوتش ${esc(c.name||"")}" loading="lazy">`; };
+    img.onerror=()=>{};
+    img.src=url;
+  }catch(_){}
+}
 if(document.readyState!=="loading")drawShowcase();else document.addEventListener("DOMContentLoaded",drawShowcase);
 })();
+
 

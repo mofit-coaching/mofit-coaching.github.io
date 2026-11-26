@@ -79,6 +79,7 @@ async function viewClients(el){
       <div class="stat acc"><div class="l">مفعّل</div><div class="v">${C.filter(c=>c.active).length}</div></div>
       <div class="stat"><div class="l">برامج محفوظة</div><div class="v">${S.templates.length}</div></div></div>
     <button class="btn primary block" id="addBtn" style="margin-bottom:14px">+ إضافة عميل جديد</button>
+    <div class="card" id="cpCard"></div>
     <div class="card" id="alerts"></div>
     <div class="card" id="aidg" hidden></div>
     <div class="card" id="wrep"></div>
@@ -113,6 +114,7 @@ async function viewClients(el){
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
   $("#tplList").querySelectorAll("[data-tdel]").forEach(b=>b.onclick=async()=>{ if(!confirm("حذف البرنامج المحفوظ؟ (برامج العملاء الحالية مش هتتأثر)")) return; await sb.from("program_templates").delete().eq("id",b.dataset.tdel); await loadCoachTemplates(); viewClients(el); });
   $("#addBtn").onclick=()=>addClientSheet(el);
+  coachPhotoCard($("#cpCard"));
   const age=backupAge();
   $("#bk").innerHTML=`<div class="card-h"><div class="ic ${age===null||age>14?"acc":""}">📦</div><h2>النسخة الاحتياطية<small>${age===null?"⚠ عمرك ما نزّلت نسخة – اعمل واحدة دلوقتي":age>14?"⚠ آخر نسخة من "+age+" يوم":"✅ آخر نسخة من "+age+" يوم"}</small></h2></div>
     <p class="hint">ملف واحد فيه كل العملاء والبرامج والتسجيلات والأطعمة. احفظه على Google Drive كل أسبوعين.</p><button class="btn navy block" id="bkBtn">📦 نزّل نسخة احتياطية كاملة</button>`;
@@ -339,6 +341,45 @@ function setupAccount(el){
   $("#sp").onclick=async()=>{ const pw=$("#newPass").value; if(await call({action:"set_password",user_id:p.id,password:pw})){ navigator.clipboard?.writeText(pw); toast("✓ اتغيّرت واتنسخت: "+pw); } };
   $("#act").onclick=async()=>{ const { error } = await sb.from("profiles").update({active:!p.active}).eq("id",p.id); if(error) return toast(error.message); await refreshClient(); setupAccount(el); };
   $("#del").onclick=()=>deleteClientFlow(p,async()=>{ S.client=null; S.tab="clients"; await loadClients(); render(); });
+}
+
+/* Coach landing photo: the photo shown in the "مين الكوتش؟" card on the login landing.
+   Shrunk on device like progress photos, stored at a fixed path in the public "assets"
+   bucket so logged-out visitors can load it. Until one is uploaded, the landing keeps
+   the designed avatar. Needs assets.sql run once in Supabase. */
+const COACH_PHOTO_PATH="coach/photo.jpg";
+function coachPhotoUrl(){ const { data }=sb.storage.from("assets").getPublicUrl(COACH_PHOTO_PATH); return data?.publicUrl||""; }
+async function coachPhotoCard(host){
+  if(!host) return;
+  host.innerHTML=`<div class="card-h"><div class="ic">🖼️</div><h2>صورتك على صفحة الدخول<small>بتظهر في قسم "مين الكوتش؟" لكل الزوار، وتقدر تغيّرها في أي وقت</small></h2></div>
+    <div class="row" style="align-items:center">
+      <div id="cpPrev" style="flex:0 0 auto;width:72px;height:72px;border-radius:22px;overflow:hidden;background:linear-gradient(165deg,#3A2012,#0B1220);display:grid;place-items:center;font-size:28px">👤</div>
+      <div class="grow" style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm navy" id="cpPick">📷 رفع / تغيير الصورة</button>
+        <button class="btn sm danger" id="cpDel" style="display:none">إزالة الصورة</button>
+      </div>
+    </div>
+    <p class="hint">الصورة بتتصغّر على جهازك قبل الرفع زي صور المتابعة، فمش بتاخد مساحة ولا باقة. ولحد ما ترفع صورة، بيظهر الشكل المعمول بدالها.</p>
+    <input type="file" id="cpFile" accept="image/*" style="display:none">`;
+  const prev=host.querySelector("#cpPrev"), del=host.querySelector("#cpDel"), file=host.querySelector("#cpFile");
+  const showCur=()=>new Promise(res=>{ const base=coachPhotoUrl(); if(!base) return res();
+    const img=new Image(); const u=base+"?v="+Math.floor(Date.now()/6e4);
+    img.onload=()=>{ prev.innerHTML=`<img src="${u}" alt="" style="width:100%;height:100%;object-fit:cover;display:block">`; del.style.display=""; res(); };
+    img.onerror=()=>res(); img.src=u; });
+  host.querySelector("#cpPick").onclick=()=>file.click();
+  file.onchange=async()=>{ const f=file.files&&file.files[0]; file.value=""; if(!f) return;
+    const btn=host.querySelector("#cpPick"); btn.disabled=true; btn.textContent="⏳ بيترفع…";
+    try{ const blob=await resizeBlob(f,512);
+      const { error }=await sb.storage.from("assets").upload(COACH_PHOTO_PATH,blob,{contentType:"image/jpeg",cacheControl:"300",upsert:true});
+      if(error) throw error;
+      toast("✓ اترفعت – هتظهر على صفحة الدخول خلال دقائق"); await showCur();
+    }catch(e){ toast("تعذر رفع الصورة"); }
+    btn.disabled=false; btn.textContent="📷 رفع / تغيير الصورة"; };
+  del.onclick=async()=>{ if(!confirm("إزالة صورتك من صفحة الدخول؟ (هيرجع الشكل المعمول)")) return;
+    const { error }=await sb.storage.from("assets").remove([COACH_PHOTO_PATH]);
+    if(error) return toast("تعذر الإزالة");
+    prev.innerHTML="👤"; del.style.display="none"; toast("✓ اتشالت"); };
+  await showCur();
 }
 
 /* ======================================================================
