@@ -376,11 +376,24 @@ async function viewFood(el){ if(S.dietPending){ el.innerHTML=planningCard("food"
 async function renderMeals(el,{mode}){
   const p=S.client, t=targets(p), meals=Math.max(1,Math.min(+p.meals_per_day||3,8)), planMode=mode==="plan";
   el.innerHTML=(planMode?"":`<div class="card"><div class="between"><button class="btn sm" id="dPrev">→</button><div style="text-align:center"><b>${niceDate(S.date)}</b><div class="muted num">${S.date}</div></div><button class="btn sm" id="dNext">←</button></div>
-      <label class="datejump"><input type="date" id="fDate" value="${S.date}" aria-label="اختار اليوم"><span class="datejump-txt">📅 ${new Date(S.date+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</span></label></div>`)+`<div class="card dark" id="fTot"></div><div id="meals"></div>`;
+      <label class="datejump"><input type="date" id="fDate" value="${S.date}" aria-label="اختار اليوم"><span class="datejump-txt">📅 ${new Date(S.date+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long",year:"numeric"})}</span></label><button class="btn sm navy block" id="cpY" style="margin-top:8px">📋 نسخ أكل إمبارح</button></div>`)+`<div class="card dark" id="fTot"></div><div id="meals"></div>`;
   if(!planMode){
     $("#fDate").onchange=e=>{S.date=e.target.value; renderMeals(el,{mode});};
     $("#dPrev").onclick=()=>{S.date=addDays(S.date,-1); renderMeals(el,{mode});};
     $("#dNext").onclick=()=>{S.date=addDays(S.date,1); renderMeals(el,{mode});};
+    $("#cpY").onclick=async()=>{ const b=$("#cpY"); b.disabled=true; b.textContent="⏳ بنسخ…";
+      const yd=addDays(S.date,-1);
+      const { data:ydItems, error:yErr }=await sb.from("meal_items").select("*").eq("client_id",p.id).eq("log_date",yd).order("created_at");
+      if(yErr){ toast(yErr.message); b.disabled=false; b.textContent="📋 نسخ أكل إمبارح"; return; }
+      if(!ydItems||!ydItems.length){ toast("مفيش أكل متسجل إمبارح"); b.disabled=false; b.textContent="📋 نسخ أكل إمبارح"; return; }
+      const have=new Set(items.map(i=>i.meal_no+"|"+i.food_id+"|"+(+i.qty)));
+      const todo=ydItems.filter(i=>!have.has(i.meal_no+"|"+i.food_id+"|"+(+i.qty)));
+      if(!todo.length){ toast("أكل إمبارح متسجل هنا بالفعل ✓"); b.disabled=false; b.textContent="📋 نسخ أكل إمبارح"; return; }
+      let done=0;
+      for(const i of todo){ const rec={id:crypto.randomUUID(),client_id:p.id,log_date:S.date,meal_no:i.meal_no,food_id:i.food_id,food_name:i.food_name,unit:i.unit,qty:i.qty,kcal:i.kcal,protein:i.protein,carbs:i.carbs,fat:i.fat}; MIN_KEYS.forEach(([k])=>{ if(i[k]!==undefined) rec[k]=i[k]; });
+        const { error:cErr }=await dbWrite({op:"insert",table:"meal_items",row:rec}); if(cErr){ toast(cErr.message); break; } done++; }
+      if(done) toast(`✓ اتنسخ ${done} صنف من إمبارح`);
+      renderMeals(el,{mode}); };
   }
   const [pl,lg]=await Promise.all([
     sb.from("diet_plan_items").select("*").eq("client_id",p.id).order("meal_no").order("position"),
