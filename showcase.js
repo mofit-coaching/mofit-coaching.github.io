@@ -100,6 +100,17 @@ const css=`
 .sc-faq summary:focus-visible,.sc-btn:focus-visible{outline:3px solid #FFB070;outline-offset:3px;border-radius:12px}
 .sc-faq p{margin:0 0 14px;color:#B6C0D2;font-size:13.5px;line-height:1.8;text-wrap:pretty}
 .sc-btn:active{transform:scale(.98)}
+/* round7 skill 5: premium polish inside the existing order. Nothing moves, no new sections, no numbers. */
+.sc-tg{position:relative;isolation:isolate}
+.sc-tg:before{content:"";position:absolute;inset:-30px -10% -20px;z-index:-1;pointer-events:none;background:radial-gradient(60% 55% at 50% 45%,rgba(255,107,26,.2),transparent 70%);animation:scbreath 7s ease-in-out infinite}
+@keyframes scbreath{0%,100%{opacity:.65;transform:scale(1)}50%{opacity:1;transform:scale(1.06)}}
+.sc-step,.sc-stat,.sc-qc,.sc-faq details{box-shadow:inset 0 1px 0 rgba(255,255,255,.07)}
+.sc-faq details[open]{border-color:rgba(255,146,72,.35)}
+.sc-faq summary{min-height:48px}
+.sc-faq summary:active{opacity:.8}
+.sc-btn{box-shadow:0 14px 30px -14px rgba(255,107,26,.65)}
+@media (hover:hover){.sc-faq details:hover{background:rgba(255,255,255,.075)}.sc-step{transition:transform .3s cubic-bezier(.22,1,.36,1)}.sc-step:hover{transform:translateY(-2px)}}
+@media(prefers-reduced-motion:reduce){.sc-tg:before{animation:none}.sc-step{transition:none}}
 .sc-ccard{position:relative;border-radius:24px;padding:22px 18px 18px;background:linear-gradient(165deg,rgba(255,255,255,.1),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.12);overflow:hidden}
 .sc-ccard:before{content:"";position:absolute;inset:0 0 auto 0;height:2px;background:linear-gradient(90deg,transparent,#FF6B1A,transparent)}
 .sc-chead{display:flex;gap:16px;align-items:center}
