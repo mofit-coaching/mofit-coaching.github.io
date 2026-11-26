@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>TEST — Swiper carousels</title>
+<link rel="stylesheet" href="styles.css?v=c84d2e1f">
+<style>
+  body{padding:14px;max-width:430px;margin:0 auto;background:#0B1220;color:#fff}
+  .testbanner{position:sticky;top:0;z-index:50;background:#DC2626;color:#fff;font-weight:800;text-align:center;padding:10px;border-radius:12px;margin-bottom:12px;font-size:.9rem}
+  .sec{margin:22px 0}
+  .sec h4{margin:0 4px 10px;color:#FFA24D}
+  /* copies of the real components' styles (from showcase.js / styles.css / photos.js) */
+  .sc-q{display:flex;gap:10px;overflow-x:auto;scroll-snap-type:x mandatory;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:4px 16px 10px;scrollbar-width:none}
+  .sc-q::-webkit-scrollbar{display:none}
+  .sc-qc{flex:0 0 82%;scroll-snap-align:center;position:relative;padding:20px 18px 16px;border-radius:22px;background:linear-gradient(160deg,rgba(255,255,255,.1),rgba(255,255,255,.03));border:1px solid rgba(255,255,255,.12)}
+  .sc-st{color:#FFC46B;letter-spacing:3px;font-size:13px}
+  .sc-qc p{margin:8px 0 14px;font-size:14.5px;line-height:1.75;color:#E6EBF5}
+  .sc-who{display:flex;align-items:center;gap:10px}
+  .sc-av{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;font-weight:800;color:#fff;background:linear-gradient(135deg,#FF6B1A,#FFA24D)}
+  .sc-who b{font-size:13px;display:block}.sc-who small{color:#9AA6BA;font-size:11px}
+  .sc-dots{display:flex;justify-content:center;gap:6px;margin-top:2px}
+  .sc-dots i{width:6px;height:6px;border-radius:9px;background:rgba(255,255,255,.22);transition:.3s}
+  .sc-dots i.on{width:20px;background:#FF6B1A}
+  .daycard{flex:none;width:118px;border-radius:16px;padding:10px 12px;background:#fff;border:1.5px solid var(--soft,#E2E8F0);cursor:pointer;text-align:start;color:#0F172A}
+  .daycard.on{border-color:#F97316;box-shadow:0 6px 16px -6px rgba(249,115,22,.6)}
+  .daycard b{display:block;font-size:.9rem}.daycard small{color:#64748B;font-size:.7rem}
+  .pp-rail{display:flex;gap:6px;overflow-x:auto;padding:2px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .pp-rail::-webkit-scrollbar{display:none}
+  .pp-chip{flex:0 0 auto;padding:7px 11px;border-radius:99px;border:1.5px solid #E4E9F1;background:#fff;font-size:11.5px;font-weight:800;color:#64748B;cursor:pointer}
+  .pp-chip.on{border-color:#F97316;background:linear-gradient(135deg,#FFF3E8,#FFE4C7);color:#C2410C}
+  .scroller{display:flex;gap:8px;overflow-x:auto;padding:2px 2px 6px;scrollbar-width:none}
+</style>
+</head>
+<body>
+<div class="testbanner">⚠️ صفحة اختبار TEST — مش جزء من التطبيق ولا فيها بيانات عملاء</div>
+
+<div class="sec">
+  <h4>١) كروت آراء العملاء (صفحة الهبوط) — autoplay + dots</h4>
+  <div class="sc-q" id="scq">
+    <div class="sc-qc"><div class="sc-st">★★★★★</div><p>أحسن حاجة إن الكوتش بيتابع كل أسبوع، مش برنامج وخلاص.</p><div class="sc-who"><div class="sc-av">م</div><div><b>محمد ع.</b><small>١٢ أسبوع</small></div></div></div>
+    <div class="sc-qc"><div class="sc-st">★★★★★</div><p>نزلت ٨ كيلو من غير حرمان، الأكل بالجرامات سهّل عليا كل حاجة.</p><div class="sc-who"><div class="sc-av">س</div><div><b>سارة م.</b><small>٨ أسابيع</small></div></div></div>
+    <div class="sc-qc"><div class="sc-st">★★★★★</div><p>التسجيل بضغطة والكوتش بيعدّل على طول. تجربة مختلفة عن أي حاجة.</p><div class="sc-who"><div class="sc-av">أ</div><div><b>أحمد ر.</b><small>٦ أسابيع</small></div></div></div>
+  </div>
+  <div class="sc-dots" id="scd"><i class="on"></i><i></i><i></i></div>
+</div>
+
+<div class="sec">
+  <h4>٢) كروت أيام الأسبوع (شاشة التمرين) — free mode</h4>
+  <div class="scroller" id="dayCards">
+    <button class="daycard"><b>يوم 1</b><small>6 تمارين</small></button>
+    <button class="daycard on"><b>يوم 2</b><small>ظهر + باي</small></button>
+    <button class="daycard"><b>يوم 3</b><small>5 تمارين</small></button>
+    <button class="daycard rest"><b>راحة</b><small>😴 استشفاء</small></button>
+    <button class="daycard"><b>يوم 5</b><small>8 تمارين</small></button>
+    <button class="daycard rest"><b>راحة</b><small>😴 استشفاء</small></button>
+    <button class="daycard rest"><b>راحة</b><small>😴 استشفاء</small></button>
+  </div>
+</div>
+
+<div class="sec">
+  <h4>٣) اختيار صور المقارنة (قبل / بعد) — free mode</h4>
+  <div class="pp-rail" data-rail="a">
+    <button class="pp-chip on">أمامي ١ نوفمبر</button><button class="pp-chip">جانبي ١ نوفمبر</button><button class="pp-chip">خلفي ١ نوفمبر</button>
+    <button class="pp-chip">أمامي ١٥ نوفمبر</button><button class="pp-chip">جانبي ١٥ نوفمبر</button><button class="pp-chip">خلفي ١٥ نوفمبر</button>
+    <button class="pp-chip">أمامي ٢٥ نوفمبر</button><button class="pp-chip">جانبي ٢٥ نوفمبر</button><button class="pp-chip">خلفي ٢٥ نوفمبر</button>
+  </div>
+</div>
+
+<p class="muted" style="color:#8591A8;font-size:.78rem">جرّب السحب بالصباع/الماوس في كل قسم. كل البيانات دي تجريبية للعرض بس.</p>
+<script src="swiper.js"></script>
+</body>
+</html>
