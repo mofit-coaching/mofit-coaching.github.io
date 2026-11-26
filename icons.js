@@ -97,10 +97,30 @@ const ICO={
   dotY:`<circle cx="12" cy="12" r="6" style="fill:#EAB308;stroke:none"/>`,
   dotR:`<circle cx="12" cy="12" r="6" style="fill:#DC2626;stroke:none"/>`,
   dotW:`<circle cx="12" cy="12" r="5.5" style="stroke:#94A3B8"/>`,
+  x:`<path d="M6.5 6.5l11 11M17.5 6.5l-11 11"/>`,
+  arrL:`<path d="M20 12H4.5"/><path d="M10.5 5.5L4 12l6.5 6.5"/><circle ${_A} cx="16.8" cy="12" r="1.6"/>`,
+  arrR:`<path d="M4 12h15.5"/><path d="M13.5 5.5L20 12l-6.5 6.5"/><circle ${_A} cx="7.2" cy="12" r="1.6"/>`,
+  bot:`<circle cx="10.5" cy="13.5" r="7"/><circle ${_A} cx="10.5" cy="13.5" r="2.8"/><path d="M18 2.8l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9z"/>`,
+  mic:`<rect x="9" y="2.5" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0013 0M12 17.5V21M9 21h6"/><rect ${_A} x="10.2" y="5" width="3.6" height="4.5" rx="1.8"/>`,
+  play:`<circle cx="12" cy="12" r="8.5"/><path ${_A} d="M10.2 8.3l6.3 3.7-6.3 3.7z"/>`,
+  share:`<path d="M12 14.5V3.5M7.8 7.7L12 3.5l4.2 4.2"/><path d="M5 12.5v5A2.5 2.5 0 007.5 20h9a2.5 2.5 0 002.5-2.5v-5"/><circle ${_A} cx="12" cy="17" r="1.5"/>`,
+  image:`<rect x="3" y="5" width="18" height="14" rx="2.5"/><circle ${_A} cx="9" cy="10" r="1.7"/><path d="M3.5 16.5l4.8-4.2 3.7 3.2 3.5-3 5 4.3"/>`,
+  inbox:`<path d="M3.5 13.5l1.9-6.8A2 2 0 017.3 5h9.4a2 2 0 011.9 1.4l1.9 7.1v4A2.5 2.5 0 0118 20H6a2.5 2.5 0 01-2.5-2.5z"/><path d="M3.5 13.5H9a3 3 0 006 0h5.5"/><rect ${_A} x="10" y="15.8" width="4" height="1.7" rx=".8"/>`,
+  megaphone:`<path d="M4 10.8v2.4A1.7 1.7 0 005.7 15H8l8.5 4.5v-15L8 9H5.7A1.7 1.7 0 004 10.8z"/><path d="M19.5 9.8a3.6 3.6 0 010 4.4"/><path ${_A} d="M8 9l8.5-4.5v2.2L8 11.2z"/>`,
+  badgeNew:`<path d="M12 2.6l2.1 2.5 3.2-.5 1.1 3.1 2.9 1.5-1.1 3.1 1.1 3.1-2.9 1.5-1.1 3.1-3.2-.5-2.1 2.5-2.1-2.5-3.2.5-1.1-3.1-2.9-1.5 1.1-3.1-1.1-3.1 2.9-1.5 1.1-3.1 3.2.5z"/><path ${_A} d="M12 8l1.1 2.3 2.5.4-1.8 1.8.4 2.5-2.2-1.2-2.2 1.2.4-2.5-1.8-1.8 2.5-.4z"/>`,
+  diamond:`<path d="M7.5 4h9L20.5 8.5 12 20.5 3.5 8.5z"/><path d="M3.5 8.5h17M9.8 8.5L12 20.5l2.2-12M7.5 4l2.3 4.5L12 4l2.2 4.5L16.5 4"/><path ${_A} d="M9.8 8.5L12 20.5l2.2-12z" opacity=".3"/>`,
+  salt:`<path d="M8.6 8.5h6.8l1.1 10.4a2 2 0 01-2 2.1h-5a2 2 0 01-2-2.1z"/><path d="M8.6 8.5c0-2.8 1.5-5 3.4-5s3.4 2.2 3.4 5"/><circle ${_A} cx="12" cy="13.8" r="1.4"/>`,
+  wheat:`<path d="M12 21V8.5"/><path d="M12 8.5C9.5 8.5 8 6.8 8 4.3c2.5 0 4 1.7 4 4.2z"/><path ${_A} d="M12 8.5c2.5 0 4-1.7 4-4.2-2.5 0-4 1.7-4 4.2z"/><path d="M12 13.5c-2.5 0-4-1.7-4-4.2 2.5 0 4 1.7 4 4.2zM12 13.5c2.5 0 4-1.7 4-4.2-2.5 0-4 1.7-4 4.2z"/><path d="M12 18.5c-2.5 0-4-1.7-4-4.2 2.5 0 4 1.7 4 4.2zM12 18.5c2.5 0 4-1.7 4-4.2-2.5 0-4 1.7-4 4.2z"/>`,
+  banana:`<path d="M4.5 7.5C5 13 9.5 18 16.5 19.5c2 .4 3.8-.2 4.7-1.6-1 .3-2.3.3-3.6 0C12 16.6 8.5 12.5 7.8 6.3c-1.3-.2-2.9.1-3.3 1.2z"/><path ${_A} d="M7.8 6.3c.7 6.2 4.2 10.3 9.8 11.6-4.9-.3-9-5-9.8-11.6z" opacity=".35"/>`,
+  minus:`<circle cx="12" cy="12" r="8.5"/><rect ${_A} x="7.5" y="10.9" width="9" height="2.2" rx="1.1"/>`,
+  thumbsUp:`<path d="M7.5 11v9H5.2A1.7 1.7 0 013.5 18.3v-5.6A1.7 1.7 0 015.2 11z"/><path d="M7.5 11.5l3.8-7.4c1.9-.3 3.3 1 3.1 2.9l-.5 3.5h4.6a2.1 2.1 0 012 2.7l-1.3 4.6a2.6 2.6 0 01-2.5 2.2H7.5"/><path ${_A} d="M13.9 10.5h4.6a2.1 2.1 0 012 2.7l-.3 1.1-4.8-1.2z" opacity=".5"/>`,
+  crown:`<path d="M4 8.5l3.8 3L12 5.5l4.2 6 3.8-3-1.7 10.5H5.7z"/><circle ${_A} cx="12" cy="13.5" r="1.5"/>`,
+  medal:`<path d="M7.5 2.5L10.8 9M16.5 2.5L13.2 9M7.5 2.5h9"/><circle cx="12" cy="14.8" r="6.2"/><path ${_A} d="M12 11.6l.95 1.9 2.1.3-1.5 1.5.35 2.1-1.9-1-1.9 1 .35-2.1-1.5-1.5 2.1-.3z"/>`,
+  vertSwap:`<path d="M8.5 3.5v17M8.5 3.5L5.5 6.5M8.5 3.5l3 3M15.5 20.5v-17M15.5 20.5l3-3M15.5 20.5l-3-3"/><circle ${_A} cx="12" cy="12" r="1.4"/>`,
   ext:`<path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 01-1 1H5a1 1 0 01-1-1V7a1 1 0 011-1h5"/><circle ${_A} cx="20" cy="4" r="1.5"/>`,
 };
 const EMOJI_ICO={
-  "💊":"pill","📱":"phone","🏁":"flag","🎁":"gift","🏠":"home","👁":"eye","🌙":"moon","🔒":"lock","✨":"sparkle","🌿":"sprout","🍑":"apple","🍊":"apple","🪨":"layers","🤸":"person","🙏":"heart","👇":"down","🥇":"star","🏅":"star",
+  "💊":"pill","📱":"phone","🏁":"flag","🎁":"gift","🏠":"home","👁":"eye","🌙":"moon","🔒":"lock","✨":"sparkle","🌿":"sprout","🍑":"apple","🍊":"apple","🪨":"layers","🤸":"person","🙏":"heart","👇":"down",
   "🔥":"flame","⚖":"scale","🍽":"plate","⏱":"watch","⏰":"watch","⏳":"hourglass","😴":"moon","💤":"moon","⚠":"warn","💪":"dumbbell","⇄":"swap",
   "🎯":"target","📸":"camera","📷":"camera","🩺":"medical","⚕":"medical","🤕":"bandage","📋":"clipboard","🥗":"bowl","🍎":"apple","🍌":"apple",
   "🍳":"pan","🍗":"drumstick","🥤":"cup","🥛":"cup","🍞":"bread","📝":"pencil","✍":"pencil","✏":"pencil","✎":"pencil","📴":"offline","💬":"chat",
@@ -109,15 +129,40 @@ const EMOJI_ICO={
   "➕":"plus","💳":"card","🤯":"brain","🧠":"brain","📄":"doc","🧩":"puzzle","💡":"bulb","🐢":"slow","📚":"book","⭐":"star","📏":"ruler","📐":"ruler",
   "🔔":"bell","📧":"mail","🔑":"key","🔐":"lock","👤":"user","🙋":"user","👥":"users","🧭":"compass","💰":"coins","🤷":"question","🧱":"layers",
   "🖨":"printer","🦵":"leg","🧍":"person","🧬":"dna","🎉":"sparkle","❤":"heart","📲":"install","🗺":"map","🕒":"clock","💧":"drop","👣":"steps",
-  "📊":"bars","✅":"check","👌":"check","🔗":"link","🗑":"trash","🌱":"sprout","🎚":"sliders","👋":"_none","😍":"face5","🙂":"face4","😐":"face3",
+  "📊":"bars","✅":"check","✓":"check","✔":"check","☑":"check","👌":"check","🔗":"link","🗑":"trash","🌱":"sprout","🎚":"sliders","👋":"hand","😍":"face5","🙂":"face4","😉":"face4","😐":"face3",
   "😕":"face2","😞":"face1","🟢":"dotG","🟡":"dotY","🔴":"dotR","⚪":"dotW","↗":"ext","🧮":"bars","🌸":"drop","🩸":"drop","🗒":"doc",
+  "✕":"x","✖":"x","←":"arrL","→":"arrR","🤖":"bot","★":"star","🌟":"star","❚❚":"pause","▶":"play","🎤":"mic","✉":"mail",
+  "🆕":"badgeNew","📥":"inbox","📢":"megaphone","🔶":"diamond","🧂":"salt","🥬":"sprout","🌾":"wheat","🍚":"bowl","🍌":"banana",
+  "👟":"run","🔩":"bolt","📖":"book","📤":"share","🖼":"image","⬆":"share","↕":"vertSwap","➖":"minus","👍":"thumbsUp","🎖":"medal","🏅":"medal","👑":"crown","🥇":"medal","🥈":"medal","🥉":"medal",
 };
 const ICO_GRP={dumbbell:"train",bolt:"train",leg:"train",arm:"train",run:"train",steps:"train",hourglass:"train",slow:"train",
   apple:"food",bowl:"food",plate:"food",pan:"food",cup:"food",drumstick:"food",bread:"food",drop:"food",pill:"food",
   check:"habit",heart:"habit",battery:"habit",batteryLow:"habit",moon:"habit",sprout:"habit",watch:"habit",clock:"habit",target:"habit",
   bars:"prog",up:"prog",down:"prog",scale:"prog",camera:"prog",ruler:"prog",calendar:"prog",doc:"prog",clipboard:"prog",book:"prog",video:"prog",
   flame:"fire",bell:"fire",warn:"fire",trophy:"fire",star:"fire",sparkle:"fire",gift:"fire",
-  chat:"chat",mail:"chat",phone:"chat",users:"chat",user:"chat",person:"chat",link:"chat"};
+  chat:"chat",mail:"chat",phone:"chat",users:"chat",user:"chat",person:"chat",link:"chat",bot:"chat",mic:"chat",inbox:"chat",megaphone:"chat",thumbsUp:"chat",hand:"chat",
+  share:"prog",image:"prog",vertSwap:"prog",
+  badgeNew:"fire",diamond:"fire",medal:"fire",crown:"fire",
+  salt:"food",wheat:"food",banana:"food"};
+/* Canvas glyphs: same geometry as the icon set, for canvas-drawn cards where
+   the DOM swapper cannot reach (share card, transformation card). */
+const CANVAS_GLYPH={
+  flame:["M12 21c-3.9 0-6.5-2.6-6.5-6.2 0-3.3 2.3-5 3.4-7.8.4 1.9 1.4 3 2.6 3.6C11.3 7.4 12.6 4.6 15.2 3c-.4 2.6.6 4.4 1.9 6.2 1 1.4 1.4 2.8 1.4 4.6C18.5 18.4 15.9 21 12 21z",
+         "M12 21c-1.8 0-3-1.2-3-2.9 0-1.7 1.3-2.5 2-4 .9 1.3 2.9 2.1 3.6 3.6.6 1.6-.6 3.3-2.6 3.3z"],
+  bolt:["M13 2.5L4.5 13.5H11L10 21.5l8.5-11H12z","M13 2.5l-3 7H12z"],
+  trophy:["M7 4h10v5a5 5 0 01-10 0V4zM7 6H4a3 3 0 003 4M17 6h3a3 3 0 01-3 4M12 14v3.5M8 21h8M9 21c0-2 1.3-3.5 3-3.5s3 1.5 3 3.5",
+          "M12 6l.9 1.8 2 .3-1.4 1.4.3 2-1.8-.9-1.8.9.3-2-1.4-1.4 2-.3z"],
+  star:["M12 3l2.7 5.6 6.1.8-4.5 4.2 1.1 6-5.4-3-5.4 3 1.1-6L3.2 9.4l6.1-.8z",null]
+};
+const CANVAS_BADGE={"🔥":"flame","⚡":"bolt","🏆":"trophy","🌟":"star"};
+function mofitCanvasGlyph(x,name,cx,cy,size,stroke,accFill){
+  const gd=CANVAS_GLYPH[name]; if(!gd) return false;
+  const s=size/24; x.save(); x.translate(cx-12*s,cy-12*s); x.scale(s,s);
+  x.lineJoin="round"; x.lineCap="round"; x.lineWidth=1.8; x.strokeStyle=stroke||"#fff";
+  x.stroke(new Path2D(gd[0]));
+  if(accFill&&gd[1]){ x.fillStyle=accFill; x.fill(new Path2D(gd[1])); }
+  x.restore(); return true;
+}
 const ico=(n,cls="")=>n==="_none"?"":`<i class="ico ${cls}" data-n="${n}" data-g="${ICO_GRP[n]||""}" aria-hidden="true"><svg viewBox="0 0 24 24">${ICO[n]||""}</svg></i>`;
 const _EMO_RE=new RegExp("("+Object.keys(EMOJI_ICO).sort((a,b)=>b.length-a.length).map(k=>k.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")).join("|")+")\\uFE0F?","gu");
 const _SKIP={INPUT:1,TEXTAREA:1,SELECT:1,OPTION:1,SCRIPT:1,STYLE:1,svg:1,SVG:1};
@@ -135,4 +180,3 @@ function iconize(root){
   if(document.body){ obs.observe(document.body,{childList:true,subtree:true,characterData:true}); requestAnimationFrame(run); }
   else document.addEventListener("DOMContentLoaded",()=>{ obs.observe(document.body,{childList:true,subtree:true,characterData:true}); run(); });
 })();
-
