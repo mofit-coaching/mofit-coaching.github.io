@@ -210,3 +210,78 @@ async function nudgeClient(c,a,btn){
 
 
 
+
+/* ===== MOFIT pulse stage (login / prices / sign-up): live ECG that reacts to touch, kinetic title, spark burst ===== */
+(function(){
+  const lv=document.getElementById("loginView"); if(!lv||lv.dataset.stageA) return; lv.dataset.stageA=1;
+  const still=matchMedia("(prefers-reduced-motion:reduce)").matches;
+  const art=lv.querySelector(".login-art"); if(!art) return;
+  lv.classList.add("stageA");
+  /* giant outlined title, one span per letter */
+  const word=document.createElement("div"); word.className="st-word"; word.setAttribute("aria-hidden","true");
+  "MOFIT".split("").forEach((ch,i)=>{ const s=document.createElement("span"); s.textContent=ch; s.style.setProperty("--i",i); if(i>1) s.className="f"; word.appendChild(s); });
+  art.insertBefore(word,art.firstChild);
+  const bpm=document.createElement("div"); bpm.className="st-bpm"; bpm.setAttribute("aria-hidden","true"); bpm.innerHTML='<i></i><b>72</b><span>BPM</span>';
+  const bpmN={}; /* BPM readout removed */
+  const cv=document.createElement("canvas"); cv.className="st-fx"; cv.setAttribute("aria-hidden","true"); lv.insertBefore(cv,lv.firstChild);
+  const cv2=document.createElement("canvas"); cv2.className="st-fx st-top"; cv2.setAttribute("aria-hidden","true"); document.body.appendChild(cv2); const cx2=cv2.getContext("2d");
+  const cx=cv.getContext("2d"); let W=0,H=0,dpr=1,N=0,buf=null,head=0;
+  const STEP=3;
+  function size(){ dpr=Math.min(2,devicePixelRatio||1); W=innerWidth; H=innerHeight; cv.width=W*dpr; cv.height=H*dpr; cx.setTransform(dpr,0,0,dpr,0,0); cv2.width=W*dpr; cv2.height=H*dpr; cx2.setTransform(dpr,0,0,dpr,0,0);
+    const n=Math.ceil(W/STEP)+2; if(n!==N){ const old=buf; buf=new Float32Array(n); if(old) buf.set(old.subarray(0,Math.min(n,old.length))); N=n; head=Math.min(head,N-1); } }
+  size(); addEventListener("resize",size);
+  /* pointer state */
+  let px=-1,py=-1,pv=0,lx=-1,ly=-1,rate=72,scrollY0=0;
+  function move(e){ const t=e.touches?e.touches[0]:e; px=t.clientX; py=t.clientY;
+    if(lx>=0){ const d=Math.hypot(px-lx,py-ly); pv=Math.min(1,pv+d/160);
+      const col=Math.round(px/STEP); const amp=Math.min(.8,d/110)*(py<H*.5?1:-1)*(.5+.5*Math.abs(py/H-.5)*2);
+      for(let k=-6;k<=6;k++){ const j=col+k; if(j>=0&&j<N&&Math.abs(j-head)>26) buf[j]+=amp*Math.cos(k/6*Math.PI/2)*(k%2?-.6:1); } }
+    lx=px; ly=py; }
+  addEventListener("pointermove",move,{passive:true}); addEventListener("touchmove",move,{passive:true});
+  addEventListener("pointerleave",()=>{lx=-1;});
+  /* heartbeat waveform, phase 0..1 */
+  function beat(p){ if(p<.1) return Math.sin(p/.1*Math.PI)*.12; if(p<.16) return 0; if(p<.2) return -(p-.16)/.04*.18; if(p<.26) return -.18+(p-.2)/.06*1.28; if(p<.32) return 1.1-(p-.26)/.06*1.45; if(p<.36) return -.35+(p-.32)/.04*.35; if(p<.5) return 0; if(p<.66) return Math.sin((p-.5)/.16*Math.PI)*.2; return 0; }
+  let phase=0,last=performance.now();
+  /* sparks */
+  const sp=[];
+  function burst(x,y){ if(still) return; for(let i=0;i<46;i++){ const a=Math.random()*Math.PI*2,s=1.5+Math.random()*7; sp.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-1.5,l:1,d:.014+Math.random()*.02,r:1+Math.random()*2.4,h:18+Math.random()*30}); }
+    for(let k=0;k<2;k++) sp.push({x,y,ring:1,rr:10,l:1,d:.035}); }
+  document.addEventListener("pointerdown",e=>{ const b=e.target.closest&&e.target.closest("#loginView .btn.primary,#loginView .ltab,#loginView .pq-cta,#loginView .plan-cta,#loginView .pq-card a,#loginView .pq-card button"); if(!b) return; const r=b.getBoundingClientRect(); burst(e.clientX||r.left+r.width/2,e.clientY||r.top+r.height/2); rate=Math.min(150,rate+30); },true);
+  window.__stageBurst=burst;
+  function frame(now){
+    requestAnimationFrame(frame);
+    if(lv.classList.contains("hidden")) return;
+    const dt=Math.min(50,now-last); last=now;
+    pv*=.94; rate+=((72+pv*60)-rate)*.02; if(rate>72+pv*60) rate-=.4;
+    bpmN.textContent=Math.round(rate);
+    const per=60/rate*1000; phase=(phase+dt/per)%1;
+    const adv=still?0:Math.max(1,Math.round(dt/16*2.4));
+    for(let k=0;k<adv;k++){ head=(head+1)%N; buf[head]=beat(phase)+(Math.random()-.5)*.012; }
+    for(let i=0;i<N;i++) if(i!==head&&Math.abs(buf[i])>1.5) buf[i]*=.97;
+    const sy=Math.min(1,(scrollY||0)/500), base=H*.19-sy*60, A=Math.min(120,H*.11)*(1+sy*.2);
+    cx.clearRect(0,0,W,H);
+    cx.lineJoin="round"; cx.lineCap="round";
+    for(let pass=0;pass<2;pass++){
+      cx.beginPath(); let started=false;
+      for(let i=0;i<N;i++){ const d=(head-i+N)%N; if(d<20&&d>=0&&i!==head&&d<16) { started=false; continue; }
+        const x=i*STEP, y=base-buf[i]*A; if(!started){cx.moveTo(x,y);started=true;} else cx.lineTo(x,y); }
+      if(pass===0){ cx.strokeStyle="rgba(255,107,26,.35)"; cx.lineWidth=9; cx.shadowColor="#FF6B1A"; cx.shadowBlur=26; }
+      else { const g=cx.createLinearGradient(0,0,W,0); g.addColorStop(0,"rgba(255,107,26,.15)"); g.addColorStop(.5,"#FFD08A"); g.addColorStop(1,"rgba(255,107,26,.15)"); cx.strokeStyle=g; cx.lineWidth=2.6; cx.shadowBlur=8; }
+      cx.stroke(); }
+    cx.shadowBlur=0;
+    const hx=head*STEP, hy=base-buf[head]*A; const gr=cx.createRadialGradient(hx,hy,0,hx,hy,26); gr.addColorStop(0,"rgba(255,240,210,.95)"); gr.addColorStop(1,"rgba(255,107,26,0)"); cx.fillStyle=gr; cx.fillRect(hx-26,hy-26,52,52);
+    if(px>=0&&!still&&pv>.02){ const g2=cx.createRadialGradient(px,py,0,px,py,90); g2.addColorStop(0,"rgba(255,140,60,"+(.16*Math.min(1,pv*2))+")"); g2.addColorStop(1,"rgba(255,107,26,0)"); cx.fillStyle=g2; cx.fillRect(px-90,py-90,180,180); }
+    cx2.clearRect(0,0,W,H);
+    for(let i=sp.length-1;i>=0;i--){ const p=sp[i]; p.l-=p.d; if(p.l<=0){sp.splice(i,1);continue;}
+      if(p.ring){ p.rr+=9; cx2.strokeStyle="rgba(255,180,90,"+p.l*.8+")"; cx2.lineWidth=2; cx2.beginPath(); cx2.arc(p.x,p.y,p.rr*(p.ring===1?1:1),0,6.283); cx2.stroke(); continue; }
+      p.x+=p.vx; p.y+=p.vy; p.vx*=.97; p.vy=p.vy*.97+.14; cx2.fillStyle="hsla("+p.h+",100%,"+(55+p.l*20)+"%,"+p.l+")"; cx2.shadowColor="#FF6B1A"; cx2.shadowBlur=10; cx2.beginPath(); cx2.arc(p.x,p.y,p.r*(.4+p.l),0,6.283); cx2.fill(); }
+    cx2.shadowBlur=0;
+    /* kinetic title: letters lean away from the pointer, drift with scroll */
+    const sp2=word.children; const wr=word.getBoundingClientRect();
+    for(let i=0;i<sp2.length;i++){ const s=sp2[i], r=s.getBoundingClientRect(); const cxm=r.left+r.width/2, cym=r.top+r.height/2;
+      let dx=0,dy=0,rot=0,sc=1; if(px>=0&&!still){ const ddx=cxm-px, ddy=cym-py, d=Math.hypot(ddx,ddy), f=Math.max(0,1-d/380); dx=ddx/(d||1)*f*34; dy=ddy/(d||1)*f*26; rot=ddx/(d||1)*f*7; sc=1+f*.07; }
+      const cur=s._t||(s._t=[0,0,0,1]); cur[0]+=(dx-cur[0])*.12; cur[1]+=(dy-cur[1])*.12; cur[2]+=(rot-cur[2])*.12; cur[3]+=(sc-cur[3])*.12;
+      s.style.transform="translate("+cur[0].toFixed(1)+"px,"+(cur[1]+sy*(14+i*10)).toFixed(1)+"px) rotate("+cur[2].toFixed(2)+"deg) scale("+cur[3].toFixed(3)+")"; }
+  }
+  requestAnimationFrame(frame);
+})();
