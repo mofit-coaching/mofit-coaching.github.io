@@ -108,7 +108,7 @@ function aichHand(q){
 
 /* the tab screen (registered in the render map in views.js) */
 window.viewAiChat=async function(el){
-  el.innerHTML=`<div class="card"><div class="card-h"><div class="ic acc">🤖</div><h2>المساعد الذكي<small>ردود فورية من برنامجك · متاح ٢٤ ساعة</small></h2></div>
+  el.innerHTML=`<div class="card aich-card"><div class="card-h"><div class="ic acc">🤖</div><h2>المساعد الذكي<small>ردود فورية من برنامجك · متاح ٢٤ ساعة</small></h2></div>
     <div class="aich-l" id="aichL" aria-live="polite"><div class="chat-empty"><div class="sk-wrap" role="status" aria-label="بيتحمل"><i class="sk sk-b"></i><i class="sk sk-l m"></i><i class="sk sk-l s"></i></div></div></div>
     <p class="aich-note">المساعد مش بديل للطبيب ومش نصيحة طبية · الأسئلة الطبية أو الإصابات بتتحوّل للكوتش · الكوتش يقدر يشوف المحادثة دي</p>
     <div class="chat-q" id="aichChips"><button type="button" class="qr" data-q="عايز بديل لأكلة في نظامي">🍽 بديل أكل</button><button type="button" class="qr" data-q="اشرحلي فورم تمرين من برنامجي">🏋️ شرح تمرين</button><button type="button" class="qr" data-q="أنضبط جدول تمريني إزاي؟">🗓 جدول التمرين</button></div>
@@ -120,11 +120,15 @@ window.viewAiChat=async function(el){
   if(!rows.length){
     L.innerHTML=`<div class="chat-empty">🤖<br>أهلاً بيك يا بطل! أنا مساعدك الذكي، موجود هنا ٢٤ ساعة 💪<br>اسألني عن أكلك أو تمرينك وهجاوبك على طول من برنامجك.<br><small style="opacity:.7">تنبيه: ده مساعد مش دكتور، وكلامه مش نصيحة طبية. لو سؤال طبي أو إصابة بحوّله للكوتش بنفسه.</small></div>`;
   } else {
-    L.innerHTML="";
+    L.innerHTML=""; L.classList.add("bulk");
     rows.forEach(r=>{
       L.append(aichBubble("me",r.question,aichWhen(r.created_at)));
       L.append(aichBubble(r.kind==="flag"?"flag":"ai",r.answer));
     });
+    L.classList.remove("bulk");
+    /* entrance cascade: only the newest 10 bubbles animate, with a short stagger; the rest pop in instantly */
+    const bb=[...L.querySelectorAll(".aich-m")], K=Math.max(0,bb.length-10);
+    bb.forEach((b,i)=>{ if(i<K) b.classList.add("no-in"); else b.style.animationDelay=((i-K)*45)+"ms"; });
     L.scrollTop=L.scrollHeight;
   }
   document.getElementById("aichChips").querySelectorAll(".qr").forEach(c=>c.onclick=()=>{ const i=document.getElementById("aichI"); if(i){ i.value=c.dataset.q||c.textContent.trim(); i.focus(); } });
