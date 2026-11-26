@@ -4,6 +4,9 @@
      resets the baseline: only activity after the start counts.
    - v4 (Nov 26, Mohammed): every member's points count from THEIR OWN
      join day, never from before (league-v4.sql).
+   - v5 (Nov 26, Mohammed): coach "end and crown winners" + "cancel
+     completely" buttons (league_end RPC, league-v5.sql); the ended
+     start card shows the latest podium.
    - Every active client gets an in-app invite on their home screen and
      chooses to join or not (league_respond). Only joined members get the
      "الليج" tab and appear on the board.
@@ -137,6 +140,7 @@ const st=document.createElement("style"); st.textContent=`
   padding:11px;border-radius:14px;background:linear-gradient(135deg,#FF5A0A,#FF8A3D 60%,#FFB347);
   box-shadow:0 12px 24px -8px rgba(255,90,10,.85),inset 0 1px 0 rgba(255,255,255,.35)}
 .lg-save:active{transform:scale(.98)}
+.lg-end{color:#FDA4AF!important;border-color:rgba(244,63,94,.45)!important}
 .lg-days{display:flex;gap:4px;margin-top:4px}
 .lg-day{flex:1;min-width:0;cursor:pointer;text-align:center;padding:8px 2px;border-radius:12px;font-family:"Cairo",sans-serif;
   font-size:.64rem;font-weight:700;color:#94A3B8;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.11)}
@@ -226,6 +230,12 @@ function trophyHTML(trophies){
       <span class="p">${byWeek[w].sort((a,b)=>a.rank-b.rank).map(t=>`${MEDALS[t.rank-1]||"🏅"} <b>${escAr(t.nickname)}</b>`).join(" · ")}</span></div>`).join("")}
   </div>`;
 }
+function lastPodiumHTML(board,names){
+  const lp=board.last_podium||[];
+  if(!lp.length) return "";
+  const wk=board.last_week?String(board.last_week).slice(5).split("-").reverse().join("/"):"";
+  return `<div class="lg-tro"><h4>🏆 آخر أبطال${wk?" - أسبوع "+wk:""}</h4>${podHTML(lp,names,true)}</div>`;
+}
 const PRIZE_PRESETS=[
   ["أسبوع مجاني","جلسة ١ لـ ١ مجانية","ترقية الباقة لشهر"],
   ["خصم ٥٠٪ على الشهر الجاي","جلسة ١ لـ ١ مجانية"],
@@ -301,6 +311,7 @@ function coachHTML(board,names){
       <div class="lg-inv"><b>🔥 ابدأ الليج</b>
       <p>أول ما تبدأ: كل عميل مفعّل هيلاقي دعوة على الرئيسية يختار يشترك أو لأ، ونقاط كل مشترك بتتحسب من يوم اشتراكه بس (السجل القديم مش بيتحسب).</p>
       <div class="lg-cta"><button class="lg-btn" id="lgStart">ابدأ الليج دلوقتي 🔥</button></div></div>
+      ${lastPodiumHTML(board,names)}
       ${cfgHTML(board)}`;
   }
   const rows=board.rows||[], leaderPts=rows.length?rows[0].points:0;
@@ -316,7 +327,8 @@ function coachHTML(board,names){
     ${!rows.length?`<p style="text-align:center;font-family:Cairo;font-size:.78rem;color:#64748B;margin:8px 0">مفيش مشتركين سجّلوا لسه</p>`:""}</div>
   <div class="lg-meta">الموسم ${board.season} · ${board.members} مشترك</div>
   <div class="lg-tro"><h4>⚙️ إدارة الليج</h4>
-    <div class="lg-cta"><button class="lg-ghost" id="lgRestart">🔁 ابدأ موسم جديد (بيقفل الحالي وبيبعت دعوات جديدة)</button></div></div>
+    <div class="lg-cta"><button class="lg-ghost" id="lgRestart">🔁 ابدأ موسم جديد (بيقفل الحالي وبيبعت دعوات جديدة)</button></div>
+    <div class="lg-cta" style="margin-top:8px"><button class="lg-ghost" id="lgFinish">🏁 إنهاء البطولة وتحديد الفائزين</button><button class="lg-ghost lg-end" id="lgCancel">⛔ إلغاء خالص</button></div></div>
   ${trophyHTML(board.trophies)}
   ${cfgHTML(board)}`;
 }
@@ -457,6 +469,25 @@ function wireGrant(host){
   };
 }
 
+/* coach: end+crown / cancel - two-tap confirm, then refetch and repaint */
+function wireEnd(host,btnId,crown,after){
+  const b=host.querySelector(btnId); if(!b) return;
+  const orig=b.textContent; let armed=false, tm=null;
+  b.onclick=async()=>{
+    if(!armed){ armed=true;
+      b.textContent=crown?"متأكد؟ الأبطال الحاليين هيتتوّجوا والليج هتقفل - اضغط تاني للتأكيد":"متأكد؟ الليج هتلغي من غير فائزين - اضغط تاني للتأكيد";
+      tm=setTimeout(()=>{ armed=false; b.textContent=orig; },4000); return;
+    }
+    clearTimeout(tm); b.disabled=true; b.textContent="…";
+    try{
+      const { data, error }=await sb.rpc("league_end",{p_crown:crown});
+      if(error||!data||!data.ok) throw error||new Error("fail");
+      toast(crown?"🏆 الأبطال اتحددوا والليج اتقفلت":"⛔ الليج اتلغت خالص");
+      LG=null; if(after) after();
+    }catch(err){ armed=false; b.disabled=false; b.textContent=orig; toast("تعذر - اتأكد إن قاعدة البيانات اتحدثت"); }
+  };
+}
+
 /* ------- module state + fetch ------- */
 let LG=null;                 // last board payload
 async function fetchBoard(){
@@ -538,12 +569,14 @@ if(typeof viewClients==="function"&&!viewClients._lg){
     const host=document.createElement("div");
     const anchor=el.querySelector("#ciov")||el.querySelector("#wrep");
     if(anchor&&anchor.parentNode) anchor.after(host); else el.appendChild(host);
-    const board=await fetchBoard();
+    let board=await fetchBoard();
     if(!board){ host.remove(); return; }
     const names=Object.fromEntries((S.coachClients||[]).map(c=>[c.id,c.full_name||c.email||"عميل"]));
-    const paint=()=>{ host.innerHTML=`<div class="lg-card">${coachHTML(board,names)}</div>`;
+    const paint=async()=>{ const b2=await fetchBoard(); if(b2) board=b2;
+      host.innerHTML=`<div class="lg-card">${coachHTML(board,names)}</div>`;
       wireCfg(host,board); wireGrant(host);
       wireStart(host,"#lgStart",paint); wireStart(host,"#lgRestart",paint);
+      wireEnd(host,"#lgFinish",true,paint); wireEnd(host,"#lgCancel",false,paint);
     };
     paint();
   };
