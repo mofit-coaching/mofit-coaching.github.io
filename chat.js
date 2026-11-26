@@ -85,7 +85,7 @@ function chatAppend(m){
   const day=chatDay(m.created_at); if(L.dataset.day!==day){ const h=document.createElement("div"); h.className="chat-day"; h.textContent=day; L.append(h); L.dataset.day=day; }
   const el=chatBubble(m), prev=L.lastElementChild;
   if(prev&&prev.classList.contains("msg")&&prev.classList.contains("me")===el.classList.contains("me")&&(new Date(m.created_at)-new Date(prev.dataset.t||0))<120000){ prev.classList.add("gnext"); el.classList.add("cont"); }
-  el.dataset.t=m.created_at; L.append(el); L.scrollTop=L.scrollHeight;
+  el.dataset.t=m.created_at; L.append(el); if(!L.classList.contains("bulk")) L.scrollTop=L.scrollHeight;
 }
 async function chatMarkRead(cid){
   const { error } = await sb.from("messages").update({read_at:new Date().toISOString()}).eq("client_id",cid).neq("sender_role",chatMine()).is("read_at",null);
@@ -119,7 +119,7 @@ async function openChat(clientId, title){
   L.innerHTML="";
   if(error){ L.innerHTML=`<div class="chat-empty">تعذر تحميل الرسايل</div>`; return; }
   if(!data.length) L.innerHTML=emptyBox("👋","ابدأ المحادثة",S.me.role==="coach"?"ابعت أول رسالة لعميلك – كلمة تشجيع في الأول بتفرق.":"الرسايل بتوصل للكوتش مباشرة – اسأل عن تمرينك أو أكلك في أي وقت.","","es-sm");
-  data.reverse().forEach(chatAppend);
+  if(data.length){ L.classList.add("bulk"); data.reverse().forEach(chatAppend); L.classList.remove("bulk"); L.scrollTop=L.scrollHeight; }
   chatMarkRead(clientId);
   const send=async(f)=>{ const { data:m, error:er } = await sb.from("messages").insert({client_id:clientId, sender_role:chatMine(), ...f}).select().single(); if(er){ toast("تعذر الإرسال، جرّب تاني"); return null; } chatAppend(m); return m; };
   $("#chatF").onsubmit=async e=>{
