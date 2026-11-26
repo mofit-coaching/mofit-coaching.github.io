@@ -208,3 +208,16 @@ html .vq-row #vq{flex:1 1 100%;min-width:0}
 html .vq-row #vf{flex:1 1 100%;width:100%!important}
 html .f-sec{font-size:.84rem;font-weight:700;color:var(--slate,#5F6B7F);margin:14px 0 4px}
 html input::placeholder,html textarea::placeholder{font-size:.84rem}
+
+/* round7 skill 3: SVG marks instead of raw glyphs, plus interaction states. No colors or layout changed. */
+.plan-feats{list-style:none;padding-inline-start:20px}
+.plan-feats li{position:relative}
+.plan-feats li::marker{content:none}
+.plan-feats li::before{content:"";position:absolute;inset-inline-start:-20px;top:.28em;width:.95em;height:.95em;background:var(--acc);-webkit-mask:var(--ck) center/contain no-repeat;mask:var(--ck) center/contain no-repeat}
+.pq-ul li::before{content:"";top:.3em;width:.95em;height:.95em;background:currentColor;-webkit-mask:var(--ck) center/contain no-repeat;mask:var(--ck) center/contain no-repeat}
+details.card>summary::after{content:"";width:.85rem;height:.85rem;background:currentColor;-webkit-mask:var(--chev) center/contain no-repeat;mask:var(--chev) center/contain no-repeat}
+:root{--ck:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");--chev:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")}
+input:focus-visible,textarea:focus-visible,select:focus-visible{outline:2px solid var(--acc,#F97316);outline-offset:1px}
+[aria-invalid="true"],input:user-invalid,textarea:user-invalid{border-color:var(--bad,#EF4444)!important}
+.cb:active,.an-chip:active,.bc-x:active,.ml-mdel:active{transform:scale(.92)}
+@media (hover:hover){.cb:hover,.an-chip:hover,.chip:hover,.seg button:hover{filter:brightness(1.06)}}
