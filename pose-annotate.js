@@ -636,7 +636,24 @@ function anDrawNote(root) {
 }
 
 /* ---------- coach studio ---------- */
+/* an open tab never re-fetches scripts: if a newer pose-annotate.js is live, reload once onto it */
+async function anFreshCheck() {
+  try {
+    const cur = [...document.scripts].find(s => /pose-annotate\.js/.test(s.src));
+    const cv = cur && (cur.src.match(/[?&]v=([\w.-]+)/) || [])[1];
+    if (!cv) return false;
+    const t = await (await fetch("./index.html?cb=" + Date.now(), { cache: "no-store" })).text();
+    const nv = (t.match(/pose-annotate\.js\?v=([\w.-]+)/) || [])[1];
+    if (!nv || nv === cv || sessionStorage.getItem("mofit-an-reloaded-" + nv)) return false;
+    sessionStorage.setItem("mofit-an-reloaded-" + nv, "1");
+    toast("🔄 في نسخة أحدث، بحدّث الصفحة… افتح الفيديو تاني بعدها");
+    setTimeout(() => { (navigator.serviceWorker ? navigator.serviceWorker.getRegistration().then(r => r && r.update()).catch(() => {}) : Promise.resolve()).finally(() => location.reload()); }, 900);
+    return true;
+  } catch (_) { return false; }
+}
+
 async function openAnnotateStudio(checkin, videoUrl, moments, onSaved) {
+  if (await anFreshCheck()) return;
   if (AN) anClose();
   AN = { mode: "edit", checkin, moments: (moments || []).map(m => ({ ...m, strokes: (m.strokes || []).map(s => ({ ...s })) })), curId: null, tool: "pen", color: AN_COLORS[0], dirty: false, pending: [], drawing: null, textAt: null, jointNote: null, photoShow: null, chartSel: null, showSkel: true, auto: null };
   AN.curId = AN.moments[0]?.id || null;
