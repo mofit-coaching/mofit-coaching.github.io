@@ -95,7 +95,7 @@ const st=document.createElement("style"); st.textContent=`
   animation:lgIn .55s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i)*70ms + .12s)}
 .lg-row.me{background:rgba(255,179,0,.10);border-color:rgba(255,194,26,.45)}
 .lg-rank{flex:none;width:30px;text-align:center;font-family:"Anton",sans-serif;font-size:1rem;direction:ltr;color:#94A3B8}
-.lg-rank.top{font-size:1.25rem}
+.lg-rank.lg-top{font-size:1.25rem}
 .lg-nm{flex:1;min-width:0}
 .lg-nm b{display:block;font-family:"Noto Kufi Arabic","Cairo",sans-serif;font-weight:700;font-size:.86rem;color:#E2E8F0;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -177,7 +177,7 @@ const st=document.createElement("style"); st.textContent=`
 .lg-x{position:absolute;top:12px;inset-inline-end:12px;z-index:2;width:32px;height:32px;border-radius:10px;border:1px solid rgba(255,255,255,.14);
   background:rgba(255,255,255,.06);color:#94A3B8;font-size:.9rem;cursor:pointer;display:grid;place-items:center;font-family:"Cairo",sans-serif}
 .lg-medal{width:26px;height:26px;flex:none;filter:drop-shadow(0 3px 8px rgba(0,0,0,.45))}
-.lg-rank.top .lg-medal{width:28px;height:28px;margin:0 auto}
+.lg-rank.lg-top .lg-medal{width:28px;height:28px;margin:0 auto}
 .lg-pod .lg-medal{width:34px;height:34px;transform-origin:50% 0;animation:lgDrop .7s cubic-bezier(.2,1.5,.4,1) both}
 .lg-p1 .lg-medal{width:46px;height:46px}
 .lg-p2 .lg-medal{animation-delay:.1s}.lg-p3 .lg-medal{animation-delay:.2s}
@@ -247,7 +247,7 @@ function countdown(endsAt){
 }
 function escAr(s){ return typeof esc==="function"?esc(s):String(s); }
 function rowHTML(r,i,isCoach,names,leaderPts,deltas){
-  const rank=i<3?`<span class="lg-rank top">${medalSVG(i+1)}</span>`:`<span class="lg-rank">${i+1}</span>`;
+  const rank=i<3?`<span class="lg-rank lg-top">${medalSVG(i+1)}</span>`:`<span class="lg-rank">${i+1}</span>`;
   const dlt=deltas&&deltas[r.nickname]?deltas[r.nickname]:0;
   const dchip=dlt>0?`<span class="lg-delta up">▲${dlt}</span>`:dlt<0?`<span class="lg-delta down">▼${-dlt}</span>`:"";
   const realName=isCoach&&r.client_id&&names&&names[r.client_id]?names[r.client_id]:null;
