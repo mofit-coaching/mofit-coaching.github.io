@@ -45,18 +45,24 @@ async function adminCall(opts){
 /* Weeks are absolute from start_date (1, 2 … 13, 14 …) and are shown in blocks of 12.
    Program length follows the subscription end date (min 12 weeks); with no end date it keeps counting. */
 const BLOCK=12, MAX_WEEKS=260;
-function maxWeek(p){ if(p?.start_date&&p?.sub_end){ const w=Math.ceil((daysBetween(p.start_date,p.sub_end)+1)/7); return Math.min(Math.max(w,BLOCK),MAX_WEEKS); } return MAX_WEEKS; }
+/* Plan length in weeks: 1 month=4, 3=12, 6=26, 12=52 (other lengths ~4.33 weeks/month), taken from sub_start→sub_end.
+   Bonus (gift) weeks from profiles.bonus_weeks (when that column exists) are added on top. No end date = no limit. */
+function planBaseWeeks(p){ if(!(p?.sub_start&&p?.sub_end)) return null; const m=Math.max(1,Math.round((daysBetween(p.sub_start,p.sub_end)+1)/30.44)); return m<=3?m*4:m===6?26:m===12?52:Math.round(m*52/12); }
+function maxWeek(p){ const b=planBaseWeeks(p); if(b===null) return MAX_WEEKS; return Math.min(b+Math.max(0,Math.floor(+p.bonus_weeks||0)),MAX_WEEKS); }
 function currentWeek(p){ if(!p?.start_date) return 1; return Math.min(Math.max(Math.floor(daysBetween(p.start_date,today())/7)+1,1),maxWeek(p)); }
 function weekOfDate(p,iso){ if(!p?.start_date) return null; const w=Math.floor(daysBetween(p.start_date,iso)/7)+1; return w>=1&&w<=MAX_WEEKS?w:null; }
 const blockOf=w=>Math.ceil(Math.max(+w||1,1)/BLOCK), wInBlock=w=>((Math.max(+w||1,1)-1)%BLOCK)+1;
-function blockWeeks(w){ const b=blockOf(w); return [...Array(BLOCK)].map((_,i)=>(b-1)*BLOCK+i+1); }
+function blockWeeks(w,p){ const b=blockOf(w), mx=p?maxWeek(p):MAX_WEEKS; return [...Array(BLOCK)].map((_,i)=>(b-1)*BLOCK+i+1).filter(x=>x<=mx); }
+/* keep the week chips where they were after a re-render (RTL scroller resets to the start otherwise); no saved spot = centre the selected chip */
+function restoreWeekChips(root,saved){ const sc=[...(root||document).querySelectorAll(".scroller")].find(s=>s.querySelector("[data-w]")); if(!sc) return; if(saved!=null&&saved!==undefined){ sc.scrollLeft=saved; return; } const on=sc.querySelector(".chip.on"); if(on){ const dr=sc.getBoundingClientRect(), sr=on.getBoundingClientRect(); sc.scrollLeft=sc.scrollLeft+(sr.left-dr.left)-(sc.clientWidth-sr.width)/2; } }
+function weekChipsX(root){ const sc=[...(root||document).querySelectorAll(".scroller")].find(s=>s.querySelector("[data-w]")); return sc?sc.scrollLeft:null; }
 /* "‹ block N ›" switcher; buttons carry data-w so every existing [data-w] handler works. Hidden while the client is still in block 1. */
 function blockNavHTML(sel,p){
   const now=currentWeek(p), b=blockOf(sel), last=Math.max(blockOf(now),b);
   if(last===1) return "";
-  const go=x=> blockOf(now)===x? now : (x-1)*BLOCK+1, r=blockWeeks(sel);
+  const go=x=> blockOf(now)===x? now : (x-1)*BLOCK+1, r=blockWeeks(sel,p);
   return `<div class="blocknav"><button class="chip" ${b>1?`data-w="${go(b-1)}"`:"disabled"}>→ السابق</button>
-    <b>البلوك ${b}<small>أسابيع ${r[0]}–${r[BLOCK-1]}</small></b>
+    <b>البلوك ${b}<small>أسابيع ${r[0]}–${r[r.length-1]}</small></b>
     <button class="chip" ${b<last?`data-w="${go(b+1)}"`:"disabled"}>التالي ←</button></div>`;
 }
 function targets(p){
