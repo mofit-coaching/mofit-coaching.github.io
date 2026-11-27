@@ -588,6 +588,22 @@
 .fl-prog .t{font-weight:800;font-size:.88rem;color:var(--navy);display:flex;justify-content:space-between;margin-bottom:8px}
 .fl-prog .tr{height:8px;border-radius:8px;background:#E2E8F0;overflow:hidden}
 .fl-prog .tr i{display:block;height:100%;width:0;background:linear-gradient(90deg,#FB923C,#EA580C);transition:width .2s}
+.fl-prog.bad{border-color:#FCA5A5;background:#FEF2F2}
+.fl-prog.bad .t{color:#B91C1C}
+.fl-prog.bad .tr i{width:100%!important;background:#EF4444}
+.fl-fail{margin-top:10px;border:1.5px solid #FCA5A5;border-radius:14px;padding:12px;background:var(--card,#fff);color:var(--navy)}
+.fl-fail h3{margin:0 0 6px;font-size:1rem;color:#B91C1C}
+.fl-fail ul{margin:8px 0;padding-inline-start:20px;font-size:.86rem;line-height:1.9}
+.fl-fail code{display:block;direction:ltr;text-align:left;font-size:.72rem;opacity:.7;margin-top:6px;word-break:break-all}
+.fl-fail .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+.fl-pc-stage{position:relative;border-radius:14px;overflow:hidden;background:#000;margin:8px 0;max-height:52vh;display:flex;justify-content:center}
+.fl-pc-stage video{max-width:100%;max-height:52vh;display:block}
+.fl-pc-stage canvas{position:absolute;inset:0;margin:auto;max-width:100%;max-height:52vh;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.fl-pc-chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
+.fl-pc-chip{font-size:.8rem;font-weight:800;padding:6px 10px;border-radius:999px;border:1.5px solid var(--soft2,#E2E8F0);background:var(--soft,#F1F5F9)}
+.fl-pc-chip.ok{border-color:#86EFAC;background:#F0FDF4;color:#166534}
+.fl-pc-chip.warn{border-color:#FDE68A;background:#FFFBEB;color:#92400E}
+.fl-pc-chip.bad{border-color:#FCA5A5;background:#FEF2F2;color:#B91C1C}
 .fl-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--soft2,#EEF2F7);cursor:pointer}
 .fl-row:last-child{border-bottom:0}
 .fl-score{flex:none;width:44px;height:44px;border-radius:14px;display:grid;place-items:center;font-weight:900;font-size:1.02rem;color:#fff}
@@ -624,7 +640,7 @@
 .fl-rep small{color:var(--slate)}
 .fl-vid{position:relative;border-radius:16px;overflow:hidden;background:#000;margin-top:10px}
 .fl-vid video{width:100%;display:block;max-height:46vh;object-fit:contain}
-.fl-vid canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.fl-vid canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .fl-note{font-size:.75rem;color:var(--slate);line-height:1.7;margin-top:10px}
 .fl-barpath{background:var(--navy,#0F172A);border-radius:16px;padding:10px;margin-top:10px}
 .fl-barpath svg{width:100%;display:block}
@@ -634,7 +650,7 @@
   function flLoadScript(src) {
     return new Promise((res, rej) => {
       const sc = document.createElement("script");
-      sc.src = src + "?v=formlab-20261127-5"; sc.onload = res; sc.onerror = rej;
+      sc.src = src + "?v=formlab-20261127-6"; sc.onload = res; sc.onerror = rej;
       document.head.appendChild(sc);
     });
   }
@@ -773,9 +789,104 @@
     closeSheet(); render();
   }
 
+
+  /* ---------- pre-check, auto-trim, failure screen ---------- */
+  const FL_KEY = [0, 11, 12, 23, 24, 25, 26, 27, 28];
+  function flBodyState(lms) {
+    if (!lms) return { found: false };
+    const vis = i => (lms[i] && (lms[i].visibility ?? 1)) || 0;
+    const full = FL_KEY.every(i => lms[i] && vis(i) >= 0.5 && lms[i].x > 0.01 && lms[i].x < 0.99 && lms[i].y > 0.01 && lms[i].y < 0.99);
+    const ys = FL_KEY.filter(i => lms[i]).map(i => lms[i].y);
+    const h = ys.length ? Math.max(...ys) - Math.min(...ys) : 0;
+    return { found: true, full, h };
+  }
+  /* keep the stretch of the clip where the body is actually in frame (drops phone set-up and walk-away seconds) */
+  function flTrimFrames(frames, dur) {
+    const ok = frames.map(fr => { const l = fr.lms; const v = i => (l[i] && l[i][2]) || 0; return v(11) >= 0.5 && v(12) >= 0.5 && v(23) >= 0.5 && v(24) >= 0.5; });
+    let best = null, cur = null;
+    frames.forEach((fr, i) => {
+      if (!ok[i]) return;
+      if (cur && fr.t - cur.end <= 1.2) { cur.end = fr.t; cur.n++; }
+      else { cur = { start: fr.t, end: fr.t, n: 1 }; }
+      if (!best || cur.n > best.n) best = cur;
+    });
+    if (!best || best.n < 6) return { frames, from: 0, to: dur, cutStart: 0, cutEnd: 0 };
+    const from = Math.max(0, best.start - 0.4), to = Math.min(dur, best.end + 0.4);
+    const kept = frames.filter(fr => fr.t >= from && fr.t <= to);
+    return { frames: kept, from, to, cutStart: from, cutEnd: Math.max(0, dur - to) };
+  }
+  const FL_TIPS = ["الجسم كامل في الكادر من الراس للرجلين", "الموبايل ثابت ومسنود على حاجة، من مستوى الوسط تقريباً", "إضاءة كويسة وخلفية مش زحمة، ومحدش تاني في الكادر", "ابعد ٢ لـ ٣ متر، وابدأ الحركة بعد ٣ ثواني من بداية التصوير"];
+  function flFail(prog, title, why, code) {
+    prog.hidden = false; prog.classList.add("bad");
+    prog.querySelector(".t span").textContent = title; prog.querySelector("b").textContent = "✕";
+    const old = document.getElementById("flFail"); if (old) old.remove();
+    const box = document.createElement("div"); box.className = "fl-fail"; box.id = "flFail";
+    box.innerHTML = `<h3>${title}</h3><div style="font-size:.88rem">${why}</div><ul>${FL_TIPS.map(t => `<li>${t}</li>`).join("")}</ul>
+      <div class="row"><button class="btn primary" id="flRetry">🔄 جرّب فيديو تاني</button></div>${code ? `<code>${flEsc(code)}</code>` : ""}`;
+    prog.insertAdjacentElement("afterend", box);
+    box.querySelector("#flRetry").onclick = () => { box.remove(); prog.hidden = true; prog.classList.remove("bad"); const fi = document.getElementById("flFile"); if (fi) fi.click(); };
+    box.scrollIntoView({ block: "nearest", behavior: "smooth" });
+  }
+  function flClearFail(prog) { prog.classList.remove("bad"); const old = document.getElementById("flFail"); if (old) old.remove(); }
+
+  /* pre-check: show the clip with a live skeleton and framing checks before the long scan */
+  async function flPrecheck(file, sel, p, prog) {
+    flCss();
+    const url = URL.createObjectURL(file);
+    let alive = true;
+    const body = openSheet(`<div class="between" style="margin-bottom:6px"><b style="font-size:1.05rem">🔍 فحص سريع قبل التحليل</b><button class="btn sm ghost" id="flPcX">✕</button></div>
+      <div class="hint" id="flPcMsg">جاري تجهيز النموذج…</div>
+      <div class="fl-pc-stage"><video src="${url}" muted playsinline loop preload="auto"></video><canvas></canvas></div>
+      <div class="fl-pc-chips" id="flPcChips"></div>
+      <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="flPcGo" disabled>▶ ابدأ التحليل</button><button class="btn ghost" id="flPcOther">🎥 اختار فيديو تاني</button></div>`);
+    const video = body.querySelector("video"), cv = body.querySelector("canvas"), msg = body.querySelector("#flPcMsg"), chips = body.querySelector("#flPcChips"), go = body.querySelector("#flPcGo");
+    const stop = () => { alive = false; try { video.pause(); } catch (_) {} };
+    const finish = () => { stop(); URL.revokeObjectURL(url); };
+    body.querySelector("#flPcX").onclick = () => { finish(); closeSheet(); };
+    body.querySelector("#flPcOther").onclick = () => { finish(); closeSheet(); const fi = document.getElementById("flFile"); if (fi) fi.click(); };
+    go.onclick = () => { finish(); closeSheet(); flScan(file, sel, p, prog); };
+    try { await new Promise((res, rej) => { if (video.readyState >= 1) return res(); video.onloadedmetadata = res; video.onerror = () => rej(new Error("video")); setTimeout(res, 5000); }); } catch (_) {}
+    try { await flEnsureModel(); } catch (e) { msg.textContent = "تعذر تجهيز النموذج، تقدر تبدأ التحليل برضه."; go.disabled = false; return; }
+    go.disabled = false; msg.textContent = "الفيديو شغال بدون صوت. السكيلتون الأخضر بيوريك لو الجسم ظاهر كويس.";
+    if (video.duration && isFinite(video.duration)) { try { video.currentTime = Math.min(video.duration * 0.4, Math.max(0, video.duration - 0.1)); } catch (_) {} }
+    video.play().catch(() => {});
+    const hist = [];
+    const chip = (cls, t) => `<span class="fl-pc-chip ${cls}">${t}</span>`;
+    const draw = lms => {
+      const w = video.videoWidth || 360, h = video.videoHeight || 640;
+      if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+      const c = cv.getContext("2d"); c.clearRect(0, 0, w, h);
+      if (!lms) return;
+      c.lineWidth = Math.max(2, w / 160); c.strokeStyle = "#22C55E"; c.fillStyle = "#F97316";
+      FL_EDGES.forEach(([a, b]) => { const A = lms[a], B = lms[b]; if (!A || !B || (A.visibility ?? 1) < 0.4 || (B.visibility ?? 1) < 0.4) return; c.beginPath(); c.moveTo(A.x * w, A.y * h); c.lineTo(B.x * w, B.y * h); c.stroke(); });
+      [0, 11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28].forEach(i => { const P = lms[i]; if (!P || (P.visibility ?? 1) < 0.4) return; c.beginPath(); c.arc(P.x * w, P.y * h, Math.max(3, w / 100), 0, 7); c.fill(); });
+    };
+    while (alive && body.isConnected) {
+      const r = await apDetectFrame(video);
+      const st = flBodyState(r.lms);
+      hist.push({ st, luma: r.luma, blank: r.blank }); if (hist.length > 8) hist.shift();
+      draw(r.lms);
+      const n = hist.length, found = hist.filter(x => x.st.found).length, full = hist.filter(x => x.st.full).length, big = hist.filter(x => x.st.found && x.st.h >= 0.35).length;
+      const lumas = hist.map(x => x.luma).filter(v => v != null), luma = lumas.length ? lumas.reduce((a, b) => a + b, 0) / lumas.length : null;
+      const blank = hist.every(x => x.blank);
+      let h = "";
+      if (blank) h += chip("bad", "⚠️ الفيديو ظاهر أسود — جرّب فيديو تاني");
+      else {
+        h += found / n >= 0.5 ? chip("ok", "✅ الجسم ظاهر") : chip("bad", "⚠️ مش شايف جسم دلوقتي");
+        if (found / n >= 0.5) h += full / n >= 0.5 ? chip("ok", "✅ الجسم كامل في الكادر") : chip("warn", "⚠️ جزء من الجسم برا الكادر أو مش واضح");
+        if (found / n >= 0.5) h += big / n >= 0.5 ? chip("ok", "✅ حجم الجسم مناسب") : chip("warn", "⚠️ الجسم صغير، قرّب شوية");
+        if (luma != null) h += luma >= 55 ? chip("ok", "✅ الإضاءة كويسة") : chip("warn", "⚠️ الإضاءة ضعيفة");
+      }
+      chips.innerHTML = h;
+      await new Promise(r2 => setTimeout(r2, 350));
+    }
+    if (!body.isConnected) finish();
+  }
+
   /* ---------- the scan flow ---------- */
   async function flScan(file, sel, p, prog) {
     const lift = sel.model, exName = sel.ex;
+    flClearFail(prog);
     const url = URL.createObjectURL(file);
     const video = document.createElement("video");
     video.muted = true; video.playsInline = true; video.preload = "auto"; video.src = url;
@@ -790,17 +901,31 @@
       if (!res.frames.length) {
         const d = res.diag || {}, code = [d.delegate, d.w + "x" + d.h, (d.tries || []).join(","), "err" + (res.errors || []).length].join(" ");
         const blank = (res.errors || []).indexOf("blank-frames") >= 0;
-        const msg = blank ? "المتصفح مقدرش يقرا صورة الفيديو (شاشة سودا). جرّب تصوّر الفيديو بالكاميرا العادية وارفعه تاني"
-          : (res.errors && res.errors.length) ? "التحليل مشتغلش على الجهاز ده. ابعت الكود ده لمحمد: " + code
-          : "مفيش جسم واضح في الفيديو — صوّر الجسم كامل من الجنب";
-        show(1, blank || (res.errors && res.errors.length) ? "تعذر التحليل" : "مفيش جسم واضح");
         console.warn("MOFIT form lab: no body found", code, (res.errors || []).slice(0, 3));
-        toast(msg); return;
+        if (blank) flFail(prog, "الفيديو ظاهر أسود", "المتصفح مقدرش يقرا صورة الفيديو. جرّب تصوّر بالكاميرا العادية وارفعه تاني.", code);
+        else if (res.errors && res.errors.length) flFail(prog, "التحليل مشتغلش على الجهاز ده", "حصلت مشكلة تقنية. ابعت الكود اللي تحت لمحمد.", code);
+        else flFail(prog, "مفيش جسم واضح في الفيديو", "مش قادر أشوف جسم كامل في الفيديو. جرّب الخطوات دي:", code);
+        URL.revokeObjectURL(url);
+        return;
+      }
+      const trimmed = flTrimFrames(res.frames, video.duration || 0);
+      if (trimmed.frames.length >= 6) {
+        const cs = Math.round(trimmed.cutStart), ce = Math.round(trimmed.cutEnd);
+        if (cs >= 2 || ce >= 2) toast("✂️ قصّينا " + (cs >= 2 ? "أول " + flN(cs) + " ث " : "") + (cs >= 2 && ce >= 2 ? "و" : "") + (ce >= 2 ? "آخر " + flN(ce) + " ث " : "") + "(الجسم مكنش ظاهر فيهم)");
+        res.frames = trimmed.frames;
       }
       const ar = (video.videoWidth && video.videoHeight) ? video.videoWidth / video.videoHeight : 0.5625;
       const track = { fps: res.fps, ar, frames: res.frames };
       show(0.98, "جاري حساب التقييم…");
       const summary = window.MofitPoseResults ? MofitPoseResults.summarize(track) : { angles: [], reps: null };
+      /* rep sanity: drop impossible reps (a rep over 15 s or under 0.5 s is noise) and recompute the totals */
+      if (summary.reps && Array.isArray(summary.reps.list)) {
+        const good = summary.reps.list.filter(r => { const d = r.t1 - r.t0; return d >= 0.5 && d <= 15; });
+        if (good.length !== summary.reps.list.length) {
+          const avg = k => { const v = good.map(r => r[k]).filter(x => x != null && isFinite(x) && x < 15); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+          summary.reps = Object.assign({}, summary.reps, { list: good, count: good.length, avgDown: avg("down"), avgUp: avg("up") });
+        }
+      }
       const analysis = flAnalyze(lift, track, summary);
       show(1, "✓ خلص");
       const repList = (summary.reps && summary.reps.list) || [];
@@ -808,6 +933,7 @@
       /* auto-save the metrics row (never the video) */
       const saved = await flSaveScan(p.id, exName, analysis);
       const scanId = saved && saved.data && saved.data.id && !String(saved.data.id).startsWith("local-") ? saved.data.id : null;
+      if (saved && saved.error) { console.warn("formlab save", saved.error); toast("⚠️ التحليل ظهر لكن ماتحفظش في السجل — بلّغ المدرب"); }
       if (saved && saved.queued) toast("📴 التحليل اتحفظ على الموبايل وهيتبعت لما النت يرجع");
       const ghosts = await flLoadGhosts();
       flResultSheet({
@@ -819,8 +945,7 @@
       flRefreshList(p);
     } catch (e) {
       console.warn("formlab scan", e);
-      prog.hidden = true;
-      toast("تعذر تحليل الفيديو — اتأكد إنه فيديو واضح وجرب تاني");
+      flFail(prog, "تعذر تحليل الفيديو", "حصلت مشكلة وقت التحليل. جرّب فيديو تاني بالخطوات دي:", String(e && e.message || e));
       URL.revokeObjectURL(url);
     }
   }
@@ -900,7 +1025,7 @@
     el.querySelector("#flExQ").addEventListener("input", e => { el.querySelector("#flExList").innerHTML = exListHTML(e.target.value); bindEx(); });
     const file = el.querySelector("#flFile"), prog = el.querySelector("#flProg");
     el.querySelector("#flPick").onclick = () => file.click();
-    file.onchange = () => { const f = file.files && file.files[0]; file.value = ""; if (f) flScan(f, { model: S.formLift, ex: S.formEx }, p, prog); };
+    file.onchange = () => { const f = file.files && file.files[0]; file.value = ""; if (f) flPrecheck(f, { model: S.formLift, ex: S.formEx }, p, prog); };
     flRefreshList(p);
   };
 })();
