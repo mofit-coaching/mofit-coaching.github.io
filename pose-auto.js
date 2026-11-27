@@ -44,6 +44,7 @@ const AP_ANGLES = [
 ];
 
 let apLandmarker = null, apDelegate = null, apVariant = null, apMode = null;
+function apIsApple() { const ua = navigator.userAgent || ""; return /iPhone|iPad|iPod/i.test(ua) || (/Macintosh/i.test(ua) && navigator.maxTouchPoints > 1); }
 
 /* variant: "lite" (default, ~5.8MB) or "full" (~9.4MB). mode: "IMAGE" or "VIDEO".
    GPU first, CPU fallback (needed on some iPhones). Cached per combo. */
@@ -68,8 +69,11 @@ async function apInit(variant, forceDelegate, mode) {
   });
   if (forceDelegate) { apLandmarker = await mk(forceDelegate); apDelegate = forceDelegate; }
   else {
-    try { apLandmarker = await mk("GPU"); apDelegate = "GPU"; }
-    catch (e) { apLandmarker = await mk("CPU"); apDelegate = "CPU"; }
+    /* iPhone/iPad Safari: the GPU delegate loads fine but returns empty results on video frames, so use CPU there */
+    const apple = apIsApple();
+    const order = apple ? ["CPU", "GPU"] : ["GPU", "CPU"];
+    try { apLandmarker = await mk(order[0]); apDelegate = order[0]; }
+    catch (e) { apLandmarker = await mk(order[1]); apDelegate = order[1]; }
   }
   apVariant = key; apMode = mode;
   return { delegate: apDelegate, variant, mode };
@@ -129,49 +133,94 @@ async function apDetectVideo(video, tsMs) {
   return (res && res.landmarks && res.landmarks[0]) || null;
 }
 
-/* VIDEO tracking: pause and sample every time slice by seeking. detectForVideo is synchronous and may take hundreds of ms, so real-time rAF sampling skips most frames. */
+/* VIDEO scan: seek to every time slice, copy the frame onto a canvas (the browser applies the phone's rotation flag
+   and decodes the frame there), then detect on the canvas. Reading the <video> directly fails on iPhone Safari for
+   rotated clips and detached video elements. Auto-recovers: GPU -> CPU if nothing is found early, and a lower
+   confidence pass if the whole clip finds nothing. Returns diag so a failure says why. */
 let apLastTs = -1;
+/* true when the canvas holds an all-black / empty frame (iPhone Safari can hand back black frames for videos it has not decoded) */
+function apBlank(cv) {
+  try {
+    const t = document.createElement("canvas"); t.width = 8; t.height = 8;
+    const c = t.getContext("2d"); c.drawImage(cv, 0, 0, 8, 8);
+    const d = c.getImageData(0, 0, 8, 8).data; let mx = 0;
+    for (let i = 0; i < d.length; i += 4) mx = Math.max(mx, d[i], d[i + 1], d[i + 2]);
+    return mx < 6;
+  } catch (_) { return false; }
+}
 async function apTrack(video, fps, onProgress) {
   fps = fps || 6;
   const duration = Number(video.duration) || 0;
   if (!duration || !Number.isFinite(duration)) throw new Error("video duration unavailable");
   const frames = [], errors = [];
-  const wasMuted = video.muted, wasPaused = video.paused, originalTime = video.currentTime;
+  const diag = { delegate: apDelegate, w: video.videoWidth, h: video.videoHeight, samples: 0, tries: [] };
+  const wasMuted = video.muted, wasPaused = video.paused, originalTime = video.currentTime, wasConnected = video.isConnected;
   const report = (fraction, stage) => { if (onProgress) onProgress(Math.min(1, Math.max(0, fraction)), stage); };
   const seek = async t => {
-    if (Math.abs(video.currentTime - t) < 0.005 && !video.seeking) return;
+    if (Math.abs(video.currentTime - t) < 0.005 && !video.seeking && video.readyState >= 2) return;
     await new Promise((resolve, reject) => {
       let timer;
       const done = () => { clearTimeout(timer); video.removeEventListener("seeked", done); resolve(); };
       const fail = () => { clearTimeout(timer); video.removeEventListener("seeked", done); reject(new Error("video seek failed")); };
       video.addEventListener("seeked", done, { once: true });
       video.addEventListener("error", fail, { once: true });
-      timer = setTimeout(done, 1200);
+      timer = setTimeout(done, 3000);
       try { video.currentTime = Math.min(duration, Math.max(0, t)); } catch (e) { fail(); }
     });
+    for (let k = 0; k < 30 && video.readyState < 2; k++) await new Promise(r => setTimeout(r, 50));
+  };
+  const cv = document.createElement("canvas");
+  const ctx = cv.getContext("2d", { willReadFrequently: false });
+  const fit = () => {
+    const vw = video.videoWidth || 640, vh = video.videoHeight || 360, m = Math.max(vw, vh), sc = m > 960 ? 960 / m : 1;
+    const w = Math.max(2, Math.round(vw * sc)), h = Math.max(2, Math.round(vh * sc));
+    if (cv.width !== w || cv.height !== h) { cv.width = w; cv.height = h; }
+  };
+  const setConf = c => { try { apLandmarker.setOptions({ runningMode: "IMAGE", minPoseDetectionConfidence: c, minPosePresenceConfidence: c, minTrackingConfidence: c }); } catch (e) { errors.push("setOptions: " + String(e && e.message || e)); } };
+  const pass = async (stepFps, conf, label, stopEarlyIfEmpty) => {
+    setConf(conf);
+    const out = [], total = Math.ceil(duration * stepFps) + 1;
+    let seen = 0;
+    for (let i = 0; i < total; i++) {
+      const t = Math.min(duration, i / stepFps);
+      if (i && t >= duration) break;
+      try {
+        await seek(t); fit();
+        ctx.drawImage(video, 0, 0, cv.width, cv.height);
+        if (apBlank(cv)) { diag.blank = (diag.blank || 0) + 1; }
+        const res = apLandmarker.detect(cv);
+        const lms = (res && res.landmarks && res.landmarks[0]) || null;
+        seen++; diag.samples++;
+        if (lms) out.push({ t: +t.toFixed(3), lms: apPack(lms) });
+      } catch (e) { errors.push(String(e && e.message || e)); seen++; }
+      if (stopEarlyIfEmpty && seen >= 12 && !out.length) break;
+      report(Math.min(1, t / duration) * (label === "main" ? 1 : 0.99), "scanning");
+    }
+    diag.tries.push(label + ":" + conf + ":" + out.length + "/" + seen);
+    return out;
   };
   try {
     video.pause(); video.muted = true;
     report(0, "warming");
+    if (!wasConnected) { video.style.cssText = "position:fixed;left:-9999px;top:0;width:2px;height:2px;opacity:0;pointer-events:none"; document.body.appendChild(video); }
+    try { await Promise.race([video.play(), new Promise(r => setTimeout(r, 1500))]); video.pause(); } catch (_) {}
     await seek(0);
-    try { apLandmarker.detectForVideo(video, Math.max(apLastTs + 1, 1)); apLastTs = Math.max(apLastTs + 1, 1); }
-    catch (e) { errors.push(String(e && e.message || e)); }
-    const total = Math.ceil(duration * fps) + 1;
-    for (let i = 0; i < total; i++) {
-      const t = Math.min(duration, i / fps);
-      if (i && t >= duration) break;
+    let out = await pass(fps, 0.5, "main", apDelegate === "GPU"), usedFps = fps;
+    if (!out.length && apDelegate === "GPU") {
       try {
-        await seek(t);
-        const ts = Math.max(apLastTs + 1, Math.round(t * 1000)); apLastTs = ts;
-        const res = apLandmarker.detectForVideo(video, ts);
-        const lms = (res && res.landmarks && res.landmarks[0]) || null;
-        if (lms) frames.push({ t: +t.toFixed(3), lms: apPack(lms) });
-      } catch (e) { errors.push(String(e && e.message || e)); }
-      report(Math.min(1, t / duration), "scanning");
+        const k = (apVariant || "lite:auto:VIDEO").split(":");
+        await apInit(k[0], "CPU", k[2] || "VIDEO"); diag.delegate = "CPU";
+        out = await pass(fps, 0.5, "cpu", false);
+      } catch (e) { errors.push("cpu-retry: " + String(e && e.message || e)); }
     }
-    return { fps, frames, errors };
+    if (!out.length) { usedFps = Math.min(fps, 3); out = await pass(usedFps, 0.25, "lowconf", false); }
+    frames.push(...out);
+    if (!out.length && diag.blank && diag.blank >= diag.samples * 0.8) errors.push("blank-frames");
+    return { fps: usedFps, frames, errors, diag };
   } finally {
+    try { setConf(0.5); apLandmarker.setOptions({ runningMode: apMode && apVariant ? (apVariant.split(":")[2] || "VIDEO") : "VIDEO" }); } catch (_) {}
     try { await seek(Math.min(originalTime, duration)); } catch (_) {}
+    if (!wasConnected && video.parentNode) video.parentNode.removeChild(video);
     video.muted = wasMuted;
     if (!wasPaused) video.play().catch(() => {});
   }

@@ -536,7 +536,7 @@ function anChartTick(root, curT) {
 function anLoadScript(src) {
   return new Promise((res, rej) => {
     const sc = document.createElement("script");
-    sc.src = src + (src.includes("?") ? "&" : "?") + "v=pose-scan-20261126"; sc.onload = res; sc.onerror = rej;
+    sc.src = src + (src.includes("?") ? "&" : "?") + "v=pose-scan-20261127"; sc.onload = res; sc.onerror = rej;
     document.head.appendChild(sc);
   });
 }
