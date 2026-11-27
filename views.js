@@ -536,42 +536,202 @@ async function cycleCard(host,p,rerender){
   });
   const h=$("#cycHide"); if(h) h.onclick=e=>{ e.preventDefault(); localStorage.setItem("cyc_hide","1"); rerender&&rerender(); };
 }
+/* ======================================================================
+   HABITS — "لوحة الحديد والطباشير"  (styles live in mofit-habits.css)
+   Same table, same columns, same save path as before: one habits row per
+   day (diet / training / cardio / sleep_quality on the 0-25-50-75-100
+   scale, plus stress, sleep_hours, water_l, steps, cardio_min, notes).
+   Only the presentation changed: the four identical score rows became
+   four stations with their own mark (plate / barbell / pulse / moon), the
+   day score became an iron plate, and the weekly averages became a chalk
+   ledger. No new columns, no new writes.
+   ====================================================================== */
+const HB_STN=[
+  {k:"diet",t:"الدايت",s:"الطبق والماكروز",g:"plate",
+   p:`<circle cx="12" cy="12" r="8.2"/><circle cx="12" cy="12" r="2.6"/>`},
+  {k:"training",t:"التمرين",s:"الحديد اللي شلته",g:"bar",
+   p:`<path d="M4.2 7.4v9.2M19.8 7.4v9.2M7.8 9.4v5.2M16.2 9.4v5.2M7.8 12h8.4"/>`},
+  {k:"cardio",t:"الكارديو",s:"النفس والحركة",g:"pulse",
+   p:`<path d="M2.6 12h3.5l2.1-5.3 3 10.6 2.6-7.5 1.6 2.2h6"/>`},
+  {k:"sleep_quality",t:"جودة النوم",s:"الاستشفاء",g:"moon",
+   p:`<path d="M20 14.4A8.1 8.1 0 019.6 4 8.1 8.1 0 1020 14.4z"/>`}
+];
+const HB_PIP={
+  plate:`<circle cx="12" cy="12" r="8.4"/><circle cx="12" cy="12" r="2.8"/>`,
+  bar:`<path d="M4.6 7.6v8.8M19.4 7.6v8.8M8.2 9.6v4.8M15.8 9.6v4.8M8.2 12h7.6"/>`,
+  pulse:`<path d="M2.4 12h3.8l2-4.6 2.7 9.2 2.3-6.6 1.5 2h6.9"/>`,
+  moon:`<path d="M18.6 15.2A7.4 7.4 0 019.4 5.6a7.7 7.7 0 109.2 9.6z"/>`
+};
+function hbVerdict(s){
+  if(s===null||s===undefined) return "لسه ما سجلتش";
+  if(s>=.95) return "يوم حديد كامل";
+  if(s>=.75) return "يوم نضيف";
+  if(s>=.5) return "ماشي على الصح";
+  if(s>0) return "يوم بايظ شوية";
+  return "يوم صفر";
+}
+function hbCount(node,from,to){
+  const tn=node&&node.firstChild; if(!tn) return;
+  if(window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches){ tn.nodeValue=String(to); return; }
+  const t0=performance.now(), dur=520;
+  const step=t=>{ const k=Math.min(1,(t-t0)/dur), e=1-Math.pow(1-k,3); tn.nodeValue=String(Math.round(from+(to-from)*e)); if(k<1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function hbHeat(p,H){
+  const by=Object.fromEntries(H.map(h=>[h.log_date,dayScore(h)]));
+  const start=p.start_date||today(), wk=currentWeek(p);
+  let html=`<div class="heat"><span></span>${["1","2","3","4","5","6","7"].map(d=>`<span style="text-align:center">${d}</span>`).join("")}`;
+  const b0=(blockOf(wk)-1)*BLOCK;
+  for(let w=b0+1;w<=Math.max(wk,b0+4)&&w<=b0+BLOCK;w++){
+    html+=`<span>أ${w}</span>`;
+    for(let d=0;d<7;d++){ const iso=addDays(start,(w-1)*7+d), s=by[iso]; const lv=s===undefined||s===null?"":s>=.9?"l4":s>=.7?"l3":s>=.45?"l2":"l1"; html+=`<i class="${lv} ${iso===today()?"today":""}" style="--k:${(w-b0-1)+d}" title="${iso}"></i>`; }
+  }
+  return html+`</div><div class="hb-key"><span><i style="background:rgba(244,241,234,.14)"></i>ضعيف</span><span><i style="background:rgba(244,241,234,.3)"></i>كويس</span><span><i style="background:rgba(255,179,71,.62)"></i>ممتاز</span><span><i style="background:var(--acc,#FF6B1A)"></i>يوم كامل</span><span><i style="background:rgba(255,255,255,.06);box-shadow:inset 0 0 0 1px rgba(255,255,255,.16)"></i>مفيش تسجيل</span></div>`;
+}
 async function viewHabits(el){
   const p=S.client;
   const { data:all } = await sb.from("habits").select("*").eq("client_id",p.id).order("log_date");
   const H=all||[], cur=H.find(h=>h.log_date===S.date)||{}, rec={...cur}, w=weekOfDate(p,S.date);
-  const scoreRow=(k,l)=>`<div style="margin-bottom:12px"><div class="muted" style="font-weight:700;margin-bottom:6px">${l}</div><div class="scorerow" data-score="${k}">${SCORE.map(([v,e,t])=>`<button class="chip ${cur[k]!==null&&cur[k]!==undefined&&+cur[k]===v?"on":""}" data-v="${v}">${e} ${t}</button>`).join("")}</div></div>`;
-  el.innerHTML=`<div class="card"><div class="between"><button class="btn sm" id="dPrev">→</button><div style="text-align:center"><b>${niceDate(S.date)}</b><div class="muted">${w?"الأسبوع "+w:""}</div></div><button class="btn sm" id="dNext">←</button></div></div>
-    <div class="card"><div class="card-h"><div class="ic acc">⭐</div><h2>يومك<small>اختار درجة التزامك</small></h2><div id="dayScore">${ring(dayScore(cur)||0,1,{size:56,stroke:6,label:pct(dayScore(cur))})}</div></div>
-      <style>.scorerow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px}.scorerow .chip{padding:6px 2px;font-size:.74rem;min-height:40px;text-align:center;white-space:nowrap}</style>${scoreRow("diet","🥗 الدايت")}${scoreRow("training","💪 التمرين")}${scoreRow("cardio","🏃 الكارديو")}${scoreRow("sleep_quality","😴 جودة النوم")}
-      <div class="grid2"><label class="f">🤯 التوتر<select data-k="stress"><option value=""></option>${STRESS.map(s=>`<option ${cur.stress===s?"selected":""}>${s}</option>`).join("")}</select></label>
-       <label class="f">💤 ساعات النوم<input inputmode="decimal" data-k="sleep_hours" value="${esc(cur.sleep_hours??"")}"></label>
-       <label class="f">💧 المياه (لتر)<input inputmode="decimal" data-k="water_l" value="${esc(cur.water_l??"")}"></label>
-       <label class="f">👣 الخطوات${p.steps_goal?` <small>(الهدف ${fmt(p.steps_goal)})</small>`:""}<input inputmode="numeric" data-k="steps" value="${esc(cur.steps??"")}"></label>
-       <label class="f">🏃 دقايق الكارديو${p.cardio_plan?.minutes?` <small>(المطلوب ${fmt(p.cardio_plan.minutes)})</small>`:""}<input inputmode="numeric" data-k="cardio_min" value="${esc(cur.cardio_min??"")}"></label>
-</div>
-      <div id="ghSlot"></div>
-      <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
-      <button class="btn primary block" id="hSave">حفظ اليوم</button></div>
+  const has=k=>cur[k]!==null&&cur[k]!==undefined;
+  const sc=dayScore(cur), filled=HB_STN.filter(x=>has(x.k)).length;
+  const goal=+p.steps_goal||0, cardioPlan=+(p.cardio_plan&&p.cardio_plan.minutes)||0;
+  const stepsPct=goal&&cur.steps?Math.min(100,Math.round(cur.steps/goal*100)):0;
+  const longDay=new Date(S.date+"T00:00:00").toLocaleDateString("ar-EG",{weekday:"long",day:"numeric",month:"long"});
+  const strip=(()=>{
+    if(!w||!p.start_date) return "";
+    const d0=addDays(p.start_date,(w-1)*7), by={}; H.forEach(h=>{ by[h.log_date]=dayScore(h); });
+    return `<div class="hb-week">${[0,1,2,3,4,5,6].map(i=>{
+      const iso=addDays(d0,i), s=by[iso];
+      const lv=s===undefined||s===null?"":s>=.9?"l4":s>=.7?"l3":s>=.45?"l2":"l1";
+      return `<button class="hb-day ${lv} ${iso===S.date?"on":""} ${iso===today()?"now":""}" data-d="${iso}" aria-label="${iso}"><b>${new Date(iso+"T00:00:00").toLocaleDateString("ar-EG",{day:"numeric"})}</b><i></i></button>`;
+    }).join("")}</div>`;
+  })();
+  const C=2*Math.PI*70, arc0=C*(1-(sc||0));
+  el.innerHTML=`<div class="hb-rail">
+      <button class="hb-nav" id="dPrev" aria-label="اليوم اللي فات">→</button>
+      <div class="hb-date"><b>${niceDate(S.date)}</b><span>${w?"أسبوع "+w+" · ":""}${longDay}</span></div>
+      <button class="hb-nav" id="dNext" aria-label="اليوم اللي بعده">←</button>
+    </div>${strip}
+    <div class="hb-hero hb-panel" style="--i:0">
+      <div class="hb-hero-txt">
+        <span class="hb-kicker">لوحة النهارده</span>
+        <h2 id="hbVerdict">${hbVerdict(sc)}</h2>
+        <p id="hbSub">${filled?filled+" من 4 متسجلين":"مفيش حاجة متسجلة لسه"}</p>
+        <div class="hb-ticks" id="hbTicks">${HB_STN.map(x=>`<i class="${has(x.k)?"on":""}"></i>`).join("")}</div>
+      </div>
+      <div class="hb-plate">
+        <svg class="hb-ring" viewBox="0 0 176 176" aria-hidden="true">
+          <defs><linearGradient id="hbG" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#FF6B1A"/><stop offset="1" stop-color="#FFD08A"/></linearGradient></defs>
+          <circle class="hb-knurl" cx="88" cy="88" r="82"/>
+          <circle class="hb-track" cx="88" cy="88" r="70"/>
+          <circle class="hb-arc" id="hbArc" cx="88" cy="88" r="70" stroke-dasharray="${C.toFixed(1)}" stroke-dashoffset="${arc0.toFixed(1)}"/>
+          <circle class="hb-eng" cx="88" cy="88" r="57"/>
+        </svg>
+        <div class="hb-mid"><b class="hb-num" id="hbNum">${Math.round((sc||0)*100)}<span>%</span></b><small>التزام النهارده</small></div>
+        <div class="hb-dust" id="hbDust"></div>
+      </div>
+    </div>
+    <div class="hb-stns hb-panel" style="--i:1">
+      <div class="hb-h"><b>الالتزام</b><small>اضغط على الدرجة اللي تعبّر عن يومك</small></div>
+      ${HB_STN.map(st=>{
+        const v=has(st.k)?+cur[st.k]:null;
+        return `<div class="hb-stn ${v!==null?"on":""}" data-stn="${st.k}">
+          <div class="hb-stn-h">
+            <span class="hb-ic"><svg viewBox="0 0 24 24" aria-hidden="true">${st.p}</svg></span>
+            <span class="hb-nm"><b>${st.t}</b><small>${st.s}</small></span>
+            <b class="hb-val ${v===null?"off":""}" data-val="${st.k}">${v===null?"—":pct(v)}</b>
+          </div>
+          <div class="hb-scale" data-score="${st.k}">${SCORE.map(([sv],i)=>`<button class="hb-pip ${v!==null&&v===+sv?"on":""}" data-v="${sv}" style="--lv:${SCORE.length-1-i}" aria-label="${pct(sv)}" aria-pressed="${v!==null&&v===+sv}"><svg class="pp" viewBox="0 0 24 24" aria-hidden="true">${HB_PIP[st.g]}</svg></button>`).join("")}</div>
+          <span class="hb-line"><i data-line="${st.k}" style="width:${v!==null?v*100:0}%"></i></span>
+        </div>`;
+      }).join("")}
+    </div>
+    <div class="hb-tray hb-panel" style="--i:2">
+      <div class="hb-h"><b>دفتر النهارده</b><small>الأرقام اللي الكوتش بيشوفها</small></div>
+      <div class="hb-g2">
+        <label class="hb-fld"><span>المياه</span><div class="hb-in"><input inputmode="decimal" data-k="water_l" value="${esc(cur.water_l??"")}" placeholder="0"><i>لتر</i></div></label>
+        <label class="hb-fld"><span>الخطوات${goal?` <small>· الهدف ${fmt(goal)}</small>`:""}</span><div class="hb-in"><input inputmode="numeric" data-k="steps" value="${esc(cur.steps??"")}" placeholder="0"><i>خطوة</i></div><span class="hb-bar"><i id="hbSteps" style="width:${stepsPct}%"></i></span></label>
+        <label class="hb-fld"><span>ساعات النوم</span><div class="hb-in"><input inputmode="decimal" data-k="sleep_hours" value="${esc(cur.sleep_hours??"")}" placeholder="0"><i>ساعة</i></div></label>
+        <label class="hb-fld"><span>دقايق الكارديو${cardioPlan?` <small>· المطلوب ${fmt(cardioPlan)}</small>`:""}</span><div class="hb-in"><input inputmode="numeric" data-k="cardio_min" value="${esc(cur.cardio_min??"")}" placeholder="0"><i>دقيقة</i></div></label>
+      </div>
+      <div class="hb-stress">
+        <span class="hb-lab">التوتر</span>
+        <select data-k="stress" class="hb-sr" aria-label="التوتر"><option value=""></option>${STRESS.map(s=>`<option ${cur.stress===s?"selected":""}>${s}</option>`).join("")}</select>
+        <div class="hb-seg" data-seg="stress">${STRESS.map(s=>`<button type="button" data-sv="${esc(s)}" class="${cur.stress===s?"on":""}">${esc(s)}</button>`).join("")}</div>
+      </div>
+      <label class="hb-notes"><span class="hb-lab">ملاحظاتك</span><textarea rows="2" data-k="notes" placeholder="حاجة حصلت النهارده تحب تفتكرها؟">${esc(cur.notes??"")}</textarea></label>
+      <button class="btn primary block hb-save" id="hSave">سجّل اليوم</button>
+    </div>
+    <div id="ghSlot"></div>
     <div id="cycSlot"></div>
-    <div class="card"><div class="card-h"><div class="ic">🗓</div><h2>خريطة الالتزام<small>كل مربع = يوم</small></h2></div>${heatmap(p,H)}</div>
-    <div class="card" id="hWeeks"></div>`;
+    <div class="hb-hist hb-panel" style="--i:3">
+      <div class="hb-h"><b>سجلك</b><small>كل مربع = يوم · اللون = درجة اليوم</small></div>
+      ${hbHeat(p,H)}
+      <div class="hb-ledger" id="hWeeks"></div>
+    </div>`;
   $("#dPrev").onclick=()=>{S.date=addDays(S.date,-1); viewHabits(el);};
   $("#dNext").onclick=()=>{S.date=addDays(S.date,1); viewHabits(el);};
+  el.querySelectorAll("[data-d]").forEach(b=>b.onclick=()=>{ S.date=b.dataset.d; viewHabits(el); });
   window.ghRenderStepsSlot&&window.ghRenderStepsSlot($("#ghSlot"),p,()=>viewHabits(el));
   cycleCard($("#cycSlot"),p,()=>viewHabits(el));
+
+  /* ---- live paint: plate, verdict, ticks, station values ---- */
+  const q=s=>el.querySelector(s), arc=q("#hbArc"), numEl=q("#hbNum");
+  let shown=Math.round((sc||0)*100);
+  const burst=()=>{ const d=q("#hbDust"); if(!d) return; d.innerHTML="";
+    for(let i=0;i<9;i++){ const a=(Math.PI*2*i)/9+Math.random()*.6, dist=40+Math.random()*26, s=document.createElement("i");
+      s.style.setProperty("--tx",(Math.cos(a)*dist).toFixed(1)+"px"); s.style.setProperty("--ty",(Math.sin(a)*dist).toFixed(1)+"px"); s.style.setProperty("--n",i); d.appendChild(s); }
+    d.classList.remove("go"); void d.offsetWidth; d.classList.add("go"); };
+  const paint=()=>{
+    const s=dayScore(rec);
+    if(arc) arc.style.strokeDashoffset=(C*(1-(s||0))).toFixed(1);
+    if(numEl){ const to=Math.round((s||0)*100); hbCount(numEl,shown,to); shown=to; }
+    const vd=q("#hbVerdict"); if(vd){ vd.textContent=hbVerdict(s); vd.classList.remove("hb-flip"); void vd.offsetWidth; vd.classList.add("hb-flip"); }
+    const n=HB_STN.filter(x=>rec[x.k]!==null&&rec[x.k]!==undefined).length;
+    const sub=q("#hbSub"); if(sub) sub.textContent=n?n+" من 4 متسجلين":"مفيش حاجة متسجلة لسه";
+    el.querySelectorAll("#hbTicks i").forEach((t,i)=>t.classList.toggle("on",rec[HB_STN[i].k]!==null&&rec[HB_STN[i].k]!==undefined));
+    HB_STN.forEach(st=>{ const v=rec[st.k], on=v!==null&&v!==undefined;
+      const val=q(`[data-val="${st.k}"]`); if(val){ val.textContent=on?pct(v):"—"; val.classList.toggle("off",!on); }
+      const line=q(`[data-line="${st.k}"]`); if(line) line.style.width=(on?v*100:0)+"%";
+      const box=q(`[data-stn="${st.k}"]`); if(box) box.classList.toggle("on",on); });
+  };
   el.querySelectorAll("[data-score]").forEach(g=>g.querySelectorAll("button").forEach(b=>b.onclick=()=>{
-    g.querySelectorAll("button").forEach(x=>x.classList.remove("on")); b.classList.add("on"); rec[g.dataset.score]=+b.dataset.v;
-    $("#dayScore").innerHTML=ring(dayScore(rec)||0,1,{size:56,stroke:6,label:pct(dayScore(rec))}); }));
+    g.querySelectorAll("button").forEach(x=>{ x.classList.remove("on"); x.setAttribute("aria-pressed","false"); });
+    b.classList.add("on"); b.setAttribute("aria-pressed","true"); rec[g.dataset.score]=+b.dataset.v;
+    burst(); paint(); }));
+
+  /* ---- stress chips drive the same select the save reads ---- */
+  const sel=q('[data-k="stress"]');
+  el.querySelectorAll("[data-seg] button").forEach(b=>b.onclick=()=>{
+    const same=b.classList.contains("on");
+    el.querySelectorAll("[data-seg] button").forEach(x=>x.classList.remove("on"));
+    if(same){ sel.value=""; } else { b.classList.add("on"); sel.value=b.dataset.sv; }
+  });
+  /* ---- steps bar follows the number as it is typed ---- */
+  const st=q('[data-k="steps"]');
+  if(st&&goal) st.addEventListener("input",()=>{ const v=num(st.value); q("#hbSteps").style.width=(v?Math.min(100,Math.round(v/goal*100)):0)+"%"; });
+
   $("#hSave").onclick=async()=>{
     const v=k=>el.querySelector(`[data-k="${k}"]`);
     const out={client_id:p.id,log_date:S.date,diet:rec.diet??null,training:rec.training??null,cardio:rec.cardio??null,sleep_quality:rec.sleep_quality??null,
       stress:v("stress").value||null,sleep_hours:num(v("sleep_hours").value),water_l:num(v("water_l").value),steps:num(v("steps").value),cardio_min:num(v("cardio_min").value),notes:v("notes").value.trim()||null,updated_at:new Date().toISOString()};
     const { error, queued } = await dbWrite({op:"upsert",table:"habits",row:out,onConflict:"client_id,log_date"}); if(error) return toast(error.message); toast(queued?"📴 اتحفظ على الموبايل":"✓ اتحفظ"); if(!queued) viewHabits(el);
   };
+  /* ---- weekly ledger: same averages as the old table ---- */
   const wk=currentWeek(p), by={}; H.forEach(h=>{ const x=weekOfDate(p,h.log_date); if(x) (by[x]=by[x]||[]).push(h); });
-  $("#hWeeks").innerHTML=`<div class="card-h"><div class="ic">📊</div><h2>المتوسط الأسبوعي</h2></div><div class="scrollx"><table><tr><th>أسبوع</th><th>دايت</th><th>تمرين</th><th>كارديو</th><th>نوم</th><th>ساعات</th><th>خطوات</th><th>أيام</th></tr>
-    ${blockWeeks(wk,p).filter(w=>w<=Math.max(wk,BLOCK)).map(w=>{ const a=by[w]||[], c=w===wk?"cur":""; return `<tr><td class="${c}"><b>${w}</b></td><td class="${c}">${pct(avg(a.map(h=>h.diet)))}</td><td class="${c}">${pct(avg(a.map(h=>h.training)))}</td><td class="${c}">${pct(avg(a.map(h=>h.cardio)))}</td><td class="${c}">${pct(avg(a.map(h=>h.sleep_quality)))}</td><td class="${c} num">${fmt(avg(a.map(h=>h.sleep_hours)),1)}</td><td class="${c} num">${fmt(avg(a.map(h=>h.steps)))}</td><td class="${c}">${a.length||""}</td></tr>`; }).join("")}</table></div>`;
+  const col=[["a","دايت"],["b","تمرين"],["c","كارديو"],["d","نوم"]];
+  $("#hWeeks").innerHTML=`<div class="hb-sub"><b>المتوسط الأسبوعي</b><small>نسبة الالتزام لكل أسبوع</small></div>
+    <div class="hb-leg">
+      <div class="hb-lh"><span>أسبوع</span><span>الالتزام</span><span>ساعات</span><span>خطوات</span><span>أيام</span></div>
+      <div class="hb-lkey">${col.map(([c,l])=>`<i class="${c}"></i>${l}`).join("")}</div>
+      ${blockWeeks(wk,p).filter(x=>x<=Math.max(wk,1)).map(x=>{ const a=by[x]||[], c=x===wk?"cur":"";
+        const vals=[avg(a.map(h=>h.diet)),avg(a.map(h=>h.training)),avg(a.map(h=>h.cardio)),avg(a.map(h=>h.sleep_quality))];
+        return `<div class="hb-lr ${c}"><b class="num">${x}</b>
+          <span class="hb-lb">${vals.map((v,i)=>`<i class="${"abcd"[i]}" style="height:${v===null?3:Math.max(3,Math.round(v*100))}%"></i>`).join("")}</span>
+          <span class="num">${fmt(avg(a.map(h=>h.sleep_hours)),1)}</span>
+          <span class="num">${fmt(avg(a.map(h=>h.steps)))}</span>
+          <span class="num">${a.length||"—"}</span></div>`; }).join("")}
+    </div>`;
 }
 
 /* ======================================================================
@@ -639,4 +799,4 @@ async function homeCheckinCard(p,wk){
     `<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>متابعة الأسبوع ${wk}<small>${thisW?(thisW.reviewed_at?"✓✓ الكوتش رد":"✓ اتبعتت – مستنية رد الكوتش"):"لسه ما اتبعتتش – وزن + صور + إحساسك"}</small></h2><button class="btn sm ${thisW?"":"primary"}" id="goCI">${thisW?"عرض":"ابعت"}</button></div>
      ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
   $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
-                                                                                                                                                                                                                                                                           }
+}
