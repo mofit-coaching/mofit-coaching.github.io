@@ -187,7 +187,7 @@ return `<div class="sc-ccard sc-rv"><div class="sc-chead"><div class="sc-cframe"
 function tagline(){const t="تمرينك وأكلك ومتابعتك كلهم في مكان واحد. ومعاك كوتش حقيقي بيتابعك كل أسبوع ويعدّل معاك على حسب نتيجتك.";const hl=new Set(["كوتش","حقيقي","مكان","واحد."]);
 /* Real numbers only, read from the app itself: exercise library size, program systems, active clients. */
 const nEx=Object.keys(window.EXDB||{}).length, nSys=(typeof B!=="undefined"&&B)?Object.keys(B).length:0, nCl=16;
-const counts=`<div class="sc-counts sc-rv"><div class="c"><b><span data-count="${nEx}">${nEx}</span>+</b><span>تمرين في مكتبة الأداء</span></div><div class="c"><b><span data-count="${nSys}">${nSys}</span>+</b><span>برنامج تمرين جاهز</span></div><div class="c"><b><span data-count="${nCl}">${nCl}</span></b><span>عميل بيتمرن معانا</span></div></div>`;
+const counts=`<div class="sc-counts sc-rv"><div class="c"><b><span data-count="${nEx}">${nEx}</span></b><span>تمرين في مكتبة الأداء</span></div><div class="c"><b><span data-count="${nSys}">${nSys}</span></b><span>برنامج تمرين جاهز</span></div><div class="c"><b><span data-count="${nCl}">${nCl}</span></b><span>عميل بيتمرن معانا</span></div></div>`;
 return `<div class="sc-tg" aria-label="${esc(t)}"><p aria-hidden="true">${t.split(" ").map(w=>`<span class="w${hl.has(w)?" hl":""}">${esc(w)}</span>`).join(" ")}</p></div>`+counts}
 /* FAQ content. Entries with a:null are NOT shown until the coach supplies the real answer (policy items).
    TODO coach: payment methods, cancellation/refund policy, women clients, program delivery time, when the subscription period starts. */
