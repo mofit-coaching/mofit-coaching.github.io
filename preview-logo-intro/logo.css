@@ -4,9 +4,9 @@
 .logo-assembly{position:relative;display:inline-flex;align-items:center;justify-content:center;padding:14px 30px;isolation:isolate;min-height:74px}
 /* the bar is two halves that draw out from the middle, then part to open a slot for the wordmark */
 .logo-assembly .lp-bar{position:absolute;left:50%;top:50%;width:min(260px,72vw);height:10px;margin:-5px 0 0 calc(min(260px,72vw) / -2);z-index:0}
-.logo-assembly .lp-bar i{position:absolute;top:0;display:block;width:50%;height:100%;border-radius:6px;box-shadow:0 0 18px rgba(255,107,26,.45);scale:0 1;translate:0 0}
-.logo-assembly .lp-a{left:0;transform-origin:right center;background:linear-gradient(90deg,rgba(255,107,26,.12),#FF6B1A 45%,#FFB347 100%)}
-.logo-assembly .lp-b{right:0;transform-origin:left center;background:linear-gradient(270deg,rgba(255,107,26,.12),#FF6B1A 45%,#FFB347 100%)}
+.logo-assembly .lp-bar i{position:absolute;top:0;display:block;width:50%;height:100%;box-shadow:0 0 18px rgba(255,107,26,.45);scale:0 1;translate:0 0}
+.logo-assembly .lp-a{left:0;border-radius:6px 0 0 6px;transform-origin:right center;background:linear-gradient(90deg,rgba(255,107,26,.12),#FF6B1A 45%,#FFB347 100%)}
+.logo-assembly .lp-b{right:0;border-radius:0 6px 6px 0;transform-origin:left center;background:linear-gradient(270deg,rgba(255,107,26,.12),#FF6B1A 45%,#FFB347 100%)}
 .logo-assembly .lp-plate{position:absolute;top:50%;width:58px;height:58px;margin-top:-29px;opacity:0;z-index:1;filter:drop-shadow(0 6px 14px rgba(255,107,26,.35));translate:0 0}
 .logo-assembly .lp-l{left:-14px;transform:translateX(-120px) rotate(-38deg) scale(.8)}
 .logo-assembly .lp-r{right:-14px;transform:translateX(120px) rotate(38deg) scale(.8)}
