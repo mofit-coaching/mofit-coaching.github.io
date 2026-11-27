@@ -164,7 +164,7 @@ async function viewCheckin(el){
   const C=all||[]; S.ciWeek=S.ciWeek||Math.max(1,wkNow);
   const cur=C.find(c=>c.week===S.ciWeek)||{}, rec={...cur}, first=C.find(c=>c.photo_front||c.photo_side||c.photo_back);
   el.innerHTML=`<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>المتابعة الأسبوعية<small>مرة في الأسبوع: وزن + صور + إحساسك</small></h2></div>
-      ${blockNavHTML(S.ciWeek,p)}<div class="scroller">${blockWeeks(S.ciWeek,p).map(w=>{ const c=C.find(x=>x.week===w); return `<button class="chip ${S.ciWeek===w?"on":""} ${wkNow===w?"cur":""}" data-w="${w}">${w}${c?(c.reviewed_at?" ✓✓":" ✓"):""}</button>`; }).join("")}</div>
+      ${blockNavHTML(S.ciWeek,p)}<div class="scroller">${planWeekList(p,S.ciWeek).map(w=>{ const c=C.find(x=>x.week===w); return `<button class="chip ${S.ciWeek===w?"on":""} ${wkNow===w?"cur":""}" data-w="${w}">${w}${c?(c.reviewed_at?" ✓✓":" ✓"):""}</button>`; }).join("")}</div>
       <p class="hint">✓ اتبعتت · ✓✓ الكوتش رد عليها</p></div>
     ${cur.coach_reply?`<div class="card dark"><div class="card-h"><div class="ic">💬</div><h2>رد الكوتش<small>الأسبوع ${S.ciWeek}</small></h2></div><p style="margin:0;white-space:pre-wrap">${esc(cur.coach_reply)}</p></div>`:""}
     <div class="card"><div class="card-h"><div class="ic dark">📝</div><h2>أسبوع ${S.ciWeek}<small>${cur.id?"اتبعتت "+esc(cur.checkin_date):"لسه ما اتبعتتش"}</small></h2></div>
@@ -237,10 +237,10 @@ async function applyDietTemplate(p, tpl, scaleTo){
 async function viewReport(el){
   const p=S.client, wkNow=currentWeek(p), t=targets(p);
   const R=S.rep||(S.rep={from:Math.max(1,Math.floor((wkNow-1)/4)*4+1), to:Math.floor((wkNow-1)/4)*4+4, summary:""});
-  const bs=(blockOf(wkNow)-1)*BLOCK, RANGES=[[bs+1,bs+4],[bs+5,bs+8],[bs+9,bs+12],[bs+1,bs+12]].concat(bs?[[1,wkNow]]:[]);
+  const bs=(blockOf(wkNow)-1)*BLOCK, whole=[1,Math.max(planWeeks(p)||0,wkNow,1)], RANGES=[[bs+1,bs+4],[bs+5,bs+8],[bs+9,bs+12],[bs+1,bs+12]].concat(bs?[[1,wkNow]]:[]).concat(whole[1]>wkNow?[whole]:[]);
   const dFrom=addDays(p.start_date||today(),(R.from-1)*7), dTo=addDays(p.start_date||today(),R.to*7-1);
   el.innerHTML=`<div class="card no-print"><div class="card-h"><div class="ic acc">📄</div><h2>التقرير الشهري<small>اختار الفترة واكتب ملخصك، وبعدين اطبع أو احفظ PDF</small></h2></div>
-      <div class="scroller">${RANGES.map(([a,b])=>`<button class="chip ${R.from===a&&R.to===b?"on":""}" data-r="${a}-${b}">${b-a===11?(bs?"البلوك "+blockOf(wkNow)+" كله":"البرنامج كله"):a===1&&b===wkNow?"من البداية لحد دلوقتي":"أسابيع "+a+"–"+b}</button>`).join("")}</div>
+      <div class="scroller">${RANGES.map(([a,b])=>`<button class="chip ${R.from===a&&R.to===b?"on":""}" data-r="${a}-${b}">${a===1&&b===whole[1]?`البرنامج كله (${a}–${b})`:b-a===11?"البلوك "+blockOf(wkNow)+" كله":a===1&&b===wkNow?"من البداية لحد دلوقتي":"أسابيع "+a+"–"+b}</button>`).join("")}</div>
       <label class="f" style="margin-top:10px">ملخص الكوتش (بيظهر في التقرير)<textarea rows="4" id="repSum">${esc(R.summary)}</textarea></label>
       <label class="row" style="gap:8px;font-size:.85rem"><input type="checkbox" id="repPh" style="width:auto;min-height:0" ${R.photos!==false?"checked":""}> إظهار صور قبل/بعد (بموافقة العميل)</label>
       <button class="btn primary block" id="repPrint" style="margin-top:10px">🖨 طباعة / حفظ PDF</button></div>
