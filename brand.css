@@ -1,0 +1,93 @@
+/* ======================================================================
+   MOFIT Living Brand (brand-*) — البراند الحي
+   The app's accent mood follows the client's real day, computed from their
+   own program and logs (brand.js):
+     data-mood="fight"    يوم قتال — dark red, on a scheduled training day
+     data-mood="recovery" يوم استشفاء — calm blue, on a rest day
+     data-mood="pr"       أسبوع الأرقام — warm gold, when a logged e1RM record
+                          was broken this week (same rule as ملخص أسبوعك)
+   Only the 10% accent layer changes; the 60/30/10 colour rule stays intact.
+   Everything is scoped under body[data-mood] so removing this file returns
+   the default MO FIT orange untouched.
+   MO Method card styles live here too (mo-*) so index.html gains one link.
+   ====================================================================== */
+
+/* ---------- mood palettes (accent layer only) ---------- */
+body[data-mood="fight"]{
+  --acc:#E11D2E; --acc2:#F4556B; --acc-soft:#FDE7EA; --acc-line:#F5B7BE;
+  --c1:#E11D2E; --mf-acc:#E11D2E; --mf-acc-2:#F4556B;
+  --mood-g1:#E11D2E; --mood-g2:#F4556B; --mood-sh:rgba(225,29,46,.55); --mood-line:rgba(225,29,46,.45);
+}
+body[data-mood="recovery"]{
+  --acc:#2563EB; --acc2:#60A5FA; --acc-soft:#E2EBFD; --acc-line:#B9CCFA;
+  --c1:#2563EB; --mf-acc:#2563EB; --mf-acc-2:#60A5FA;
+  --mood-g1:#2563EB; --mood-g2:#60A5FA; --mood-sh:rgba(37,99,235,.5); --mood-line:rgba(37,99,235,.4);
+}
+body[data-mood="pr"]{
+  --acc:#D97706; --acc2:#FBBF24; --acc-soft:#FFF1D6; --acc-line:#F0D5A0;
+  --c1:#D97706; --mf-acc:#D97706; --mf-acc-2:#FBBF24;
+  --mood-g1:#D97706; --mood-g2:#FBBF24; --mood-sh:rgba(217,119,6,.55); --mood-line:rgba(217,119,6,.45);
+}
+
+/* ---------- hardcoded-accent spots that the tokens don't reach ---------- */
+body[data-mood] .btn.primary{
+  background:linear-gradient(135deg,var(--mood-g1),var(--mood-g2));
+  box-shadow:0 12px 24px -10px var(--mood-sh),inset 0 1px 0 rgba(255,255,255,.3);
+}
+body[data-mood] .nav button.on{
+  background:linear-gradient(160deg,var(--mood-g1),var(--mood-g2));
+  box-shadow:0 8px 20px -8px var(--mood-sh);
+}
+body[data-mood] .bar>i{background:linear-gradient(90deg,var(--mood-g1),var(--mood-g2))}
+body[data-mood] .logo b{-webkit-text-fill-color:var(--mood-g1);color:var(--mood-g1)}
+body[data-mood] .timer::before{background:linear-gradient(90deg,var(--mood-g1),var(--mood-g2))}
+body[data-mood] .timer.done{background:linear-gradient(135deg,var(--mood-g1),var(--mood-g2))}
+body[data-mood] .ringwrap svg circle[stroke="#F97316"]{stroke:var(--mood-g1)}
+
+/* ---------- contained ambient: hero tint + header/nav mood lines ---------- */
+body[data-mood] .card.dark.hero{
+  box-shadow:0 0 0 1.5px var(--mood-line),0 24px 50px -22px var(--mood-sh);
+  transition:box-shadow .5s;
+}
+body[data-mood] .top{border-bottom:2px solid var(--mood-line)}
+body[data-mood] .nav{box-shadow:0 -10px 26px -18px var(--mood-sh)}
+
+/* ---------- the mood pill in the header ---------- */
+.brand-mood{
+  background:linear-gradient(135deg,var(--mood-g1),var(--mood-g2));
+  color:#fff;font-weight:800;letter-spacing:.1px;
+  box-shadow:0 6px 16px -6px var(--mood-sh);
+  animation:moodpop .45s cubic-bezier(.2,1.4,.4,1) both;
+}
+@keyframes moodpop{from{opacity:0;transform:scale(.7)}}
+body:not([data-mood]) .brand-mood{display:none}
+@media(prefers-reduced-motion:reduce){.brand-mood{animation:none}}
+
+/* ======================================================================
+   The MO Method card (mo-*) — تقييم MO FIT
+   ====================================================================== */
+.mo-card{overflow:hidden;position:relative}
+.mo-card::before{
+  content:"";position:absolute;inset:0;pointer-events:none;
+  background:radial-gradient(220px 130px at 88% -20%,color-mix(in srgb,var(--acc,#FF6B1A) 16%,transparent),transparent 70%);
+}
+.mo-word{font-family:Anton,Outfit,system-ui,sans-serif;letter-spacing:.06em;direction:ltr;unicode-bidi:isolate}
+.mo-word b{color:var(--acc,#FF6B1A);font-weight:inherit}
+.mo-main{display:flex;gap:18px;align-items:center;flex-wrap:wrap}
+.mo-score{flex:none;text-align:center}
+.mo-score .mo-num{font:800 2.5rem/1 Anton,Outfit,system-ui,sans-serif;color:var(--navy,#0B1220)}
+.mo-score .mo-of{font-size:.78rem;font-weight:700;color:var(--slate,#5F6B7F)}
+.mo-bars{flex:1;min-width:180px;display:flex;flex-direction:column;gap:10px}
+.mo-row{display:flex;flex-direction:column;gap:4px}
+.mo-row .mo-lab{display:flex;justify-content:space-between;align-items:baseline;font-size:.86rem;font-weight:700;color:var(--navy3,#2B3750)}
+.mo-row .mo-lab .mo-val{font-variant-numeric:tabular-nums;color:var(--slate,#5F6B7F);font-weight:800}
+.mo-bar{height:10px;border-radius:99px;background:var(--soft2,#F0EFEA);overflow:hidden}
+.mo-bar>i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--acc,#FF6B1A),var(--acc2,#FF9248));transition:width .8s cubic-bezier(.22,.9,.24,1)}
+.mo-row.mo-off .mo-bar>i{background:var(--soft,#E6E4DE)}
+.mo-hint{font-size:.74rem;color:var(--slate,#5F6B7F);font-weight:600}
+.mo-how{margin-top:12px;border-top:1px dashed var(--soft,#E6E4DE);padding-top:10px}
+.mo-how summary{cursor:pointer;font-weight:800;font-size:.86rem;color:var(--navy3,#2B3750);list-style:none}
+.mo-how summary::before{content:"＋ ";color:var(--acc,#FF6B1A)}
+.mo-how[open] summary::before{content:"－ "}
+.mo-how ul{margin:8px 0 0;padding-inline-start:18px;display:flex;flex-direction:column;gap:6px;font-size:.82rem;color:var(--slate,#5F6B7F);line-height:1.7}
+.mo-how b{color:var(--navy3,#2B3750)}
