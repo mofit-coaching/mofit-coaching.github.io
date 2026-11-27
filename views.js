@@ -262,7 +262,7 @@ async function viewTrain(el){
     const nSets=modeSets(weekSets(ex,p,S.week)), restS=modeRest(ex.rest_sec||90), alt=altChoice(ex.id), hint=progressionHint(ex,[...Array(ex.sets)].map((_,i)=>get(ex.id,S.week-1,i+1)).filter(Boolean),deload);
     const mus=muscleOf(ex.name); box.style.setProperty("--mc",mColor(mus));
     box.innerHTML=`<div class="ex-h"><div class="ex-n">${idx+1}</div><div class="ex-t">${mus!=="أخرى"?mChip(mus):""}<b data-vid>${esc(alt||ex.name)}</b>${alt?`<small style="display:block;color:#FDBA74;font-size:.7rem">بديل لـ ${esc(ex.name)}</small>`:""}
-        <div class="ex-tags"><span class="pill glass">🎯 ${nSets}×${esc(ex.target_reps||"—")}</span>${deload?`<span class="pill glass">RIR 3-4</span>`:ex.target_rir?`<span class="pill glass">RIR ${esc(modeRir(ex.target_rir))}</span>`:""}<button class="pill glass" data-alt style="border:0;cursor:pointer">⇄ بديل</button><button class="pill glass" data-hist style="border:0;cursor:pointer">📈 السجل</button><button class="pill glass" data-exdb style="border:0;cursor:pointer" title="صور وشرح الأداء">📸 الأداء</button><button class="pill glass" data-pain style="border:0;cursor:pointer" title="حاسس بألم؟">🤕</button>${ex.rest_sec?`<span class="pill glass">⏱ ${restS}ث</span>`:""}${ex.tempo?`<span class="pill glass">🕒 ${esc(ex.tempo)}</span>`:""}<span class="pill acc" data-best></span></div></div>
+        <div class="ex-tags"><span class="pill glass">🎯 ${nSets}×${esc(ex.target_reps||"—")}</span>${deload?`<span class="pill glass">RIR 3-4</span>`:ex.target_rir?`<span class="pill glass">RIR ${esc(modeRir(ex.target_rir))}</span>`:""}<button class="pill glass" data-alt style="border:0;cursor:pointer">⇄ بديل</button><button class="pill glass" data-hist style="border:0;cursor:pointer">📈 السجل</button><button class="pill glass" data-exdb style="border:0;cursor:pointer" title="صور وشرح الأداء">📸 الأداء</button><button class="pill glass" data-why style="border:0;cursor:pointer" title="ليه التمرين ده في برنامجك">📚 ليه؟</button><button class="pill glass" data-pain style="border:0;cursor:pointer" title="حاسس بألم؟">🤕</button>${ex.rest_sec?`<span class="pill glass">⏱ ${restS}ث</span>`:""}${ex.tempo?`<span class="pill glass">🕒 ${esc(ex.tempo)}</span>`:""}<span class="pill acc" data-best></span></div></div>
         ${vid?`<button class="play" data-vid title="شاهد الأداء الصحيح">${ICON.play}</button>`:""}</div>
       <div class="ex-b">${hint?`<div class="prog ${hint.kind}">${hint.text}</div>`:""}${ex.tempo?tempoBlocks(ex.tempo):""}${ex.notes?`<p class="hint" style="margin:0 0 8px">📝 ${esc(ex.notes)}</p>`:""}${deload?"":idx===firstC?warmupHTML(hint?.w||prevW(ex)):firstOfM[idx]?feederHTML(hint?.w||prevW(ex),mus):""}
         <div class="set-head"><span>#</span><span>العدات</span><span>الوزن كجم</span><span>RIR</span><span>فشل</span><span></span></div><div data-sets></div>
@@ -271,6 +271,7 @@ async function viewTrain(el){
     box.querySelector("[data-alt]").onclick=()=>openAlts(ex,()=>viewTrain(el));
     box.querySelector("[data-hist]").onclick=()=>openExHistory(ex);
     box.querySelector("[data-exdb]").onclick=()=>mofitExdb.open(alt||ex.name);
+    box.querySelector("[data-why]").onclick=()=>mofitReceipts.open(alt||ex.name);
     box.querySelector("[data-rest]").onclick=()=>startRest(restS, ex.name);
     box.querySelector("[data-pain]").onclick=()=>openPain(ex,()=>openAlts(ex,()=>viewTrain(el)));
     const setsEl=box.querySelector("[data-sets]");
@@ -637,4 +638,4 @@ async function homeCheckinCard(p,wk){
     `<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>متابعة الأسبوع ${wk}<small>${thisW?(thisW.reviewed_at?"✓✓ الكوتش رد":"✓ اتبعتت – مستنية رد الكوتش"):"لسه ما اتبعتتش – وزن + صور + إحساسك"}</small></h2><button class="btn sm ${thisW?"":"primary"}" id="goCI">${thisW?"عرض":"ابعت"}</button></div>
      ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
   $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
-}
+                                                                                                                                                                                                                                                                           }
