@@ -1,0 +1,10 @@
+/* MOFIT Skeleton Scroll: a glowing skeleton that moves through lifts as the landing page scrolls. */
+#skelScroll{position:fixed;left:8px;bottom:14px;width:96px;height:200px;z-index:3;pointer-events:none;opacity:0;transition:opacity .5s ease;filter:drop-shadow(0 6px 18px rgba(255,107,26,.28))}
+#skelScroll.skel-on{opacity:.5}
+#skelScroll .skel-svg{width:100%;height:100%;overflow:visible}
+#skelScroll .sk-label{font:700 11px/1 Cairo,Outfit,system-ui,sans-serif;fill:#FFB347;letter-spacing:.02em}
+#skelScroll .sk-torso,#skelScroll .sk-armL,#skelScroll .sk-armR,#skelScroll .sk-legL,#skelScroll .sk-legR,#skelScroll .sk-bar{transition:none}
+@media(min-width:560px){#skelScroll{width:118px;height:246px;left:18px;bottom:22px}#skelScroll.skel-on{opacity:.55}}
+@media(min-width:900px){#skelScroll{width:140px;height:292px;left:calc(50% - 430px);bottom:40px}#skelScroll.skel-on{opacity:.6}}
+@media(max-height:560px){#skelScroll{height:150px;width:72px}}
+@media(prefers-reduced-motion:reduce){#skelScroll{display:none}}
