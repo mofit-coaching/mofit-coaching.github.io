@@ -84,6 +84,7 @@ async function viewClients(el){
     <div class="card" id="aidg" hidden></div>
     <div class="card" id="wrep"></div>
     <div class="card" id="pgan"></div>
+    <div class="card" id="brain"></div>
     <div class="card" id="ciov"></div>
     <div class="card" id="mlst"></div>
     <div class="card"><div class="card-h"><div class="ic dark">👥</div><h2>عملائك</h2></div>
@@ -109,7 +110,7 @@ async function viewClients(el){
       <div class="bar" style="height:5px"><i style="width:${wInBlock(wk)/BLOCK*100}%"></i></div></div><div style="text-align:center"><b class="num">${wInBlock(wk)}</b><div class="muted" style="font-size:.66rem">/12${wk>BLOCK?" · ب"+blockOf(wk):""}</div></div>${AL[c.id].length?`<span class="pill acc">🔔 ${AL[c.id].length}</span>`:""}${c.active?"":`<span class="pill navy">موقوف</span>`}<button class="client-del" type="button" data-del="${c.id}" aria-label="حذف العميل" title="حذف العميل وكل بياناته">🗑</button></div>`; }).join(""):emptyBox("🙋","لسه مفيش عملاء","ضيف أول عميل وابدأ ابنِ برنامجه: تمرين وأكل ومتابعة من مكان واحد.",{label:"+ إضافة عميل جديد",click:"#addBtn"});
     $("#cl").querySelectorAll("[data-del]").forEach(b=>b.onclick=e=>{ e.stopPropagation(); deleteClientFlow(C.find(c=>c.id===b.dataset.del),async()=>{ await loadClients(); viewClients(el); }); });
     $("#cl").querySelectorAll(".client").forEach(r=>r.onclick=async()=>{ await openClient(C.find(c=>c.id===r.dataset.id)); S.tab="home"; render(); window.scrollTo(0,0); }); };
-  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C); checkinOverviewCard($("#ciov"),C);
+  weeklyReportCard($("#wrep"),C); progressCard($("#pgan"),C); if(typeof coachBrainCard==="function") coachBrainCard($("#brain"),C); checkinOverviewCard($("#ciov"),C);
   if(typeof aiDigestCard==="function") aiDigestCard(C,AL); mlStorageMeter($("#mlst"));
   drawF(); draw(""); $("#cq")&&($("#cq").oninput=e=>draw(e.target.value.trim()));
   $("#tplList").innerHTML=S.templates.length?S.templates.map(t=>`<div class="item" style="padding:9px 0"><div class="nm"><b>✍ ${esc(t.name)}</b><small>${t.days} أيام · ${t.plan.map(d=>esc(d.label)).join(" / ")}</small></div><button class="x" data-tdel="${t.id}">✕</button></div>`).join(""):`<p class="hint">من ⚙️ التحكم ← برنامج التمرين عند أي عميل، اضغط "💾 حفظ كبرنامج كوتش".</p>`;
@@ -159,11 +160,12 @@ function addClientSheet(el){
    COACH: CLIENT CONTROL PANEL
    ====================================================================== */
 async function viewSetup(el){
-  const tabsH=[["data","👤 البيانات"],["program","🏋️ التمرين"],["diet","🥗 التغذية"],["supps","💊 المكملات"],["report","📄 تقرير"],["account","🔐 الحساب"]];
+  const tabsH=[["data","👤 البيانات"],["program","🏋️ التمرين"],["diet","🥗 التغذية"],["brain","🧠 عقل الكوتش"],["supps","💊 المكملات"],["report","📄 تقرير"],["account","🔐 الحساب"]];
   el.innerHTML=`<div class="seg" style="margin-bottom:14px">${tabsH.map(([k,l])=>`<button data-sub="${k}" class="${S.setupTab===k?"on":""}">${l}</button>`).join("")}</div><div id="sub"></div>`;
   el.querySelectorAll("[data-sub]").forEach(b=>b.onclick=()=>{ S.setupTab=b.dataset.sub; viewSetup(el); });
   const sub=$("#sub");
   if(S.setupTab==="data") return setupData(sub);
+  if(S.setupTab==="brain") return window.viewBrain?viewBrain(sub):null;
   if(S.setupTab==="program") return setupProgram(sub);
   if(S.setupTab==="diet") return setupDiet(sub);
   if(S.setupTab==="supps") return setupSupps(sub);
@@ -648,4 +650,4 @@ async function viewAssign(el){
   }
   $("#asgBack").onclick=()=>viewClients(el);
   paint();
-           }
+       }
