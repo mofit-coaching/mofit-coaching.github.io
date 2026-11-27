@@ -1,0 +1,29 @@
+/* MOFIT Live Muscle Heat card */
+.heat .card-h h2 small{display:block;font-weight:500;font-size:11px;color:var(--muted,#64748B);margin-top:2px}
+.heat-wrap{display:grid;grid-template-columns:1fr;gap:12px;margin-top:6px}
+.heat-map svg.anat{width:100%;max-width:260px;height:auto;display:block;margin:0 auto}
+.heat-tot{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:9px 12px;border-radius:12px;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.25)}
+.heat-tot b{font:800 26px/1 Anton,Outfit,system-ui,sans-serif;color:#F97316}
+.heat-tot span{font-size:12px;color:var(--text,#0F172A)}
+.heat-tot em{font-style:normal;font-size:11px;font-weight:700;margin-inline-start:auto}
+.heat-tot em.up{color:#16A34A}
+.heat-tot em.dn{color:#DC2626}
+.heat-legend{margin-top:10px;display:grid;gap:6px}
+.heat-r{display:grid;grid-template-columns:10px 1fr auto auto auto;align-items:center;gap:8px;font-size:12.5px}
+.heat-r i{width:10px;height:10px;border-radius:3px}
+.heat-r b{font-weight:800}
+.heat-st{font-style:normal;font-size:10.5px;padding:3px 8px;border-radius:999px;white-space:nowrap;border:1px solid transparent}
+.heat-st.off{background:#F1F5F9;color:#64748B;border-color:#E2E8F0}
+.heat-st.low{background:#FFF7ED;color:#C2410C;border-color:#FED7AA}
+.heat-st.mid{background:#FFFBEB;color:#B45309;border-color:#FDE68A}
+.heat-st.ok{background:#ECFDF5;color:#047857;border-color:#A7F3D0}
+.heat-st.hi{background:#FEF2F2;color:#B91C1C;border-color:#FECACA}
+.heat-r small{font-size:10.5px;font-weight:700}
+.heat-r small.up{color:#16A34A}
+.heat-r small.dn{color:#DC2626}
+.heat-ref{margin:10px 0 0;font-size:11px;line-height:1.7;color:var(--muted,#64748B)}
+.heat-empty{text-align:center;padding:16px 8px}
+.heat-empty p{margin:8px 0 0;font-size:12.5px;line-height:1.8;color:var(--muted,#64748B)}
+.heat-empty small{display:block;margin-top:6px;font-size:11px;color:var(--muted,#94A3B8)}
+.heat-e-ic{font-size:2rem}
+@media(min-width:520px){.heat-wrap{grid-template-columns:200px 1fr;align-items:start}}
