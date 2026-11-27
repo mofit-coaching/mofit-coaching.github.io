@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEST — program receipts (ليه التمرين ده؟)</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&family=Noto+Kufi+Arabic:wght@700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="design.css">
+<link rel="stylesheet" href="coachshell.css">
+<link rel="stylesheet" href="dark.css">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="mofit-tokens.css">
+<link rel="stylesheet" href="mofit-look.css">
+<link rel="stylesheet" href="mofit-home.css">
+<link rel="stylesheet" href="mofit-breathe.css">
+<style>
+  body{font-family:"Cairo",sans-serif;background:#0b0e1f;margin:0;padding:0;max-width:480px;margin-inline:auto;min-height:100vh}
+  #testbar{background:#DC2626;color:#fff;font-weight:800;text-align:center;padding:8px;font-size:.9rem}
+  .fakecard{background:#131832;border-radius:18px;margin:12px 14px;padding:16px;border:1px solid rgba(255,255,255,.07)}
+  .fakecard h3{margin:0 0 6px;font-size:.95rem;color:#fff}
+  .fakecard p{margin:0;font-size:.8rem;color:#9aa3c7}
+  #cov td,#cov th{font-size:.72rem;padding:4px 8px;text-align:start}
+  #cov table{width:100%;border-collapse:collapse}
+  .tag-e{color:#4ADE80}.tag-p{color:#FDBA74}.tag-g{color:#F87171}
+</style>
+</head>
+<body>
+<div id="testbar">⚠️ TEST PAGE — بيانات وهمية، الشيت بتفتح لوحدها ⚠️</div>
+<main id="main">
+  <div class="fakecard">
+    <h3>كارت تمرين (محاكاة للشكل الحقيقي)</h3>
+    <div class="ex-tags">
+      <span class="pill glass">🎯 4×8-12</span>
+      <span class="pill glass">RIR 2</span>
+      <button class="pill glass" style="border:0;cursor:pointer">⇄ بديل</button>
+      <button class="pill glass" style="border:0;cursor:pointer">📈 السجل</button>
+      <button class="pill glass" style="border:0;cursor:pointer">📸 الأداء</button>
+      <button class="pill glass" style="border:0;cursor:pointer" title="ليه التمرين ده في برنامجك" onclick="mofitReceipts.open(curName())">📚 ليه؟</button>
+      <button class="pill glass" style="border:0;cursor:pointer" title="حاسس بألم؟">🤕</button>
+    </div>
+  </div>
+  <div class="fakecard" id="cov"><h3>تغطية الـ receipts على كل أسماء مكتبة البرامج</h3><p>بيتحسب...</p></div>
+</main>
+<div id="sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="نافذة"><div class="sheet-bg"></div><div class="sheet-card"><div class="sheet-grab"></div><div id="sheetBody"></div></div></div>
+<script>
+/* minimal stubs of the real helpers (core.js) */
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+let _sheetOpener=null;
+function openSheet(html){ _sheetOpener=document.activeElement; $("#sheetBody").innerHTML=html; $("#sheet").classList.remove("hidden"); document.body.style.overflow="hidden"; return $("#sheetBody"); }
+function closeSheet(){ $("#sheet").classList.add("hidden"); $("#sheetBody").innerHTML=""; document.body.style.overflow=""; }
+</script>
+<script src="receipts-data.js"></script>
+<script src="receipts.js"></script>
+<script>
+const NAMES=`BACK SQUAT – BBB|BACK SQUAT|BENT-OVER BB ROW|BIKE INTERVALS|BIKE SPRINT|BIRD DOG|BODYWEIGHT SPLIT SQUAT|BOX JUMP|BULGARIAN SPLIT SQUAT (CHAIR)|BULGARIAN SPLIT SQUAT|BURPEE FINISHER|CABLE CURL|CABLE FLY|CABLE GLUTE KICKBACK|CABLE LATERAL RAISE|CABLE PULL-THROUGH|CABLE ROPE CRUNCH|CABLE TRICEPS PUSHDOWN|CHAIR DIP|CHEST-SUPPORTED ROW|CHIN-UP (IF BAR) OR TOWEL ROW|CHIN-UP (OR ASSISTED)|CLOSE-GRIP (DIAMOND) PUSH-UP|CLOSE-GRIP BENCH PRESS|CONVENTIONAL DEADLIFT – BBB|CONVENTIONAL DEADLIFT|DB ARNOLD SHOULDER PRESS|DB BENCH PRESS|DB BULGARIAN SPLIT SQUAT|DB CALF RAISE|DB CHEST-SUPPORTED ROW (ON CHAIR)|DB CURL|DB FLOOR PRESS|DB GOBLET SQUAT|DB HAMMER CURL|DB HIP THRUST (BACK ON SOFA)|DB LATERAL RAISE|DB OVERHEAD TRICEPS EXTENSION|DB PULLOVER|DB REAR DELT FLY (BENT-OVER)|DB REVERSE LUNGE|DB ROMANIAN DEADLIFT|DB ROW|DB SHOULDER PRESS|DB SHRUG|DB SKULL CRUSHER (FLOOR)|DB SKULL CRUSHER|DB SPLIT SQUAT|DB STEP-UP|DB SUMO DEADLIFT|DEAD BUG|DECLINE PUSH-UP|DIPS (CHEST)|DOOR TOWEL ROW|DUAL CABLE SHRUGS|EZ BAR CURL|FACE PULL|FARMER'S WALK|FEET-ELEVATED PUSH-UP|FLAT BB BENCH PRESS – BBB|FLAT BB BENCH PRESS|FLAT DB PRESS|FRONT SQUAT|GOBLET SQUAT|HACK SQUAT MACHINE|HAMMER CURL|HANGING KNEE RAISE|HANGING LEG RAISE|HIP ABDUCTION MACHINE|HIP THRUST|HOLLOW BODY HOLD|INCLINE BB BENCH PRESS|INCLINE DB CURL|INCLINE DB PRESS|INCLINE TREADMILL WALK|INVERTED ROW (TABLE / BAR)|JUMP SQUAT|KETTLEBELL SWING|LANDMINE PRESS|LAT PULLDOWN|LATERAL LUNGE|LEG EXTENSION MACHINE|LEG PRESS (HIGH FEET)|LEG PRESS|LYING LEG CURL|MACHINE CHEST PRESS|MACHINE SHOULDER PRESS|MCGILL CURL-UP|MED BALL CHEST PASS|MOUNTAIN CLIMBER|NEUTRAL-GRIP PULLDOWN|NORDIC CURL (ASSISTED)|ONE-ARM DB ROW|OVERHEAD CABLE TRICEPS EXTENSION|PALLOF PRESS|PEC DECK FLY MACHINE|PIKE PUSH-UP|PISTOL SQUAT (TO CHAIR)|PLANK|PREACHER CURL|PULL-UP (OR ASSISTED)|PUSH PRESS|PUSH-UP (DEFICIT ON DBS)|PUSH-UP (PROGRESSION)|PUSH-UP|REAR DELT FLY MACHINE|ROMANIAN DEADLIFT|SA CABLE TRICEPS EXTENSION|SA DB ROW|SA ISO LAT ROW MACHINE|SEATED CABLE ROW|SEATED CALF RAISE MACHINE|SEATED DB SHOULDER PRESS|SEATED LEG CURL|SIDE PLANK|SINGLE-LEG CALF RAISE (STEP)|SINGLE-LEG GLUTE BRIDGE|SINGLE-LEG HIP THRUST|SINGLE-LEG ROMANIAN DEADLIFT (BODYWEIGHT)|SKATER LUNGE|SKULL CRUSHER|STANDING CALF RAISE|STANDING OVERHEAD PRESS – BBB|STANDING OVERHEAD PRESS|STIFF-LEG DEADLIFT|STRAIGHT-ARM PULLDOWN|SUPERMAN HOLD|TOWEL CURL (SELF-RESISTANCE)|TRAP BAR DEADLIFT|TRX / INVERTED ROW|WALKING LUNGE|WEIGHTED DIP|WEIGHTED PULL-UP`.split("|");
+function curName(){ return new URLSearchParams(location.search).get("ex")||"HIP THRUST"; }
+(function(){
+  let e=0,p=0,g=0;
+  const rows=NAMES.map(n=>{ const r=RECEIPTS.find(n); const t=r.exact?'<span class="tag-e">مخصوص</span>':(r.gen?'<span class="tag-g">عام</span>':'<span class="tag-p">نمط حركة</span>'); if(r.exact)e++;else if(r.gen)g++;else p++;
+    return `<tr><td translate="no" lang="en">${esc(n)}</td><td>${t}</td></tr>`; }).join("");
+  document.getElementById("cov").innerHTML=`<h3>تغطية الـ receipts (${NAMES.length} اسم)</h3><p>مخصوص: ${e} · نمط حركة: ${p} · عام: ${g}</p><div class="scrollx"><table><tr><th>التمرين</th><th>النوع</th></tr>${rows}</table></div>`;
+  if(!new URLSearchParams(location.search).has("list")) mofitReceipts.open(curName());
+})();
+</script>
+</body>
+</html>
