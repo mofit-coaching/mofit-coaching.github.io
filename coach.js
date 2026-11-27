@@ -209,7 +209,8 @@ function setupProgram(el){
   const p=S.client, days=[...new Set(S.program.map(e=>e.day_no))].sort((a,b)=>a-b);
   if(S._bcid!==p.id){ S._bcid=p.id; S.day=days[0]||1; }
   if(!days.includes(S.day)&&days.length) S.day=days[0];
-  el.innerHTML=`<div id="brHost"></div><div class="card" style="${p.program_pending?"border:1.5px solid var(--acc-line,#FDBA74)":""}"><label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="progPend" ${p.program_pending?"checked":""} style="width:22px;height:22px;min-height:0;margin-top:2px"><span><b>البرنامج لسه متعملش</b><br><small class="muted">لما تفعّلها، العميل بيشوف رسالة متحركة إن الكوتش لسه بيجهّز التمرين، ومبيشوفش أي تمارين. البرنامج بتاعك محفوظ زي ما هو.</small></span></label></div><div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
+  el.innerHTML=`<div id="brHost"></div><div class="card"><div class="card-h"><div class="ic acc">🧩</div><h2>مساعد بناء البرنامج<small>مسودة تمرين + أكل من إجابات العميل — بتتطبق باعتمادك على نسخته بس</small></h2></div>
+      <button class="btn primary block" id="pbOpen">⚡ افتح المساعد</button></div><div class="card" style="${p.program_pending?"border:1.5px solid var(--acc-line,#FDBA74)":""}"><label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer"><input type="checkbox" id="progPend" ${p.program_pending?"checked":""} style="width:22px;height:22px;min-height:0;margin-top:2px"><span><b>البرنامج لسه متعملش</b><br><small class="muted">لما تفعّلها، العميل بيشوف رسالة متحركة إن الكوتش لسه بيجهّز التمرين، ومبيشوفش أي تمارين. البرنامج بتاعك محفوظ زي ما هو.</small></span></label></div><div class="card"><div class="card-h"><div class="ic acc">🧭</div><h2>نظام التمرين والمستوى<small>الحالي: ${esc(p.split_name||"لم يحدد")}${p.level?" · "+esc(p.level):""}</small></h2></div>
       <div id="sysBox">${systemFields(p.training_days||3, p.level||"متوسط")}</div>
       <button class="btn danger block" id="sysApply" style="margin-top:10px">⚠ استبدال البرنامج بنظام جديد</button>
       <p class="hint">⚠ التطبيق بيستبدل البرنامج الحالي ويمسح المجموعات المسجلة على التمارين القديمة.</p></div>
@@ -227,6 +228,7 @@ function setupProgram(el){
       <div id="pList"></div>
       <div class="row"><button class="btn navy grow" id="exAdd">+ تمرين ليوم ${S.day}</button>${S.program.length?`<button class="btn grow" id="tplSave">💾 حفظ كبرنامج كوتش</button>`:""}</div></div>`;
   const getSys=wireSystemPicker($("#sysBox"), p.split_key, p.id);
+  $("#pbOpen")&&($("#pbOpen").onclick=()=>typeof openProgramBuilder==="function"?openProgramBuilder(p):toast("المساعد مش متاح دلوقتي"));
   weekEditor($("#wk"), el); wireCardioEditor(p);
   blockReviewHTML(p).then(h=>{ const x=$("#brHost"); if(x){ x.innerHTML=h; wireBlockReview(p,el); } });
   el.querySelectorAll("[data-dw]").forEach(b=>b.onclick=()=>b.classList.toggle("on"));
@@ -650,4 +652,4 @@ async function viewAssign(el){
   }
   $("#asgBack").onclick=()=>viewClients(el);
   paint();
-       }
+}
