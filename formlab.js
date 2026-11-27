@@ -302,7 +302,7 @@
 .fl-dot.ok{background:#22C55E;box-shadow:0 0 8px rgba(34,197,94,.7)}
 .fl-dot.mid{background:#FACC15;box-shadow:0 0 8px rgba(250,204,21,.7)}
 .fl-dot.bad{background:#F43F5E;box-shadow:0 0 8px rgba(244,63,94,.7)}
-.fl-check .cb{flex:1}
+.fl-check .fl-cb{flex:1;display:block;min-width:0}
 .fl-check .cb b{display:block;font-size:.9rem;color:var(--navy)}
 .fl-check .cb small{color:var(--slate)}
 .fl-check .ct{font-size:.78rem;color:#92400E;background:#FFFBEB;border-radius:8px;padding:4px 8px;margin-top:4px;display:inline-block}
@@ -414,10 +414,10 @@
     const repList = o.repList || [];
     const body = openSheet(`<div class="between" style="margin-bottom:6px"><b style="font-size:1.1rem">${L.icon} ${L.label} — نتيجة الفورم</b><button class="btn sm ghost" onclick="closeSheet()">✕</button></div>
       <div class="fl-hero-score">${ring(o.score, 100, { size: 110, stroke: 11, label: flN(o.score), sub: "من ١٠٠", color: tone === "ok" ? "#22C55E" : tone === "mid" ? "#FACC15" : "#F43F5E" })}
-        <div class="gv"><span class="fl-grade ${o.grade.tone}">${o.grade.t}</span><small class="hint">تقييم MOFIT الاسترشادي — ${o.metrics.reps || 0} عدات متعرف عليها</small></div></div>
+        <div class="gv"><span class="fl-grade ${o.grade.tone}">${o.grade.t}</span><small class="hint">${(o.metrics.reps || 0) > 0 ? "تقييم MOFIT الاسترشادي — " + o.metrics.reps + " عدات متعرف عليها" : "تقييم مبدئي من الحركة العامة — مفيش عدات واضحة في الفيديو"}</small></div></div>
       ${flGhostBox(o.lift, o.metrics, o.ghost)}
       <div class="card" style="box-shadow:none;border:1px solid var(--soft2,#EEF2F7)"><div class="card-h"><div class="ic acc">✅</div><h2>تفاصيل التقييم</h2></div>
-        ${checks.map(c => `<div class="fl-check"><span class="fl-dot ${c.tone}"></span><div class="cb"><b>${flEsc(c.label)}</b><small>${flEsc(c.val)}</small>${c.tip && c.tone !== "ok" ? `<span class="fl-ct">💡 ${flEsc(c.tip)}</span>` : ""}</div>${c.pts ? `<b style="color:#BE123C">-${c.pts}</b>` : `<b style="color:#15803D">✓</b>`}</div>`).join("")}</div>
+        ${checks.map(c => `<div class="fl-check"><span class="fl-dot ${c.tone}"></span><div class="fl-cb"><b>${flEsc(c.label)}</b><small>${flEsc(c.val)}</small>${c.tip && c.tone !== "ok" ? `<span class="fl-ct">💡 ${flEsc(c.tip)}</span>` : ""}</div>${c.pts ? `<b style="color:#BE123C">-${c.pts}</b>` : `<b style="color:#15803D">✓</b>`}</div>`).join("")}</div>
       ${o.barPath ? flBarPathSVG(o.barPath, o.lift) : ""}
       ${repList.length ? `<div class="card" style="box-shadow:none;border:1px solid var(--soft2,#EEF2F7);margin-top:10px"><div class="card-h"><div class="ic dark">🔁</div><h2>العدات (${repList.length})</h2></div><div class="fl-reps">
         ${repList.map((r, i) => `<div class="fl-rep" data-t="${r.t0}"><span class="n">${i + 1}</span><div><b>عمق ${flN(r.bottom)}°</b> <small>· نزول ${flN(r.down, 1)} ث · طلوع ${flN(r.up, 1)} ث · ${flN(r.dur, 1)} ث</small></div></div>`).join("")}</div></div>` : ""}
