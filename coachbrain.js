@@ -110,6 +110,23 @@ function coachBrainSuggestions(p,exs,sets,weights,adherence7){
         run:async()=>sb.from("profiles").update({manual_kcal:next}).eq("id",p.id).then(r=>r.error) });
     }
   }
+  /* protein floor (his own field: بروتين جم/كجم 1.6-2.2, placeholder 1.8) */
+  if(p.start_weight&&!p.protein_gpk){
+    const t=targets(p);
+    if(t.P){
+      const gpkNow=t.P/p.start_weight;
+      if(gpkNow<1.6){
+        const newP=Math.round(p.start_weight*1.8);
+        out.push({ kind:"protein", icon:"🥩",
+          title:"رفع البروتين لـ 1.8 جم/كجم",
+          why:`البروتين المحسوب دلوقتي ≈ ${fmt(gpkNow,1)} جم/كجم – تحت نطاقك (1.6-2.2). البروتين العالي بيحافظ على العضل${cut?" وبيشبّع وقت التنشيف":""}`,
+          before:`${fmt(t.P)} جم (${fmt(gpkNow,1)} جم/كجم)`,
+          after:`${fmt(newP)} جم (1.8 جم/كجم)`,
+          note:"بيتحفظ في بيانات العميل وتوزيع الماكروز بيتحسب عليه تلقائياً",
+          run:async()=>sb.from("profiles").update({protein_gpk:1.8}).eq("id",p.id).then(r=>r.error) });
+      }
+    }
+  }
   return out.slice(0,8);
 }
 
