@@ -34,12 +34,17 @@
     pulldown: { label: "سحب سفلي",   icon: "🧗", proxy: "wrists",    tempoPhase: "down", tempoRange: [1.5, 3.5], joint: "الكوع" },
     hinge:    { label: "هينج (مفصلة الحوض)", icon: "🦵", proxy: "wrists", tempoPhase: "down", tempoRange: [2, 4], joint: "الركبة" },
     lunge:    { label: "لانج / سبليت سكوات", icon: "🦶", proxy: "shoulders", tempoPhase: "down", tempoRange: [1.5, 3.5], joint: "الركبة" },
+    curl:     { label: "كيرل (باي)", icon: "💪", proxy: "wrists", tempoPhase: "down", tempoRange: [1.5, 3.5], joint: "الكوع" },
+    extend:   { label: "تراي (فرد)", icon: "🔱", proxy: "wrists", tempoPhase: "down", tempoRange: [1.5, 3.5], joint: "الكوع" },
+    raise:    { label: "رفرفة / فلاي", icon: "🪽", proxy: "wrists", tempoPhase: "down", tempoRange: [1.5, 3.5], joint: "الكوع" },
+    calf:     { label: "سمانة", icon: "🦵", proxy: "wrists", tempoPhase: "down", tempoRange: [1.5, 3.5], joint: "الركبة" },
+    legmach:  { label: "ماكينة رجل", icon: "🦿", proxy: "wrists", tempoPhase: "down", tempoRange: [1.5, 3.5], joint: "الركبة" },
   };
   /* quick chips stay the original four big lifts (the full library picker
      below covers everything else) */
   const FL_QUICK = ["squat", "deadlift", "bench", "ohp"];
   /* canonical library exercise for each dedicated model */
-  const FL_CANON = { squat: "BACK SQUAT", deadlift: "CONVENTIONAL DEADLIFT", bench: "FLAT BB BENCH PRESS", ohp: "STANDING OVERHEAD PRESS", hpress: "DB BENCH PRESS", vpress: "DB SHOULDER PRESS", row: "ONE-ARM DB ROW", pulldown: "LAT PULLDOWN", hinge: "ROMANIAN DEADLIFT", lunge: "BULGARIAN SPLIT SQUAT" };
+  const FL_CANON = { squat: "BACK SQUAT", deadlift: "CONVENTIONAL DEADLIFT", bench: "FLAT BB BENCH PRESS", ohp: "STANDING OVERHEAD PRESS", hpress: "DB BENCH PRESS", vpress: "DB SHOULDER PRESS", row: "ONE-ARM DB ROW", pulldown: "LAT PULLDOWN", hinge: "ROMANIAN DEADLIFT", lunge: "BULGARIAN SPLIT SQUAT", curl: "DB CURL", extend: "CABLE TRICEPS PUSHDOWN", raise: "DB LATERAL RAISE", calf: "STANDING CALF RAISE", legmach: "LEG EXTENSION MACHINE" };
   /* exercises matching a dedicated model get the detailed checks; every other
      exercise gets the honest generic fallback, labelled approximate (تقريبي) */
   const FL_MODEL_OF = [
@@ -62,9 +67,18 @@
     /* vertical pull */
     [/^PULL-UP|^CHIN-UP|WEIGHTED PULL-UP$|PULLDOWN( MACHINE)?$/, "pulldown"],
     /* horizontal pull */
-    [/ROW$|ROW MACHINE$|^SA ISO LAT ROW MACHINE$/, "row"],
+    [/ROW$|ROW \(|ROW MACHINE$|^SA ISO LAT ROW MACHINE$/, "row"],
     /* hinge family */
     [/ROMANIAN DEADLIFT$|^STIFF-LEG DEADLIFT$|^GOOD MORNING/, "hinge"],
+    /* batch 2: isolation patterns */
+    [/^LEG CURL MACHINE|LEG CURL$|^NORDIC CURL/, "legmach"],   /* before biceps curl: LEG CURL ends in CURL */
+    [/CURL$|CURL \(|^PREACHER CURL$/, "curl"],          /* biceps curls */
+    [/FACE PULL$/, "row"],
+    [/HIP EXTENSION|PULL-THROUGH$/, "hinge"],
+    [/TRICEPS|SKULL CRUSHER/, "extend"],
+    [/LATERAL RAISE|REAR DELT FLY|CABLE FLY$|COSTAL CABLE FLY$|PEC DECK/, "raise"],
+    [/CALF RAISE/, "calf"],
+    [/^LEG EXTENSION MACHINE|^LEG PRESS/, "legmach"],
   ];
   function flModelFor(ex) { const m = FL_MODEL_OF.find(([re]) => re.test(ex || "")); return m ? m[1] : "generic"; }
   const FL_GENERIC = { proxy: "wrists" };
@@ -402,6 +416,99 @@
     return out;
   }
 
+
+  /* curl family: elbow stays pinned, only the forearm moves */
+  function flChecksCurl(frames, reps) {
+    const out = [];
+    /* 1) elbow drift: shoulder->elbow point should stay almost still */
+    const rt = flRefTrunk(frames);
+    const ex = flStat(frames.map(f => (f.F && f.F.elbow) ? f.F.elbow.x / rt : null));
+    if (ex) { const rng = ex.max - ex.min; out.push(flCheck("الكوع ثابت", "حركة " + flN(rng * 100) + "٪", rng < 0.06 ? "ok" : rng < 0.12 ? "mid" : "bad", 14, rng < 0.06 ? "" : "الكوع بيمشي لقدّام مع الكيرل — ثبّته جنب جسمك")); }
+    /* 2) ROM per rep */
+    const roms = (reps && reps.list ? reps.list : []).map(r => {
+      const span = frames.filter(f => f.t >= r.t0 - 0.05 && f.t <= r.t1 + 0.05 && f.F && f.F.elbow && f.F.wrist);
+      const angs = span.map(f => flAngle(f.F.sh, f.F.elbow, f.F.wrist)).filter(v => v != null);
+      return angs.length >= 3 ? Math.max(...angs) - Math.min(...angs) : null;
+    }).filter(v => v != null);
+    const er = flStat(roms);
+    if (er) out.push(flCheck("مدى الحركة", flN(er.avg) + "° في العدة", er.avg >= 80 ? "ok" : er.avg >= 50 ? "mid" : "bad", 12, er.avg >= 80 ? "" : "افرد الذراع تحت خالص واقبض لفوق — مدى كامل"));
+    /* 3) trunk rock */
+    const tl = flStat(frames.map(f => f.F ? f.F.tilt : null));
+    if (tl) out.push(flCheck("ثبات الجسم", "تذبذب ±" + flN(tl.sd) + "°", tl.sd < 5 ? "ok" : tl.sd < 10 ? "mid" : "bad", 10, tl.sd < 5 ? "" : "الجسم بيهز مع العدة — قلّل الوزن أو ثبّت ضهرك"));
+    /* 4) eccentric */
+    if (reps && reps.avgDown != null) { const d = reps.avgDown; out.push(flCheck("التحكم في النزول", flN(d, 1) + " ثانية", d >= 1.5 ? "ok" : d >= 1 ? "mid" : "bad", 6, d >= 1.5 ? "" : "انزل بتحكم — النزول بيبني العضلة")); }
+    out.push(flCheck("ℹ️ حدود القياس", "من فيديو جانبي واحد", "ok", 0, "مش بيتقاس: فرق اليمين عن الشمال ولا لفّ الرسغ — لو دراع أضعف من التانية صوّرها لوحدها"));
+    return out;
+  }
+
+  /* triceps extension family: pushdowns, overhead extensions, skull crushers */
+  function flChecksExtend(frames, reps) {
+    const out = flChecksCurl(frames, reps); /* same physics: pinned elbow, ROM, sway, eccentric */
+    out[0] = (function(){ const c = out[0]; return flCheck("الكوع ثابت", c.val, c.tone, 14, c.tone === "ok" ? "" : "الكوع بيتحرك مع العدة — ثبّته وخلّي الحركة من الساعد بس"); })();
+    out[out.length - 1] = flCheck("ℹ️ حدود القياس", "من فيديو جانبي واحد", "ok", 0, "مش بيتقاس: اتجاه الكوع لبره/لجوه — خليه ثابت قريب من جسمك");
+    return out;
+  }
+
+  /* lateral raise / fly family */
+  function flChecksRaise(frames, reps) {
+    const out = [];
+    /* 1) raise height: wrist-shoulder angle from the body line at the top */
+    const tops = (reps && reps.list ? reps.list : []).map(r => {
+      const span = frames.filter(f => f.t >= r.t0 - 0.05 && f.t <= r.t1 + 0.05 && f.F && f.F.wrist);
+      if (!span.length) return null;
+      const fr = span.reduce((b, f) => f.F.wrist.y < b.F.wrist.y ? f : b, span[0]);
+      return flAngle(fr.F.hp, fr.F.sh, fr.F.wrist);
+    }).filter(v => v != null);
+    const ra = flStat(tops);
+    if (ra) out.push(flCheck("ارتفاع الرفعة", flN(ra.avg) + "° من الجسم", ra.avg >= 60 && ra.avg <= 100 ? "ok" : ra.avg >= 45 ? "mid" : "bad", 12, ra.avg < 60 ? "ارفع لمستوى الكتف تقريبًا" : ra.avg > 100 ? "متطلعش فوق مستوى الكتف بكتير" : ""));
+    /* 2) trunk sway */
+    const tl = flStat(frames.map(f => f.F ? f.F.tilt : null));
+    if (tl) out.push(flCheck("ثبات الجسم", "تذبذب ±" + flN(tl.sd) + "°", tl.sd < 5 ? "ok" : tl.sd < 10 ? "mid" : "bad", 12, tl.sd < 5 ? "" : "الجسم بيهتز مع الرفعة — وزن أخف وتحكم أكتر"));
+    /* 3) eccentric */
+    if (reps && reps.avgDown != null) { const d = reps.avgDown; out.push(flCheck("التحكم في النزول", flN(d, 1) + " ثانية", d >= 1.5 ? "ok" : d >= 1 ? "mid" : "bad", 6, d >= 1.5 ? "" : "انزل بتحكم — متسيبش الوزن يقع")); }
+    out.push(flCheck("ℹ️ حدود القياس", "من فيديو جانبي واحد", "ok", 0, "مش بيتقاس بدقة: مسار الذراع من قدّام — الرفعة الجانبية بتتشاف أوضح من الكاميرا الأمامية"));
+    return out;
+  }
+
+  /* calf raise family: ankle ROM, control, full range */
+  function flChecksCalf(frames, reps) {
+    const out = [];
+    /* 1) ankle travel per rep (vertical movement range, normalized) */
+    const rt = flRefTrunk(frames);
+    const travels = (reps && reps.list ? reps.list : []).map(r => {
+      const span = frames.filter(f => f.t >= r.t0 - 0.05 && f.t <= r.t1 + 0.05 && f.F && f.F.ankle);
+      const ys = span.map(f => f.F.ankle.y / rt);
+      return ys.length >= 3 ? Math.max(...ys) - Math.min(...ys) : null;
+    }).filter(v => v != null);
+    const tr = flStat(travels);
+    if (tr) out.push(flCheck("مدى الحركة", flN(tr.avg * 100) + "٪ من طول الجذع", tr.avg >= 0.10 ? "ok" : tr.avg >= 0.06 ? "mid" : "bad", 14, tr.avg >= 0.10 ? "" : "اطلع على صوابعك لأعلى نقطة وانزل لمدى كامل"));
+    /* 2) tempo: calves love control, not bouncing */
+    if (reps && reps.avgDown != null) { const d = reps.avgDown; out.push(flCheck("التحكم", flN(d, 1) + " ثانية نزول", d >= 1.5 ? "ok" : d >= 0.9 ? "mid" : "bad", 10, d >= 1.5 ? "" : "متعملهاش نطّة — نزول بطيء ووقفة لحظة تحت")); }
+    /* 3) rep consistency */
+    if (reps && reps.consistency != null) { const c = reps.consistency; out.push(flCheck("ثبات العدات", flN(c) + "٪", c >= 80 ? "ok" : c >= 60 ? "mid" : "bad", 8, c >= 80 ? "" : "خلّي كل عدة بنفس المدى")); }
+    out.push(flCheck("ℹ️ حدود القياس", "من فيديو جانبي واحد", "ok", 0, "مش بيتقاس: الوقفة في أعلى نقطة بدقة الكسر من الثانية — حاول تثبت لحظة فوق قبل النزول"));
+    return out;
+  }
+
+  /* leg machine family: leg extension, leg curl, leg press (knee-driven ROM) */
+  function flChecksLegMach(frames, reps) {
+    const out = [];
+    /* 1) knee ROM per rep */
+    const roms = (reps && reps.list ? reps.list : []).map(r => {
+      const span = frames.filter(f => f.t >= r.t0 - 0.05 && f.t <= r.t1 + 0.05 && f.F && f.F.knee && f.F.ankle);
+      const angs = span.map(f => flAngle(f.F.hp, f.F.knee, f.F.ankle)).filter(v => v != null);
+      return angs.length >= 3 ? Math.max(...angs) - Math.min(...angs) : null;
+    }).filter(v => v != null);
+    const er = flStat(roms);
+    if (er) out.push(flCheck("مدى الحركة", flN(er.avg) + "° في العدة", er.avg >= 60 ? "ok" : er.avg >= 40 ? "mid" : "bad", 14, er.avg >= 60 ? "" : "وسّع المدى — فرد/ثني كامل بتحكم"));
+    /* 2) control: no swinging */
+    if (reps && reps.avgDown != null) { const d = reps.avgDown; out.push(flCheck("التحكم في الرجوع", flN(d, 1) + " ثانية", d >= 1.5 ? "ok" : d >= 0.9 ? "mid" : "bad", 10, d >= 1.5 ? "" : "ارجع بالوزن بتحكم — مترميش الفيم")); }
+    /* 3) consistency */
+    if (reps && reps.consistency != null) { const c = reps.consistency; out.push(flCheck("ثبات العدات", flN(c) + "٪", c >= 80 ? "ok" : c >= 60 ? "mid" : "bad", 8, c >= 80 ? "" : "خلّي كل عدة بنفس المدى والسرعة")); }
+    out.push(flCheck("ℹ️ حدود القياس", "من فيديو جانبي واحد", "ok", 0, "مش بيتقاس: ضبط الكرسي/الظهر في الماكينة — ظبطها بحيث الركبة على محور الحركة"));
+    return out;
+  }
+
   /* generic fallback for every exercise without a dedicated model:
      honest whole-movement metrics only — reps, tempo, consistency, ROM,
      trunk stability, path, balance. Score is capped and labelled تقريبي. */
@@ -425,7 +532,7 @@
   function flAnalyze(lift, track, summary) {
     const frames = flFrames(track);
     const reps = summary.reps || null;
-    const FL_CHECK = { squat: flChecksSquat, deadlift: flChecksDeadlift, bench: flChecksBench, ohp: flChecksOhp, hpress: flChecksHPress, vpress: flChecksVPress, row: flChecksRow, pulldown: flChecksPulldown, hinge: flChecksHinge, lunge: flChecksLunge };
+    const FL_CHECK = { squat: flChecksSquat, deadlift: flChecksDeadlift, bench: flChecksBench, ohp: flChecksOhp, hpress: flChecksHPress, vpress: flChecksVPress, row: flChecksRow, pulldown: flChecksPulldown, hinge: flChecksHinge, lunge: flChecksLunge, curl: flChecksCurl, extend: flChecksExtend, raise: flChecksRaise, calf: flChecksCalf, legmach: flChecksLegMach };
     const checks = (FL_CHECK[lift] || flChecksGeneric)(frames, reps, summary);
     const lost = checks.reduce((a, c) => a + c.pts, 0);
     let score = Math.max(5, Math.min(100, 100 - lost));
