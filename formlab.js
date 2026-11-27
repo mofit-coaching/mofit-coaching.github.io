@@ -640,7 +640,7 @@
 .fl-rep small{color:var(--slate)}
 .fl-vid{position:relative;border-radius:16px;overflow:hidden;background:#000;margin-top:10px}
 .fl-vid video{width:100%;display:block;max-height:46vh;object-fit:contain}
-.fl-vid canvas{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+.fl-vid canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .fl-note{font-size:.75rem;color:var(--slate);line-height:1.7;margin-top:10px}
 .fl-barpath{background:var(--navy,#0F172A);border-radius:16px;padding:10px;margin-top:10px}
 .fl-barpath svg{width:100%;display:block}
@@ -918,6 +918,14 @@
       const track = { fps: res.fps, ar, frames: res.frames };
       show(0.98, "جاري حساب التقييم…");
       const summary = window.MofitPoseResults ? MofitPoseResults.summarize(track) : { angles: [], reps: null };
+      /* rep sanity: drop impossible reps (a rep over 15 s or under 0.5 s is noise) and recompute the totals */
+      if (summary.reps && Array.isArray(summary.reps.list)) {
+        const good = summary.reps.list.filter(r => { const d = r.t1 - r.t0; return d >= 0.5 && d <= 15; });
+        if (good.length !== summary.reps.list.length) {
+          const avg = k => { const v = good.map(r => r[k]).filter(x => x != null && isFinite(x) && x < 15); return v.length ? v.reduce((a, b) => a + b, 0) / v.length : null; };
+          summary.reps = Object.assign({}, summary.reps, { list: good, count: good.length, avgDown: avg("down"), avgUp: avg("up") });
+        }
+      }
       const analysis = flAnalyze(lift, track, summary);
       show(1, "✓ خلص");
       const repList = (summary.reps && summary.reps.list) || [];
@@ -925,6 +933,7 @@
       /* auto-save the metrics row (never the video) */
       const saved = await flSaveScan(p.id, exName, analysis);
       const scanId = saved && saved.data && saved.data.id && !String(saved.data.id).startsWith("local-") ? saved.data.id : null;
+      if (saved && saved.error) { console.warn("formlab save", saved.error); toast("⚠️ التحليل ظهر لكن ماتحفظش في السجل — بلّغ المدرب"); }
       if (saved && saved.queued) toast("📴 التحليل اتحفظ على الموبايل وهيتبعت لما النت يرجع");
       const ghosts = await flLoadGhosts();
       flResultSheet({
