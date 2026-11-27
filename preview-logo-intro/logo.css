@@ -48,3 +48,8 @@
 @keyframes lpTapPlate{0%{transform:none}45%{transform:scale(1.14)}100%{transform:none}}
 @keyframes lpTapBar{0%,100%{filter:none}45%{filter:brightness(1.55) saturate(1.15)}}
 @media(prefers-reduced-motion:reduce){.logo-assembly.lp-tap .lp-plate,.logo-assembly.lp-tap .lp-bar i,.logo-assembly.lp-tap .lp-clank{animation:none}}
+
+/* two clear layers in the hero: the heartbeat line and the outlined MO FIT stay together in the
+   upper zone, the bar and the solid MO FIT sit lower as their own group, with clear air between. */
+.logo-intro .login-art .st-word{scale:.45;translate:0 -64px}
+.logo-intro .logo-assembly{scale:.78;translate:0 38px}
