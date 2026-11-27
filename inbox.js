@@ -89,7 +89,7 @@ async function viewHub(el){
   el.innerHTML=`<div class="card hub"><div class="card-h"><div class="ic acc">👤</div><h2>${esc(c.full_name||c.email)}<small>${esc(c.email||"")}${c.phone?" · "+esc(c.phone):""}</small></h2>${c.active?`<span class="pill acc">مفعّل</span>`:`<span class="pill">مستني التفعيل</span>`}</div>
       <div class="inb-a"><button class="btn sm primary" id="hbChat">💬 محادثة${un?` (${un})`:""}</button>${c.phone?`<a class="btn sm" target="_blank" rel="noopener" href="${esc(remindLink(c,{text:"متابعة"}))}">📲 واتساب</a>`:""}<button class="btn sm" id="hbSet">⚙ التحكم</button></div></div>
     <div class="grid2"><div class="stat ${sub&&sub.cls!=="good"?"acc":""}"><div class="l">💳 الاشتراك</div><div class="v" style="font-size:1rem">${sub?sub.icon+" "+esc(sub.text):"—"}</div><div class="s">${c.sub_end?"ينتهي "+esc(c.sub_end):""}</div></div>
-      <div class="stat"><div class="l">📅 الأسبوع</div><div class="v num">${wk}</div><div class="s">بلوك ${blockOf(wk)} · ${wInBlock(wk)}/12</div></div></div>
+      <div class="stat"><div class="l">📅 الأسبوع</div><div class="v num">${wk}</div><div class="s">${(()=>{ const n=planWeeks(c); return n?"من "+n+" أسبوع":"بلوك "+blockOf(wk)+" · "+wInBlock(wk)+"/12"; })()}</div></div></div>
     <div id="hbSteps"></div>
     <div class="card" id="hbStreak"><p class="muted">جارٍ التحميل…</p></div>
     <div class="card"><div class="card-h"><div class="ic">📸</div><h2>المتابعة الأسبوعية<small>${o.last_checkin_week?"آخر متابعة: أسبوع "+o.last_checkin_week:"مفيش متابعات لسه"}${o.unreviewed?" · "+o.unreviewed+" مستنية ردك":""}</small></h2></div>
