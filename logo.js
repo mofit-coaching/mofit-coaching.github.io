@@ -17,9 +17,11 @@ function build(art){
   const wrap=document.createElement("div");
   wrap.className="logo-assembly";
   wrap.setAttribute("aria-hidden","true");
-  wrap.innerHTML=`<span class="lp-bar"></span>${PLATE("lp-l","#FF6B1A")}${PLATE("lp-r","#FFB347")}<span class="lp-clank"></span><span class="lp-word"></span>`;
+  wrap.innerHTML=`<span class="lp-bar"></span>${PLATE("lp-l","#FF6B1A")}${PLATE("lp-r","#FFB347")}<span class="lp-clank"></span>`;
   big.parentNode.insertBefore(wrap,big);
-  wrap.querySelector(".lp-word").appendChild(big);
+  /* keep the wordmark where it is: the brand wordmark has its own entrance animation,
+     and re-parenting it broke that. The barbell builds around it. */
+  wrap.appendChild(big);
   return true;
 }
 function play(art){
