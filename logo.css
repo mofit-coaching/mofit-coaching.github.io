@@ -5,6 +5,8 @@
 .login-art.logo-done .hero-svg{opacity:0}
 /* the ECG is painted as a background on .login-art::before - that is the line the bar collided with */
 .login-art.logo-on::before{opacity:0 !important;transition:opacity .3s ease}
+/* the wave behind the wordmark is a brand canvas (st-fx) - it is the line the bar crossed */
+.logo-intro .st-fx{opacity:0 !important;transition:opacity .3s ease}
 .logo-assembly .lp-word{position:relative;display:block;z-index:2;transform-origin:center bottom}
 .logo-assembly{position:relative;display:inline-flex;align-items:center;justify-content:center;padding:14px 30px;isolation:isolate}
 .logo-assembly .lp-bar{position:absolute;left:50%;top:50%;width:min(260px,72vw);height:10px;margin:-5px 0 0 calc(min(260px,72vw) / -2);border-radius:6px;
