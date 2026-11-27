@@ -1,4 +1,8 @@
 /* MOFIT logo assembly styles. Brand: navy base, orange-gold plates. */
+/* the hero ECG + rings sit exactly where the barbell builds, so they step aside */
+.logo-assembly{min-height:74px}
+.login-art.logo-on .hero-svg{opacity:0;transition:opacity .28s ease}
+.login-art.logo-done .hero-svg{opacity:0}
 .logo-assembly{position:relative;display:inline-flex;align-items:center;justify-content:center;padding:14px 30px;isolation:isolate}
 .logo-assembly .lp-bar{position:absolute;left:50%;top:50%;width:min(260px,72vw);height:10px;margin:-5px 0 0 calc(min(260px,72vw) / -2);border-radius:6px;
   background:linear-gradient(90deg,rgba(255,107,26,.15),#FF6B1A 18%,#FFB347 50%,#FF6B1A 82%,rgba(255,107,26,.15));
@@ -9,19 +13,20 @@
 .logo-assembly .logo-big{position:relative;z-index:2;margin:0;transform-origin:center bottom}
 .logo-assembly .lp-clank{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2px solid rgba(255,179,71,.85);opacity:0;z-index:3}
 
-.logo-on .lp-bar{animation:lpBar .55s cubic-bezier(.2,.9,.2,1) .1s both}
-.logo-on .lp-l{animation:lpPlateL .6s cubic-bezier(.22,1.2,.3,1) .55s both}
-.logo-on .lp-r{animation:lpPlateR .6s cubic-bezier(.22,1.2,.3,1) .62s both}
-.logo-on .logo-big{animation:lpWord .62s cubic-bezier(.2,1.1,.25,1) .95s both}
-.logo-on .lp-clank{animation:lpClank .7s ease-out 1.5s both}
+.logo-on .lp-bar{animation:lpBar .62s cubic-bezier(.2,.9,.2,1) .05s both}
+.logo-on .lp-l{animation:lpPlateL .62s cubic-bezier(.22,1.2,.3,1) .48s both}
+.logo-on .lp-r{animation:lpPlateR .62s cubic-bezier(.22,1.2,.3,1) .55s both}
+.logo-on .logo-big{animation:lpWord .64s cubic-bezier(.2,1.1,.25,1) 1s both}
+.logo-on .lp-clank{animation:lpClank .7s ease-out 1.52s both}
 
-@keyframes lpBar{from{transform:scaleX(0);opacity:0}to{transform:scaleX(1);opacity:1}}
-@keyframes lpPlateL{from{transform:translateX(-120px) rotate(-38deg) scale(.8);opacity:0}to{transform:none;opacity:1}}
-@keyframes lpPlateR{from{transform:translateX(120px) rotate(38deg) scale(.8);opacity:0}to{transform:none;opacity:1}}
-@keyframes lpWord{0%{opacity:0;transform:translateY(10px) scale(.86)}70%{opacity:1;transform:translateY(-1px) scale(1.02)}100%{opacity:1;transform:none}}
+@keyframes lpBar{0%{transform:scaleX(0);opacity:0}70%{transform:scaleX(1.07);opacity:1}100%{transform:scaleX(1);opacity:1}}
+@keyframes lpPlateL{0%{transform:translateX(-170px) rotate(-95deg) scale(.5);opacity:0}70%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes lpPlateR{0%{transform:translateX(170px) rotate(95deg) scale(.5);opacity:0}70%{opacity:1}100%{transform:none;opacity:1}}
+@keyframes lpWord{0%{opacity:0;transform:translateY(-30px) scale(.9)}62%{opacity:1;transform:translateY(4px) scale(1.02)}100%{opacity:1;transform:none}}
 @keyframes lpClank{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(3.4)}}
 
 @media(prefers-reduced-motion:reduce){
+  .login-art.logo-on .hero-svg{opacity:0}
   .logo-on .lp-bar,.logo-on .lp-l,.logo-on .lp-r,.logo-on .logo-big,.logo-on .lp-clank{animation:none}
   .logo-on .lp-bar{transform:scaleX(1);opacity:1}
   .logo-on .lp-l,.logo-on .lp-r{opacity:1;transform:none}
