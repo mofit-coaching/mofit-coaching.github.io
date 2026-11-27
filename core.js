@@ -49,6 +49,11 @@ const BLOCK=12, MAX_WEEKS=260;
    Bonus (gift) weeks from profiles.bonus_weeks (when that column exists) are added on top. No end date = no limit. */
 function planBaseWeeks(p){ if(!(p?.sub_start&&p?.sub_end)) return null; const m=Math.max(1,Math.round((daysBetween(p.sub_start,p.sub_end)+1)/30.44)); return m<=3?m*4:m===6?26:m===12?52:Math.round(m*52/12); }
 function maxWeek(p){ const b=planBaseWeeks(p); if(b===null) return MAX_WEEKS; return Math.min(b+Math.max(0,Math.floor(+p.bonus_weeks||0)),MAX_WEEKS); }
+/* Weeks the client's own plan runs for: the subscription length (1 month=4, 3=12, 6=26, 12=52) plus gift weeks.
+   null = no subscription dates yet, so the app falls back to the current 12-week block. */
+function planWeeks(p){ return planBaseWeeks(p)===null?null:maxWeek(p); }
+/* Week picker list: every week of the plan, or the current block while the plan length is unknown. */
+function planWeekList(p,sel){ const n=planWeeks(p); if(n) return [...Array(n)].map((_,i)=>i+1); const b=blockOf(sel||currentWeek(p)); return [...Array(BLOCK)].map((_,i)=>(b-1)*BLOCK+i+1); }
 function currentWeek(p){ if(!p?.start_date) return 1; return Math.min(Math.max(Math.floor(daysBetween(p.start_date,today())/7)+1,1),maxWeek(p)); }
 function weekOfDate(p,iso){ if(!p?.start_date) return null; const w=Math.floor(daysBetween(p.start_date,iso)/7)+1; return w>=1&&w<=MAX_WEEKS?w:null; }
 const blockOf=w=>Math.ceil(Math.max(+w||1,1)/BLOCK), wInBlock=w=>((Math.max(+w||1,1)-1)%BLOCK)+1;
@@ -58,7 +63,7 @@ function restoreWeekChips(root,saved){ const sc=[...(root||document).querySelect
 function weekChipsX(root){ const sc=[...(root||document).querySelectorAll(".scroller")].find(s=>s.querySelector("[data-w]")); return sc?sc.scrollLeft:null; }
 /* "‹ block N ›" switcher; buttons carry data-w so every existing [data-w] handler works. Hidden while the client is still in block 1. */
 function blockNavHTML(sel,p){
-  const now=currentWeek(p), b=blockOf(sel), last=Math.max(blockOf(now),b);
+  const now=currentWeek(p), b=blockOf(sel), n=planWeeks(p), last=n?Math.max(blockOf(n),b):Math.max(blockOf(now),b);
   if(last===1) return "";
   const go=x=> blockOf(now)===x? now : (x-1)*BLOCK+1, r=blockWeeks(sel,p);
   return `<div class="blocknav"><button class="chip" ${b>1?`data-w="${go(b-1)}"`:"disabled"}>→ السابق</button>
