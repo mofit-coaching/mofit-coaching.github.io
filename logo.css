@@ -1,39 +1,39 @@
 /* MOFIT logo assembly styles. Brand: navy base, orange-gold plates. */
-/* the hero ECG + rings sit exactly where the barbell builds, so they step aside */
-.logo-assembly{min-height:74px}
-.login-art.logo-on .hero-svg{opacity:0;transition:opacity .28s ease}
-.login-art.logo-done .hero-svg{opacity:0}
-/* the ECG is painted as a background on .login-art::before - that is the line the bar collided with */
-.login-art.logo-on::before{opacity:0 !important;transition:opacity .3s ease}
-/* the wave behind the wordmark is a brand canvas (st-fx) - it is the line the bar crossed */
-.logo-intro .st-fx{opacity:0 !important;transition:opacity .3s ease}
-.logo-assembly .lp-word{position:relative;display:block;z-index:2;transform-origin:center bottom}
-.logo-assembly{position:relative;display:inline-flex;align-items:center;justify-content:center;padding:14px 30px;isolation:isolate}
-.logo-assembly .lp-bar{position:absolute;left:50%;top:50%;width:min(260px,72vw);height:10px;margin:-5px 0 0 calc(min(260px,72vw) / -2);border-radius:6px;
-  background:linear-gradient(90deg,rgba(255,107,26,.15),#FF6B1A 18%,#FFB347 50%,#FF6B1A 82%,rgba(255,107,26,.15));
-  box-shadow:0 0 18px rgba(255,107,26,.45);transform:scaleX(0);transform-origin:center;opacity:0;z-index:0}
-.logo-assembly .lp-plate{position:absolute;top:50%;width:58px;height:58px;margin-top:-29px;opacity:0;z-index:1;filter:drop-shadow(0 6px 14px rgba(255,107,26,.35))}
+/* The hero heartbeat (brand canvases + hero ECG) stays visible and keeps drawing on top of
+   the assembly - it is not hidden or dimmed while the build runs. */
+.logo-assembly{position:relative;display:inline-flex;align-items:center;justify-content:center;padding:14px 30px;isolation:isolate;min-height:74px}
+/* the bar is two halves that draw out from the middle, then part to open a slot for the wordmark */
+.logo-assembly .lp-bar{position:absolute;left:50%;top:50%;width:min(260px,72vw);height:10px;margin:-5px 0 0 calc(min(260px,72vw) / -2);z-index:0}
+.logo-assembly .lp-bar i{position:absolute;top:0;display:block;width:50%;height:100%;box-shadow:0 0 18px rgba(255,107,26,.45);scale:0 1;translate:0 0}
+.logo-assembly .lp-a{left:0;border-radius:6px 0 0 6px;transform-origin:right center;background:linear-gradient(90deg,rgba(255,107,26,.12),#FF6B1A 45%,#FFB347 100%)}
+.logo-assembly .lp-b{right:0;border-radius:0 6px 6px 0;transform-origin:left center;background:linear-gradient(270deg,rgba(255,107,26,.12),#FF6B1A 45%,#FFB347 100%)}
+.logo-assembly .lp-plate{position:absolute;top:50%;width:58px;height:58px;margin-top:-29px;opacity:0;z-index:1;filter:drop-shadow(0 6px 14px rgba(255,107,26,.35));translate:0 0}
 .logo-assembly .lp-l{left:-14px;transform:translateX(-120px) rotate(-38deg) scale(.8)}
 .logo-assembly .lp-r{right:-14px;transform:translateX(120px) rotate(38deg) scale(.8)}
 .logo-assembly .logo-big{position:relative;z-index:2;margin:0;transform-origin:center bottom}
 .logo-assembly .lp-clank{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2px solid rgba(255,179,71,.85);opacity:0;z-index:3}
+/* the wordmark reveal (small and low inside the bar, then up out of the opening) is driven by
+   logo.js with the Web Animations API, so it composes with the brand's own wordmark animations
+   instead of overriding them. */
 
-.logo-on .lp-bar{animation:lpBar .62s cubic-bezier(.2,.9,.2,1) .05s both}
-.logo-on .lp-l{animation:lpPlateL .62s cubic-bezier(.22,1.2,.3,1) .48s both}
-.logo-on .lp-r{animation:lpPlateR .62s cubic-bezier(.22,1.2,.3,1) .55s both}
-.logo-on .lp-word{animation:lpWord .64s cubic-bezier(.2,1.1,.25,1) 1s both}
-.logo-on .lp-clank{animation:lpClank .7s ease-out 1.52s both}
+.logo-on .lp-a{animation:lpDraw .58s cubic-bezier(.2,.9,.2,1) .05s both,lpPartL 1.15s cubic-bezier(.3,1.1,.3,1) .8s both}
+.logo-on .lp-b{animation:lpDraw .58s cubic-bezier(.2,.9,.2,1) .05s both,lpPartR 1.15s cubic-bezier(.3,1.1,.3,1) .8s both}
+.logo-on .lp-l{animation:lpPlateL .62s cubic-bezier(.22,1.2,.3,1) .55s both,lpShiftL 1.15s ease-out .8s both}
+.logo-on .lp-r{animation:lpPlateR .62s cubic-bezier(.22,1.2,.3,1) .62s both,lpShiftR 1.15s ease-out .8s both}
+.logo-on .lp-clank{animation:lpClank .7s ease-out 1.6s both}
 
-@keyframes lpBar{0%{transform:scaleX(0);opacity:0}70%{transform:scaleX(1.07);opacity:1}100%{transform:scaleX(1);opacity:1}}
+@keyframes lpDraw{0%{scale:0 1;opacity:0}70%{scale:1.05 1;opacity:1}100%{scale:1 1;opacity:1}}
+@keyframes lpPartL{0%{translate:0}38%{translate:-24px}100%{translate:0}}
+@keyframes lpPartR{0%{translate:0}38%{translate:24px}100%{translate:0}}
 @keyframes lpPlateL{0%{transform:translateX(-170px) rotate(-95deg) scale(.5);opacity:0}70%{opacity:1}100%{transform:none;opacity:1}}
 @keyframes lpPlateR{0%{transform:translateX(170px) rotate(95deg) scale(.5);opacity:0}70%{opacity:1}100%{transform:none;opacity:1}}
-@keyframes lpWord{0%{opacity:0;transform:translateY(-30px) scale(.9)}62%{opacity:1;transform:translateY(4px) scale(1.02)}100%{opacity:1;transform:none}}
+@keyframes lpShiftL{0%{translate:0}38%{translate:-24px}100%{translate:0}}
+@keyframes lpShiftR{0%{translate:0}38%{translate:24px}100%{translate:0}}
 @keyframes lpClank{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(3.4)}}
 
 @media(prefers-reduced-motion:reduce){
-  .login-art.logo-on .hero-svg{opacity:0}
-  .logo-on .lp-bar,.logo-on .lp-l,.logo-on .lp-r,.logo-on .lp-word,.logo-on .lp-clank{animation:none}
-  .logo-on .lp-bar{transform:scaleX(1);opacity:1}
+  .logo-on .lp-a,.logo-on .lp-b,.logo-on .lp-l,.logo-on .lp-r,.logo-on .lp-clank{animation:none}
+  .logo-on .lp-a,.logo-on .lp-b{scale:1 1;opacity:1}
   .logo-on .lp-l,.logo-on .lp-r{opacity:1;transform:none}
   .logo-on .lp-clank{display:none}
 }
