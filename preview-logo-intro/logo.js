@@ -9,7 +9,7 @@ const PLATE=(cls,color)=>`<svg class="lp-plate ${cls}" viewBox="0 0 120 120" ari
   <circle cx="60" cy="60" r="54" fill="none" stroke="${color}" stroke-width="14"/>
   <circle cx="60" cy="60" r="34" fill="none" stroke="${color}" stroke-width="6" opacity=".55"/>
   <circle cx="60" cy="60" r="17" fill="#0A1020" stroke="${color}" stroke-width="6"/></svg>`;
-let lastPlay=0, timer=null;
+let lastPlay=0, timer=null, tapTimer=null;
 function build(art){
   if(art.dataset.logo) return true;
   const big=art.querySelector(".logo-big");
@@ -23,6 +23,24 @@ function build(art){
   /* keep the wordmark where it is: the brand wordmark has its own entrance animation,
      and re-parenting it broke that. The barbell builds around it. */
   wrap.appendChild(big);
+  /* touch: pressing the wordmark lifts it and pulses the bar. pointerdown covers iOS Safari,
+     touchstart is the belt-and-braces fallback; both are passive so scrolling is never blocked. */
+  const tap=()=>{
+    if(!art.classList.contains("logo-on")) return;
+    if(big.animate){
+      big.getAnimations().forEach(a=>{ if(a.id==="lpTap") a.cancel(); });
+      const t=big.animate([
+        {transform:"translateY(0) scale(1)",filter:"drop-shadow(0 0 0 rgba(255,107,26,0))"},
+        {transform:"translateY(-9px) scale(1.08)",filter:"drop-shadow(0 6px 22px rgba(255,107,26,.85))",offset:.4},
+        {transform:"translateY(0) scale(1)",filter:"drop-shadow(0 0 0 rgba(255,107,26,0))"}],
+        {duration:540,easing:"cubic-bezier(.2,1.25,.3,1)"});
+      t.id="lpTap";
+    }
+    wrap.classList.remove("lp-tap"); void wrap.offsetWidth; wrap.classList.add("lp-tap");
+    clearTimeout(tapTimer); tapTimer=setTimeout(()=>wrap.classList.remove("lp-tap"),760);
+  };
+  big.addEventListener("pointerdown",tap,{passive:true});
+  big.addEventListener("touchstart",tap,{passive:true});
   return true;
 }
 function play(art){
