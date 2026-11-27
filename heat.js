@@ -37,7 +37,7 @@ function bodyHTML(cur, prev){
     return `<div class="heat-empty"><div class="heat-e-ic">🫥</div><p>لسه مفيش مجموعات مسجلة الأسبوع ده. أول ما تسجل تمرينك، جسمك هنا بيتلوّن لوحده.</p>${totP?`<small>الأسبوع اللي فات سجلت ${totP} مجموعة.</small>`:""}</div>`;
   }
   const legend=names.map(m=>{
-    const n=vol[m], s=stateOf(n), d=n-(pv[m]||0);
+    const n=vol[m], s=stateOf(n), d=totP?n-(pv[m]||0):0;
     return `<div class="heat-r"><i style="background:${col(m)}"></i><span>${m}</span><b class="num">${n}</b><em class="heat-st ${s.k}">${s.t}</em>${d?`<small class="${d>0?"up":"dn"}">${d>0?"▲":"▼"}${Math.abs(d)}</small>`:`<small></small>`}</div>`;
   }).join("");
   return `<div class="heat-wrap">
