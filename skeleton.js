@@ -23,6 +23,8 @@ function poseAt(p){
   return o;
 }
 const BONE=(x1,y1,x2,y2,w)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="url(#skG)" stroke-width="${w}" stroke-linecap="round"/>`;
+/* two bones per limb: upper and lower, positioned by setLimb() */
+const LIMB=(x,y,w)=>`${BONE(x,y,x,y,w)}${BONE(x,y,x,y,w)}`;
 
 function build(){
   const host=document.createElement("div");
@@ -41,10 +43,10 @@ function build(){
       <path class="sk-ribs" d="M84 96 q16 -6 32 0 M82 112 q18 -6 36 0 M84 128 q16 -6 32 0 M88 144 q12 -5 24 0" fill="none" stroke="url(#skG)" stroke-width="3" stroke-linecap="round" opacity=".85"/>
       <path class="sk-pelvis" d="M84 196 q16 12 32 0" fill="none" stroke="url(#skG)" stroke-width="4" stroke-linecap="round"/>
     </g>
-    <g class="sk-armL">${BONE(96,100,0,0,4)}</g>
-    <g class="sk-armR">${BONE(104,100,0,0,4)}</g>
-    <g class="sk-legL">${BONE(94,196,0,0,5)}</g>
-    <g class="sk-legR">${BONE(106,196,0,0,5)}</g>
+    <g class="sk-armL">${LIMB(96,100,4)}</g>
+    <g class="sk-armR">${LIMB(104,100,4)}</g>
+    <g class="sk-legL">${LIMB(94,196,5)}</g>
+    <g class="sk-legR">${LIMB(106,196,5)}</g>
     <g class="sk-bar"><line x1="42" y1="0" x2="158" y2="0" stroke="#FFB347" stroke-width="5" stroke-linecap="round"/><circle cx="42" cy="0" r="9" fill="none" stroke="#FF6B1A" stroke-width="4"/><circle cx="158" cy="0" r="9" fill="none" stroke="#FF6B1A" stroke-width="4"/></g>
   </g>
   <text class="sk-label" x="100" y="414" text-anchor="middle">وقوف</text>
