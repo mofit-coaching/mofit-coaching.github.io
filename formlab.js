@@ -21,11 +21,26 @@
   const flDate = s => { try { return new Date(s).toLocaleDateString("ar-EG", { day: "numeric", month: "long" }); } catch (e) { return (s || "").slice(0, 10); } };
 
   const FL_LIFTS = {
-    squat:    { label: "سكوات",        icon: "🏋", proxy: "shoulders", tempoPhase: "down", tempoRange: [2, 4],  joint: "الركبة" },
-    deadlift: { label: "ديدلفت",       icon: "⚙", proxy: "wrists",    tempoPhase: "up",   tempoRange: [1, 3],  joint: "الركبة" },
-    bench:    { label: "بنش برس",      icon: "🛏", proxy: "wrists",    tempoPhase: "down", tempoRange: [1.5, 4], joint: "الكوع" },
-    ohp:      { label: "كتف فوق الراس", icon: "🙆", proxy: "wrists",    tempoPhase: "up",   tempoRange: [1, 3],  joint: "الكوع" },
+    /* exercise names stay English + translate="no" so browser auto-translate can't mangle them */
+    squat:    { label: "Back Squat",     icon: "🏋", proxy: "shoulders", tempoPhase: "down", tempoRange: [2, 4],  joint: "الركبة" },
+    deadlift: { label: "Deadlift",       icon: "⚙", proxy: "wrists",    tempoPhase: "up",   tempoRange: [1, 3],  joint: "الركبة" },
+    bench:    { label: "Bench Press",    icon: "🛏", proxy: "wrists",    tempoPhase: "down", tempoRange: [1.5, 4], joint: "الكوع" },
+    ohp:      { label: "Overhead Press", icon: "🙆", proxy: "wrists",    tempoPhase: "up",   tempoRange: [1, 3],  joint: "الكوع" },
   };
+  /* canonical library exercise for each dedicated model */
+  const FL_CANON = { squat: "BACK SQUAT", deadlift: "CONVENTIONAL DEADLIFT", bench: "FLAT BB BENCH PRESS", ohp: "STANDING OVERHEAD PRESS" };
+  /* exercises matching a dedicated model get the detailed checks; every other
+     exercise gets the honest generic fallback, labelled approximate (تقريبي) */
+  const FL_MODEL_OF = [
+    [/^BACK SQUAT$/, "squat"],
+    [/BB BENCH PRESS$/, "bench"],
+    [/^CONVENTIONAL DEADLIFT$/, "deadlift"],
+    [/(?:^| )OVERHEAD PRESS$|MILITARY PRESS$/, "ohp"],
+  ];
+  function flModelFor(ex) { const m = FL_MODEL_OF.find(([re]) => re.test(ex || "")); return m ? m[1] : "generic"; }
+  const FL_GENERIC = { proxy: "wrists" };
+  const flLiftOf = lift => FL_LIFTS[lift] || { label: lift, icon: "🎥" };
+  const flEn = s => `<span translate="no" lang="en">${flEsc(s)}</span>`;
 
   /* ---------- landmark math (track frames: {t, lms:[[x,y,vis]x33]}, ar = w/h) ---------- */
   const MINV = 0.4;
@@ -52,7 +67,7 @@
     const tilt = Math.abs(Math.atan2(sh.x - hp.x, hp.y - sh.y) * 180 / Math.PI);
     return { sh, hp, knee, ankle, elbow, wrist, trunk, tilt };
   }
-  function flProxy(F, lift) { return FL_LIFTS[lift].proxy === "shoulders" ? F.sh : F.wrist; }
+  function flProxy(F, lift) { return (FL_LIFTS[lift] || FL_GENERIC).proxy === "shoulders" ? F.sh : F.wrist; }
   /* per-frame snapshots for the whole track */
   function flFrames(track) {
     const ar = track.ar || 0.5625;
@@ -241,17 +256,38 @@
     return out;
   }
 
+  /* generic fallback for every exercise without a dedicated model:
+     honest whole-movement metrics only — reps, tempo, consistency, ROM,
+     trunk stability, path, balance. Score is capped and labelled تقريبي. */
+  function flChecksGeneric(frames, reps, summary) {
+    const out = [];
+    if (reps && reps.count) {
+      out.push(flCheck("العدات والإيقاع", reps.count + " عدة · نزول " + flN(reps.avgDown, 1) + " ث · طلوع " + flN(reps.avgUp, 1) + " ث", "ok", 0, ""));
+      if (reps.avgDown != null) { const d = reps.avgDown; out.push(flCheck("التحكم في النزول", flN(d, 1) + " ثانية", d >= 1.5 ? "ok" : d >= 0.9 ? "mid" : "bad", 8, d >= 1.5 ? "" : "نزّل بتحكم — حوالي ثانية ونص لـ ٣ ثواني")); }
+      if (reps.consistency != null) { const c = reps.consistency; out.push(flCheck("ثبات العدات", flN(c) + "٪", c >= 80 ? "ok" : c >= 60 ? "mid" : "bad", 8, c >= 80 ? "" : "خلّي كل عدة بنفس المدى والسرعة")); }
+    } else out.push(flCheck("العدات", "متحددش", "mid", 6, "صوّر من الجنب والجسم كامل عشان العدات تتعد"));
+    if (reps && reps.rom) { const r = reps.rom; out.push(flCheck("مدى الحركة", flN(r) + "° (" + reps.name + ")", r >= 60 ? "ok" : r >= 35 ? "mid" : "bad", 6, r >= 35 ? "" : "مدى الحركة صغير — وسّع الحركة بتحكم لو ده مش جزء من التمرين")); }
+    const tl = flStat(frames.map(f => f.F ? f.F.tilt : null));
+    if (tl) out.push(flCheck("ثبات الجذع", "تذبذب ±" + flN(tl.sd) + "°", tl.sd < 6 ? "ok" : tl.sd < 12 ? "mid" : "bad", 8, tl.sd < 6 ? "" : "شدّ جسمك وثبّت وضعك طول التمرين"));
+    const bp = flBarPath(frames, "generic");
+    if (bp) out.push(flCheck("مسار الحركة", "انحراف " + flN(bp.drift * 100) + "٪", bp.drift < 0.18 ? "ok" : bp.drift < 0.30 ? "mid" : "bad", 8, bp.drift < 0.18 ? "" : "الحركة بتلف بين العدات — ثبّت المسار"));
+    if (summary && summary.gravity) { const g = summary.gravity; out.push(flCheck("اتزان الجسم", g.label + " · " + flN(g.insidePct) + "٪", g.tone, 6, g.tone === "ok" ? "" : "وزنك مايل — وزّعه على نص القدم")); }
+    return out;
+  }
+
   /* full analysis: returns { score, grade, checks, metrics, barPath } — pure, testable */
   function flAnalyze(lift, track, summary) {
     const frames = flFrames(track);
     const reps = summary.reps || null;
-    const checks = (lift === "squat" ? flChecksSquat : lift === "deadlift" ? flChecksDeadlift : lift === "bench" ? flChecksBench : flChecksOhp)(frames, reps, summary);
+    const checks = (lift === "squat" ? flChecksSquat : lift === "deadlift" ? flChecksDeadlift : lift === "bench" ? flChecksBench : lift === "ohp" ? flChecksOhp : flChecksGeneric)(frames, reps, summary);
     const lost = checks.reduce((a, c) => a + c.pts, 0);
-    const score = Math.max(5, Math.min(100, 100 - lost));
+    let score = Math.max(5, Math.min(100, 100 - lost));
+    if (lift === "generic") score = Math.min(score, 85); /* approximate model: honest cap */
     const grade = score >= 90 ? { t: "ممتاز 🏆", tone: "ok" } : score >= 75 ? { t: "كويس 💪", tone: "ok" } : score >= 60 ? { t: "محتاج شغل 🛠", tone: "mid" } : { t: "ركّز على الأساسيات 🎯", tone: "bad" };
     const bp = flBarPath(frames, lift);
     const metrics = {
       v: 1, lift,
+      model: lift, approx: lift === "generic",
       score, reps: reps ? reps.count : 0,
       checks: checks.map(c => ({ label: c.label, val: c.val, tone: c.tone, pts: c.pts })),
       drift: bp ? +bp.drift.toFixed(3) : null,
@@ -265,7 +301,7 @@
     return { score, grade, checks, metrics, barPath: bp, frames };
   }
 
-  window.FormLab = { analyze: flAnalyze, LIFTS: FL_LIFTS };
+  window.FormLab = { analyze: flAnalyze, LIFTS: FL_LIFTS, modelFor: flModelFor, CANON: FL_CANON };
 
   /* ==================================================================
      UI
@@ -274,8 +310,25 @@
   function flCss() {
     if (flCssDone) return; flCssDone = true;
     const st = document.createElement("style"); st.id = "flCss"; st.textContent = `
-.fl-lifts{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:10px;-webkit-overflow-scrolling:touch}
-.fl-lift{flex:none;border:1.5px solid var(--soft2,#E2E8F0);background:var(--soft,#F1F5F9);border-radius:14px;padding:10px 14px;font-weight:800;font-size:.9rem;cursor:pointer;color:var(--navy);font-family:inherit;min-height:44px}
+/* horizontal chip row: LTR scroll container (iOS Safari jitters on RTL
+   overflow-x) + RTL track so visual order stays right-to-left; momentum
+   scroll, soft snap, no layout jump when the active chip changes */
+.fl-lifts{display:flex;overflow-x:auto;padding:2px 2px 8px;margin-bottom:10px;-webkit-overflow-scrolling:touch;touch-action:pan-x;overscroll-behavior-x:contain;scroll-snap-type:x proximity;direction:ltr;scrollbar-width:none}
+.fl-lifts::-webkit-scrollbar{display:none}
+.fl-lifts-t{display:flex;gap:8px;direction:rtl;width:max-content;min-width:100%}
+.fl-lift{flex:none;scroll-snap-align:start;border:1.5px solid var(--soft2,#E2E8F0);background:var(--soft,#F1F5F9);border-radius:14px;padding:10px 14px;font-weight:800;font-size:.9rem;cursor:pointer;color:var(--navy);font-family:inherit;min-height:44px}
+.fl-exwrap{margin-bottom:10px}
+.fl-exwrap>summary{cursor:pointer;font-weight:800;font-size:.9rem;padding:10px 12px;border:1.5px dashed var(--soft2,#CBD5E1);border-radius:14px;list-style:none}
+.fl-exwrap>summary::-webkit-details-marker{display:none}
+.fl-exq{width:100%;margin:8px 0 6px;padding:10px 12px;border:1.5px solid var(--soft2,#E2E8F0);border-radius:12px;font-family:inherit;font-size:.9rem;background:var(--card,#fff);color:var(--navy)}
+.fl-exlist{max-height:260px;overflow-y:auto;-webkit-overflow-scrolling:touch;touch-action:pan-y;overscroll-behavior:contain;padding-left:4px}
+.fl-exg{font-size:.78rem;font-weight:800;color:var(--mut,#64748B);margin:8px 2px 4px}
+.fl-exs{display:flex;flex-wrap:wrap;gap:6px}
+.fl-ex{display:inline-flex;align-items:center;gap:6px;border:1.5px solid var(--soft2,#E2E8F0);background:var(--soft,#F1F5F9);border-radius:12px;padding:8px 10px;font-weight:700;font-size:.8rem;cursor:pointer;color:var(--navy);font-family:inherit;min-height:40px}
+.fl-ex.on{background:linear-gradient(135deg,#F97316,#EA580C);color:#fff;border-color:#EA580C}
+.fl-ex .fl-mdl{font-style:normal;font-size:.68rem;opacity:.75}
+.fl-sel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:2px 0 10px;font-size:.9rem}
+.fl-approx{margin:10px 0;padding:10px 12px;border-radius:12px;background:#FFFBEB;border:1px solid #FDE68A;color:#92400E;font-size:.85rem;font-weight:700}
 .fl-lift.on{background:linear-gradient(135deg,#F97316,#EA580C);color:#fff;border-color:#EA580C;box-shadow:0 8px 18px -8px rgba(249,115,22,.7)}
 .fl-prog{margin-top:12px;border:1.5px solid var(--soft2,#E2E8F0);border-radius:14px;padding:12px;background:var(--soft,#F8FAFC)}
 .fl-prog .t{font-weight:800;font-size:.88rem;color:var(--navy);display:flex;justify-content:space-between;margin-bottom:8px}
@@ -390,8 +443,8 @@
 
   /* ghost comparison block */
   function flGhostBox(lift, metrics, ghost) {
-    const L = FL_LIFTS[lift];
-    if (!ghost || !ghost.metrics) return `<div class="fl-ghostbox"><h4>👻 شبح الكوتش</h4><p class="hint" style="margin:0">الكوتش لسه ما حددش الأداء المثالي لـ${L.label}. أول ما يحدده، هتشوف مقارنتك بيه هنا.</p></div>`;
+    const L = flLiftOf(lift);
+    if (!ghost || !ghost.metrics) return `<div class="fl-ghostbox"><h4>👻 شبح الكوتش</h4><p class="hint" style="margin:0">الكوتش لسه ما حددش الأداء المثالي لـ${flEn(L.label)}. أول ما يحدده، هتشوف مقارنتك بيه هنا.</p></div>`;
     const g = ghost.metrics, rows = [];
     const cmp = (label, mine, his, unit, betterLow) => {
       if (mine == null || his == null) return;
@@ -408,13 +461,15 @@
   /* the result sheet, used right after a scan (with live video+track) and from history (metrics only) */
   function flResultSheet(o) {
     flCss();
-    const L = FL_LIFTS[o.lift];
+    const L = flLiftOf(o.lift);
+    const approx = o.metrics && o.metrics.approx;
     const tone = o.score >= 75 ? "ok" : o.score >= 50 ? "mid" : "bad";
     const checks = o.checks || (o.metrics.checks || []).map(c => ({ ...c, tip: "" }));
     const repList = o.repList || [];
-    const body = openSheet(`<div class="between" style="margin-bottom:6px"><b style="font-size:1.1rem">${L.icon} ${L.label} — نتيجة الفورم</b><button class="btn sm ghost" onclick="closeSheet()">✕</button></div>
+    const body = openSheet(`<div class="between" style="margin-bottom:6px"><b style="font-size:1.1rem">${L.icon} ${flEn(L.label)} — نتيجة الفورم</b><button class="btn sm ghost" onclick="closeSheet()">✕</button></div>
       <div class="fl-hero-score">${ring(o.score, 100, { size: 110, stroke: 11, label: flN(o.score), sub: "من ١٠٠", color: tone === "ok" ? "#22C55E" : tone === "mid" ? "#FACC15" : "#F43F5E" })}
         <div class="gv"><span class="fl-grade ${o.grade.tone}">${o.grade.t}</span><small class="hint">${(o.metrics.reps || 0) > 0 ? "تقييم MOFIT الاسترشادي — " + o.metrics.reps + " عدات متعرف عليها" : "تقييم مبدئي من الحركة العامة — مفيش عدات واضحة في الفيديو"}</small></div></div>
+      ${approx ? `<div class="fl-approx">🔎 تحليل تقريبي — التمرين ده ملوش نموذج مخصص لسه، فالتقييم من الحركة العامة (عدات · إيقاع · ثبات · اتزان) ومحددش تفاصيل زي العمق أو زاوية الكوع. أقصى تقييم هنا ٨٥.</div>` : ""}
       ${flGhostBox(o.lift, o.metrics, o.ghost)}
       <div class="card" style="box-shadow:none;border:1px solid var(--soft2,#EEF2F7)"><div class="card-h"><div class="ic acc">✅</div><h2>تفاصيل التقييم</h2></div>
         ${checks.map(c => `<div class="fl-check"><span class="fl-dot ${c.tone}"></span><div class="fl-cb"><b>${flEsc(c.label)}</b><small>${flEsc(c.val)}</small>${c.tip && c.tone !== "ok" ? `<span class="fl-ct">💡 ${flEsc(c.tip)}</span>` : ""}</div>${c.pts ? `<b style="color:#BE123C">-${c.pts}</b>` : `<b style="color:#15803D">✓</b>`}</div>`).join("")}</div>
@@ -460,13 +515,13 @@
     await sb.from("form_scans").update({ is_ghost: false }).eq("lift", lift).eq("is_ghost", true);
     const { error } = await sb.from("form_scans").update({ is_ghost: true }).eq("id", scanId);
     if (error) { if (btn) { btn.disabled = false; btn.textContent = "⭐ خلّي دي الشبح المثالي"; } return toast("تعذر الحفظ، جرّب تاني"); }
-    toast("⭐ دي بقت الشبح المثالي لـ" + FL_LIFTS[lift].label);
+    toast("⭐ دي بقت الشبح المثالي لـ" + flLiftOf(lift).label);
     closeSheet(); render();
   }
 
   /* ---------- the scan flow ---------- */
-  async function flScan(file, lift, p, prog) {
-    const L = FL_LIFTS[lift];
+  async function flScan(file, sel, p, prog) {
+    const lift = sel.model, exName = sel.ex;
     const url = URL.createObjectURL(file);
     const video = document.createElement("video");
     video.muted = true; video.playsInline = true; video.preload = "auto"; video.src = url;
@@ -488,13 +543,13 @@
       const repList = (summary.reps && summary.reps.list) || [];
       if (!repList.length) toast("اتحلل الفيديو بس متعرفش على عدات واضحة — التقييم من الحركة العامة");
       /* auto-save the metrics row (never the video) */
-      const saved = await flSaveScan(p.id, lift, analysis);
+      const saved = await flSaveScan(p.id, exName, analysis);
       const scanId = saved && saved.data && saved.data.id && !String(saved.data.id).startsWith("local-") ? saved.data.id : null;
       if (saved && saved.queued) toast("📴 التحليل اتحفظ على الموبايل وهيتبعت لما النت يرجع");
       const ghosts = await flLoadGhosts();
       flResultSheet({
-        lift, score: analysis.score, grade: analysis.grade, checks: analysis.checks, metrics: analysis.metrics,
-        barPath: analysis.barPath, repList, ghost: ghosts[lift] || null,
+        lift: exName, score: analysis.score, grade: analysis.grade, checks: analysis.checks, metrics: analysis.metrics,
+        barPath: analysis.barPath, repList, ghost: ghosts[exName] || null,
         videoURL: url, track, canGhost: S.me.role === "coach" && !!scanId, scanId,
       });
       setTimeout(() => { prog.hidden = true; }, 600);
@@ -515,10 +570,10 @@
     if (error) { host.innerHTML = `<div class="card"><p class="hint">جدول التحليلات لسه مش متجهز (formlab.sql) — التحليل شغال، بس الحفظ هيبقى جاهز أول ما الجدول يتعمل.</p></div>`; return; }
     host.innerHTML = `<div class="card"><div class="card-h"><div class="ic dark">📋</div><h2>التحليلات السابقة<small>${rows.length ? rows.length + " تحليل" : ""}</small></h2></div>
       ${rows.length ? rows.map(r => {
-        const L = FL_LIFTS[r.lift] || { label: r.lift, icon: "🎥" };
+        const L = flLiftOf(r.lift);
         const tone = r.score >= 75 ? "ok" : r.score >= 50 ? "mid" : "bad";
         return `<div class="fl-row" data-id="${r.id}"><span class="fl-score ${tone}">${flN(r.score)}</span>
-          <div class="nm"><b>${L.icon} ${L.label}${r.is_ghost ? " <span class='fl-ghost'>⭐ الشبح</span>" : ""}</b><small>${r.reps || 0} عدات · ${flDate(r.created_at)}</small></div>
+          <div class="nm"><b>${L.icon} ${flEn(L.label)}${r.is_ghost ? " <span class='fl-ghost'>⭐ الشبح</span>" : ""}${r.metrics && r.metrics.approx ? " <span class='pill acc-soft' style='font-size:.68rem'>≈ تقريبي</span>" : ""}</b><small>${r.reps || 0} عدات · ${flDate(r.created_at)}</small></div>
           ${isCoach ? `<button class="fl-ghostbtn" data-ghost="${r.id}" data-lift="${r.lift}">${r.is_ghost ? "⭐ الشبح الحالي" : "⭐ خلّيها الشبح"}</button>` : ""}</div>`;
       }).join("") : emptyBox("🎥", "مفيش تحليلات لسه", "صوّر أول مجموعة من الجنب والتقييم هيظهر هنا — التحليل على الموبايل والفيديو ما بيترفعش.")}</div>`;
     host.querySelectorAll("[data-ghost]").forEach(b => b.onclick = e => { e.stopPropagation(); if (b.textContent.includes("الحالي")) return; flSetGhost(b.dataset.lift, b.dataset.ghost, b); });
@@ -539,20 +594,50 @@
     const p = S.client; if (!p) { el.innerHTML = ""; return; }
     const isCoach = S.me.role === "coach";
     S.formLift = S.formLift || "squat";
+    S.formEx = S.formEx || FL_CANON[S.formLift];
+    /* full exercise library, grouped by muscle, English names (translate-proof) */
+    const exNames = Object.keys(window.EXDB || {}).sort();
+    const groups = {};
+    exNames.forEach(n => { const m = (typeof muscleOf === "function" ? muscleOf(n) : "أخرى"); (groups[m] = groups[m] || []).push(n); });
+    const gOrder = ["أمامية", "صدر", "ضهر", "أكتاف", "باي", "تراي", "خلفية/أرداف", "سمانة", "بطن", "أخرى"].filter(g => groups[g]);
+    const exBtn = n => { const mdl = flModelFor(n); return `<button class="fl-ex ${S.formEx === n ? "on" : ""}" data-ex="${flEsc(n)}">${flEn(n)}<i class="fl-mdl">${mdl === "generic" ? "≈ تقريبي" : "🎯 مفصّل"}</i></button>`; };
+    const exListHTML = q => {
+      const f = (q || "").trim().toUpperCase();
+      return gOrder.map(g => {
+        const items = groups[g].filter(n => !f || n.includes(f));
+        return items.length ? `<div class="fl-exg">${g} · ${items.length}</div><div class="fl-exs">${items.map(exBtn).join("")}</div>` : "";
+      }).join("") || `<p class="hint" style="margin:8px 2px">مفيش تمرين بالاسم ده — جرّب اسم تاني بالإنجليزي.</p>`;
+    };
+    const selHTML = () => { const mdl = flModelFor(S.formEx); return `التمرين: ${flEn(S.formEx)} ${mdl === "generic" ? `<span class="pill acc-soft">≈ تحليل تقريبي</span>` : `<span class="pill acc">🎯 تحليل مفصّل</span>`}`; };
     el.innerHTML = `
       <div class="card dark hero"><div class="card-h"><div class="ic">🧪</div><h2>معمل الفورم<small>تحليل الأداء بالذكاء الاصطناعي — على موبايلك</small></h2></div>
         <p class="hero-sub">صوّر مجموعة من الجنب 📱 والتطبيق يحسب زوايا المفاصل ومسار البار ويديك تقييم MOFIT من ١٠٠، وتقارن نفسك بـ👻 شبح الكوتش المثالي. الفيديو ما بيترفعش — التحليل كله على جهازك.</p></div>
       <div class="card"><div class="card-h"><div class="ic acc">🎥</div><h2>${isCoach ? "تحليل جديد للعميل" : "تحليل جديد"}</h2></div>
-        <div class="fl-lifts" id="flLifts">${Object.entries(FL_LIFTS).map(([k, L]) => `<button class="fl-lift ${S.formLift === k ? "on" : ""}" data-lift="${k}">${L.icon} ${L.label}</button>`).join("")}</div>
+        <div class="fl-lifts"><div class="fl-lifts-t" id="flLifts">${Object.entries(FL_LIFTS).map(([k, L]) => `<button class="fl-lift ${S.formLift === k ? "on" : ""}" data-lift="${k}" data-ex="${FL_CANON[k]}">${L.icon} ${flEn(L.label)}</button>`).join("")}</div></div>
+        <details class="fl-exwrap" id="flExWrap"><summary>📚 كل التمارين (${exNames.length}) — اختار أي حركة من المكتبة</summary>
+          <input class="fl-exq" id="flExQ" inputmode="search" placeholder="🔍 دوّر بالاسم الإنجليزي…" translate="no" lang="en">
+          <div class="fl-exlist" id="flExList">${exListHTML("")}</div></details>
+        <div class="fl-sel" id="flSel">${selHTML()}</div>
         <button class="btn primary block" id="flPick">🎥 صوّر أو ارفع فيديو المجموعة</button>
         <input type="file" id="flFile" accept="video/*" class="hidden">
-        <p class="hint" style="margin-top:8px">📌 لأحسن نتيجة: الموبايل ثابت من الجنب · الجسم كامل في الكادر · إضاءة كويسة · ٣ لـ ٥ عدات.</p>
+        <p class="hint" style="margin-top:8px">📌 لأحسن نتيجة: الموبايل ثابت من الجنب · الجسم كامل في الكادر · إضاءة كويسة · ٣ لـ ٥ عدات. التمارين اللي عليها ≈ تقييمها تقريبي من الحركة العامة.</p>
         <div class="fl-prog" id="flProg" hidden><div class="t"><span>جاري التحليل…</span><b>0٪</b></div><div class="tr"><i></i></div></div></div>
       <div id="flScans"><div class="card"><p class="hint">بيحمّل التحليلات…</p></div></div>`;
-    el.querySelectorAll("[data-lift]").forEach(b => b.onclick = () => { S.formLift = b.dataset.lift; el.querySelectorAll("[data-lift]").forEach(x => x.classList.toggle("on", x === b)); });
+    const syncSel = () => {
+      el.querySelector("#flSel").innerHTML = selHTML();
+      el.querySelectorAll("[data-lift]").forEach(x => x.classList.toggle("on", x.dataset.lift === S.formLift));
+      el.querySelectorAll("[data-ex]").forEach(x => x.classList.toggle("on", x.dataset.ex === S.formEx));
+    };
+    el.querySelectorAll("[data-lift]").forEach(b => b.onclick = () => { S.formLift = b.dataset.lift; S.formEx = b.dataset.ex; syncSel(); });
+    const bindEx = () => el.querySelectorAll("#flExList [data-ex]").forEach(b => b.onclick = () => {
+      S.formEx = b.dataset.ex; S.formLift = flModelFor(S.formEx); syncSel();
+      const d = el.querySelector("#flExWrap"); if (d) d.open = false;
+    });
+    bindEx();
+    el.querySelector("#flExQ").addEventListener("input", e => { el.querySelector("#flExList").innerHTML = exListHTML(e.target.value); bindEx(); });
     const file = el.querySelector("#flFile"), prog = el.querySelector("#flProg");
     el.querySelector("#flPick").onclick = () => file.click();
-    file.onchange = () => { const f = file.files && file.files[0]; file.value = ""; if (f) flScan(f, S.formLift, p, prog); };
+    file.onchange = () => { const f = file.files && file.files[0]; file.value = ""; if (f) flScan(f, { model: S.formLift, ex: S.formEx }, p, prog); };
     flRefreshList(p);
   };
 })();
