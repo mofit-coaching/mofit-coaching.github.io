@@ -1,5 +1,5 @@
 /* MOFIT Live Muscle Heat card */
-.heat .card-h h2 small{display:block;font-weight:500;font-size:11px;color:var(--muted,#64748B);margin-top:2px}
+.mheat .card-h h2 small{display:block;font-weight:500;font-size:11px;color:var(--muted,#64748B);margin-top:2px}
 .heat-wrap{display:grid;grid-template-columns:1fr;gap:12px;margin-top:6px}
 .heat-map svg.anat{width:100%;max-width:260px;height:auto;display:block;margin:0 auto}
 .heat-tot{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;padding:9px 12px;border-radius:12px;background:rgba(249,115,22,.1);border:1px solid rgba(249,115,22,.25)}
