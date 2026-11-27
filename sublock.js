@@ -60,7 +60,15 @@ const spPlans=()=>{ try{ return (typeof cacheGet==="function"&&cacheGet("plans")
 const spTierOf=t=>typeof TIER_DEFS!=="undefined"&&TIER_DEFS[t]?t:null;
 function spGuessTier(plan){ plan=plan||""; if(/VIP|واحد لواحد/i.test(plan)) return "v"; if(plan.indexOf("المتابعة")>-1) return "s"; if(plan.indexOf("البرنامج")>-1) return "b"; return null; }
 function spGuessMonths(plan){ const m=String(plan||"").match(/(\d+)/); if(m) return +m[1]; if(/شهري|شهر/.test(plan||"")) return 1; return null; }
-function spPriceFor(tier,months){ const p=spPlans().find(x=>(x.tier||String(x.id||"")[0])===tier&&+x.months===+months); return p&&planPrice(p)?p.price:null; }
+function spPriceFor(tier,months){
+  const p=spPlans().find(x=>(x.tier||String(x.id||"")[0])===tier&&+x.months===+months);
+  if(p&&planPrice(p)) return p.price;
+  if(+months===9){ /* no saved 9-month plan: 20% off the tier's 1-month price (midpoint of his 15% @6m and 25% @12m curve) */
+    const m1=spPlans().find(x=>(x.tier||String(x.id||"")[0])===tier&&+x.months===1);
+    if(m1&&planPrice(m1)) return Math.round(+m1.price*9*0.8);
+  }
+  return null;
+}
 
 window.subPickerHTML=function(p){
   const cur=p.sub_plan||"", gt=spGuessTier(cur), gm=spGuessMonths(cur);
