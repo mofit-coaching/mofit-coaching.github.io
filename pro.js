@@ -21,25 +21,54 @@ async function execWrite(job){
     return { data };
   }catch(e){ return isNetErr(e)?{net:true}:{error:{message:String(e.message||e)}}; }
 }
+/* job: {op:"upsert"|"insert"|"delete", table, row?, onConflict?, match?}
+   Dedupe key for upserts: same table + same conflict-key values = same logical record,
+   so a newer queued write replaces the older one (never sends stale values, never doubles). */
+function jobKey(job){ if(job.op!=="upsert"||!job.onConflict||!job.row) return null;
+  return job.table+"|"+job.onConflict.split(",").map(c=>String(job.row[c])).join("|"); }
 async function dbWrite(job){
   if(!navigator.onLine) return enqueue(job);
+  const k=jobKey(job); /* a direct write supersedes a queued write of the same record (stale value must never win) */
+  if(k){ const qd=queue(); const i=qd.findIndex(j=>jobKey(j)===k); if(i>=0){ qd.splice(i,1); cacheSet("queue",qd); drawOffline(); } }
+  if(queue().length) flushQueue(); /* drain older queued writes first (fire-and-forget) */
   const r=await execWrite(job); return r.net? enqueue(job) : r;
 }
-function enqueue(job){ const qd=queue(); qd.push({...job, at:Date.now()}); cacheSet("queue",qd); drawOffline();
+function enqueue(job){ const qd=queue(); const k=jobKey(job);
+  if(k){ const i=qd.findIndex(j=>jobKey(j)===k); if(i>=0){ qd[i]={...job,at:qd[i].at}; cacheSet("queue",qd); drawOffline();
+    return { data:{...(job.row||{}), id:job.row?.id||("local-"+qd[i].at)}, queued:true }; } }
+  qd.push({...job, at:Date.now()}); cacheSet("queue",qd); drawOffline();
   return { data:{...(job.row||{}), id:job.row?.id||("local-"+Date.now())}, queued:true }; }
 let flushing=false;
+/* Dead-letter: writes the server rejected (not network). Never silently dropped — kept in
+   localStorage, surfaced on the offline bar, retryable from a sheet. */
+function deadQueue(){ return cacheGet("deadqueue")||[]; }
 async function flushQueue(){
   if(flushing||!navigator.onLine) return drawOffline(); const qd=queue(); if(!qd.length) return drawOffline();
-  flushing=true; cacheSet("queue",[]); const failed=[]; let sent=0;
-  for(const job of qd){ if(failed.length){ failed.push(job); continue; } const r=await execWrite(job); if(r.net) failed.push(job); else sent++; }
+  flushing=true; cacheSet("queue",[]); const failed=[]; let sent=0, errd=0;
+  for(const job of qd){ if(failed.length){ failed.push(job); continue; } const r=await execWrite(job);
+    if(r.net) failed.push(job);
+    else if(r.error){ errd++; const dl=deadQueue(); dl.push({...job, tries:(job.tries||0)+1, err:String(r.error.message||r.error)}); cacheSet("deadqueue",dl); }
+    else sent++; }
   cacheSet("queue",[...failed,...queue()]); flushing=false;
-  if(sent) toast(`✓ اتبعت ${sent} تسجيل كان أوفلاين`); drawOffline();
+  if(sent) toast(`✓ اتبعت ${sent} تسجيل كان أوفلاين`);
+  if(errd) toast(`⚠️ ${errd} تسجيل متسجلش – اضغط على شريط الأوفلاين`);
+  drawOffline();
 }
+function retryDead(){ const dl=deadQueue(); if(!dl.length) return; cacheSet("deadqueue",[]);
+  const qd=queue(); cacheSet("queue",[...dl.map(({err,...j})=>j),...qd]); closeSheet(); flushQueue(); }
+function deadSheet(){ const dl=deadQueue(); if(!dl.length) return;
+  openSheet(`<div class="between" style="margin-bottom:10px"><b>⚠️ تسجيلات محتاجة مراجعة (${dl.length})</b><button class="btn sm ghost" onclick="closeSheet()">✕</button></div>
+  <p class="hint" style="margin:0 0 10px">التسجيلات دي اتحفظت على موبايلك ومش ضايعة، بس السيرفر رفضها. جرّب تبعتها تاني، ولو نفس المشكلة كلّم الكوتش.</p>
+  ${dl.map(j=>`<div class="item" style="padding:10px 0"><div class="nm"><b>${esc(j.table)} · ${esc(j.op)}</b><small>${esc(j.err||"")}</small></div></div>`).join("")}
+  <button class="btn block" onclick="retryDead()">🔁 إعادة المحاولة</button>`); }
 function drawOffline(){
-  let el=document.getElementById("offbar"); const n=queue().length, off=!navigator.onLine;
-  if(!off&&!n){ el?.remove(); return; }
+  let el=document.getElementById("offbar"); const n=queue().length, d=deadQueue().length, off=!navigator.onLine;
+  if(!off&&!n&&!d){ el?.remove(); return; }
   if(!el){ el=document.createElement("div"); el.id="offbar"; el.className="offbar"; document.body.appendChild(el); }
-  el.innerHTML=off?`📴 أوفلاين – تسجيلك بيتحفظ على الموبايل ويتبعت لما النت يرجع${n?` (${n})`:""}`:`⏳ جاري إرسال ${n} تسجيل…`;
+  el.innerHTML=off?`📴 أوفلاين – تسجيلك بيتحفظ على الموبايل ويتبعت لما النت يرجع${n?` (${n})`:""}`
+    :d?`⚠️ ${d} تسجيل محتاج مراجعة – اضغط هنا`
+    :`⏳ جاري إرسال ${n} تسجيل…`;
+  el.onclick=d?deadSheet:null;
 }
 window.addEventListener("online",()=>{ drawOffline(); flushQueue(); });
 window.addEventListener("offline",drawOffline);
