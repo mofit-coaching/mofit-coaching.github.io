@@ -17,9 +17,9 @@ function build(art){
   const wrap=document.createElement("div");
   wrap.className="logo-assembly";
   wrap.setAttribute("aria-hidden","true");
-  wrap.innerHTML=`<span class="lp-bar"></span>${PLATE("lp-l","#FF6B1A")}${PLATE("lp-r","#FFB347")}<span class="lp-clank"></span>`;
+  wrap.innerHTML=`<span class="lp-bar"></span>${PLATE("lp-l","#FF6B1A")}${PLATE("lp-r","#FFB347")}<span class="lp-clank"></span><span class="lp-word"></span>`;
   big.parentNode.insertBefore(wrap,big);
-  wrap.appendChild(big);
+  wrap.querySelector(".lp-word").appendChild(big);
   return true;
 }
 function play(art){
