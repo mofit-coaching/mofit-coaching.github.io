@@ -226,6 +226,33 @@ async function apTrack(video, fps, onProgress) {
   }
 }
 
+/* single-frame preview detect for the pre-check: copies the current video frame onto a canvas, runs IMAGE-mode detection.
+   Returns { lms, luma, blank, w, h } (lms null when no body). Never throws. */
+let apPrevCv = null;
+async function apDetectFrame(video) {
+  const out = { lms: null, luma: null, blank: false, w: video.videoWidth || 0, h: video.videoHeight || 0 };
+  try {
+    if (!apLandmarker || !video.videoWidth || video.readyState < 2) return out;
+    if (!apPrevCv) apPrevCv = document.createElement("canvas");
+    const vw = video.videoWidth, vh = video.videoHeight, m = Math.max(vw, vh), sc = m > 640 ? 640 / m : 1;
+    apPrevCv.width = Math.max(2, Math.round(vw * sc)); apPrevCv.height = Math.max(2, Math.round(vh * sc));
+    const c = apPrevCv.getContext("2d"); c.drawImage(video, 0, 0, apPrevCv.width, apPrevCv.height);
+    out.blank = apBlank(apPrevCv);
+    try {
+      const t = document.createElement("canvas"); t.width = 16; t.height = 16;
+      const tc = t.getContext("2d"); tc.drawImage(apPrevCv, 0, 0, 16, 16);
+      const d = tc.getImageData(0, 0, 16, 16).data; let s = 0;
+      for (let i = 0; i < d.length; i += 4) s += 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+      out.luma = s / 256;
+    } catch (_) {}
+    try { apLandmarker.setOptions({ runningMode: "IMAGE" }); } catch (_) {}
+    const res = apLandmarker.detect(apPrevCv);
+    out.lms = (res && res.landmarks && res.landmarks[0]) || null;
+  } catch (e) { out.err = String(e && e.message || e); }
+  return out;
+}
+
+
 // angle series from tracked frames: [{name, pts:[[t,deg],...]}]
 function apSeries(frames) {
   const names = {};
