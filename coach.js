@@ -165,9 +165,9 @@ async function viewSetup(el){
   el.querySelectorAll("[data-sub]").forEach(b=>b.onclick=()=>{ S.setupTab=b.dataset.sub; viewSetup(el); });
   const sub=$("#sub");
   if(S.setupTab==="data") return setupData(sub);
+  if(S.setupTab==="brain") return window.viewBrain?viewBrain(sub):null;
   if(S.setupTab==="program") return setupProgram(sub);
   if(S.setupTab==="diet") return setupDiet(sub);
-  if(S.setupTab==="brain") return window.viewBrain?viewBrain(sub):null;
   if(S.setupTab==="supps") return setupSupps(sub);
   if(S.setupTab==="report") return viewReport(sub);
   return setupAccount(sub);
@@ -650,4 +650,4 @@ async function viewAssign(el){
   }
   $("#asgBack").onclick=()=>viewClients(el);
   paint();
-     }
+       }
