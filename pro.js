@@ -51,16 +51,30 @@ const DELOAD_DEFAULT={"مبتدئ":[], "متوسط":[6], "متقدم":[4,8]};
 function isDeload(p,w){ return Array.isArray(p?.deload_weeks) && p.deload_weeks.includes(wInBlock(w)); }
 function weekSets(ex,p,w){ return isDeload(p,w) ? Math.max(1,Math.ceil(ex.sets*0.6)) : ex.sets; }
 
-/* ---------- 3) progression (double progression) ---------- */
+/* ---------- 3) progression (double progression + RIR autoregulation) ---------- */
+/* Rules: move up only when the top of the rep range is hit with reps left in reserve (RIR 2+).
+   Reps hit while grinding (RIR 0-1 / failure) = hold one more session.
+   Reps under the range at failure = back off ~5% and rebuild the reps.
+   Lower-body compounds step +5 kg, upper-body compounds +2.5 kg, isolation adds reps first. */
 function repRange(t){ const m=String(t||"").match(/(\d+)\s*[-–]\s*(\d+)/); if(m) return [+m[1],+m[2]]; const n=parseInt(t); return isNaN(n)?null:[n,n]; }
+const LOWER_RE=/SQUAT|DEADLIFT|RDL|LEG PRESS|HACK|LUNGE|SPLIT|HIP THRUST|HIP EXTENSION|LEG CURL|LEG EXTENSION|CALF|STEP-UP|GLUTE|PULL-THROUGH/i;
 function progressionHint(ex, prevSets, deload){
   const done=prevSets.filter(s=>s.reps!=null&&s.weight!=null&&s.weight>0); const rr=repRange(ex.target_reps);
   if(!done.length||!rr) return null;
   const top=Math.max(...done.map(s=>+s.weight)), atTop=done.filter(s=>+s.weight===top);
+  const lower=LOWER_RE.test(ex.name||""), comp=isCompound(ex.name);
   if(deload) return {kind:"deload", w:Math.round(top*0.9/1.25)*1.25, text:`🔄 ديلود: ${fmt(Math.round(top*0.9/1.25)*1.25,2)} كجم تقريباً · مجموعات أقل · RIR 3-4`};
-  const inc=isCompound(ex.name)?2.5:(top<15?1:1.25);
-  if(atTop.length>=Math.min(2,ex.sets) && atTop.every(s=>+s.reps>=rr[1])) return {kind:"up", w:top+inc, text:`📈 وصلت لأعلى المدى (${rr[1]}) – جرّب ${fmt(top+inc,2)} كجم (+${inc})`};
-  if(atTop.some(s=>+s.reps<rr[0])) return {kind:"hold", w:top, text:`⏸ ثبّت ${fmt(top,2)} كجم – العدات كانت تحت المدى (${rr[0]})`};
+  const inc=comp?(lower?5:2.5):(top<15?1:1.25);
+  const rirs=atTop.map(s=>s.rir).filter(r=>r!==null&&r!==undefined&&r!=="").map(Number).filter(r=>!isNaN(r));
+  const grinding=atTop.some(s=>typeof isFailure==="function"&&isFailure(s))||(rirs.length>0&&Math.min(...rirs)<=0);
+  const nearFail=rirs.length>0&&Math.min(...rirs)<=1;
+  const hitTop=atTop.length>=Math.min(2,ex.sets)&&atTop.every(s=>+s.reps>=rr[1]);
+  const missed=atTop.some(s=>+s.reps<rr[0]);
+  if(hitTop&&grinding) return {kind:"hold", w:top, text:`⏸ وصلت آخر المدى بس على الفشل – ثبّت ${fmt(top,2)} كجم مجموعة كمان، وسيب عدّة في الاحتياط`};
+  if(hitTop&&nearFail) return {kind:"hold", w:top, text:`⏸ آخر المدى وصلته وانت قريب من الفشل – كرر ${fmt(top,2)} كجم مرة كمان وبعدها اطلع`};
+  if(hitTop) return {kind:"up", w:top+inc, text:`📈 وصلت لأعلى المدى (${rr[1]})${rirs.length?" وفاضل عدّة في الاحتياط":""} – جرّب ${fmt(top+inc,2)} كجم (+${inc})`};
+  if(missed&&grinding){ const w=Math.max(1,Math.round(top*0.95/1.25)*1.25); return {kind:"hold", w, text:`🔽 العدات تحت المدى وانت للفشل – نزّل لـ${fmt(w,2)} كجم ورجّع العدات`}; }
+  if(missed) return {kind:"hold", w:top, text:`⏸ ثبّت ${fmt(top,2)} كجم – العدات كانت تحت المدى (${rr[0]})`};
   return {kind:"reps", w:top, text:`➕ نفس الوزن ${fmt(top,2)} كجم – حاول تزود عدّة في كل مجموعة`};
 }
 
