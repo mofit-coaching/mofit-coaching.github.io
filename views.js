@@ -138,7 +138,7 @@ async function viewHome(el){
     <div class="card" id="hN"><div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2></div><p class="muted">جارٍ التحميل…</p></div>
     <div id="hSteps"></div><div id="hCardio"></div>
     <div class="hsec"><span>تقدمك</span></div>
-    <div id="hRecap"></div><div id="hFlame"></div><div id="hStreak"></div>
+    <div id="hRecap"></div><div id="hFlame"></div><div id="hRank"></div><div id="hStreak"></div>
     <div class="card" id="hH"></div>
     <div class="card" id="hF"></div>
     <div class="hsec"><span>جسمك</span></div>
@@ -172,6 +172,7 @@ async function viewHome(el){
   $("#hCardio").innerHTML=cardioCardHTML(p,H,wk); wireCardioCard();
   loadCardHTML(p).then(h=>{ const x=$("#hLoad"); if(x) x.innerHTML=h; });
   if(typeof flameHeroHTML==="function") flameHeroHTML(p).then(h=>{ const x=$("#hFlame"); if(x){ x.innerHTML=h; if(window.flameAfter) flameAfter(x,p); } }).catch(()=>{});
+  if(typeof rankCardHTML==="function") rankCardHTML(p).then(h=>{ const x=$("#hRank"); if(x) x.innerHTML=h; }).catch(()=>{});
   if(typeof firstWeekHTML==="function"&&S.me.role==="client") firstWeekHTML(p).then(h=>{ const x=$("#hFirst"); if(x){ x.innerHTML=h; if(window.firstWeekAfter) firstWeekAfter(x,p); } }).catch(()=>{});
   if(typeof streakCardHTML==="function") streakCardHTML(p).then(h=>{ const x=$("#hStreak"); if(x){ x.innerHTML=h; if(window.streakAfter&&S.me.role==="client") streakAfter(p); } }).catch(()=>{});
   $("#hH").innerHTML=`<div class="card-h"><div class="ic">✅</div><h2>الالتزام<small>${H.length} يوم مسجّل</small></h2></div>
@@ -637,4 +638,4 @@ async function homeCheckinCard(p,wk){
     `<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>متابعة الأسبوع ${wk}<small>${thisW?(thisW.reviewed_at?"✓✓ الكوتش رد":"✓ اتبعتت – مستنية رد الكوتش"):"لسه ما اتبعتتش – وزن + صور + إحساسك"}</small></h2><button class="btn sm ${thisW?"":"primary"}" id="goCI">${thisW?"عرض":"ابعت"}</button></div>
      ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
   $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
-}
+                                      }
