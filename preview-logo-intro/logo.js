@@ -36,8 +36,16 @@ function build(art){
         {duration:540,easing:"cubic-bezier(.2,1.25,.3,1)"});
       t.id="lpTap";
     }
-    wrap.classList.remove("lp-tap"); void wrap.offsetWidth; wrap.classList.add("lp-tap");
-    clearTimeout(tapTimer); tapTimer=setTimeout(()=>wrap.classList.remove("lp-tap"),760);
+    /* pulse the bar with Web Animations: a CSS class here would replace the intro animations
+       on the halves and plates and leave them invisible. */
+    const barEl=wrap.querySelector(".lp-bar");
+    if(barEl&&barEl.animate){
+      barEl.getAnimations().forEach(a=>{ if(a.id==="lpTapBar") a.cancel(); });
+      const b=barEl.animate(
+        [{filter:"brightness(1) saturate(1)"},{filter:"brightness(1.7) saturate(1.2)",offset:.4},{filter:"brightness(1) saturate(1)"}],
+        {duration:540,easing:"ease-out"});
+      b.id="lpTapBar";
+    }
   };
   big.addEventListener("pointerdown",tap,{passive:true});
   big.addEventListener("touchstart",tap,{passive:true});
