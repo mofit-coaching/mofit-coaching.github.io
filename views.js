@@ -614,10 +614,12 @@ async function viewMeasures(el){
       <label class="f">ملاحظات<textarea rows="2" data-k="notes">${esc(cur.notes??"")}</textarea></label>
       <button class="btn primary block" id="bSave">حفظ ${sel?"الأسبوع "+sel:"قياسات البداية"}</button></div>
     ${weightTrendCard(B,p)}
+    ${window.mofitHeat?mofitHeat.cardHTML():"<div></div>"}
     <div class="card"><div class="card-h"><div class="ic acc">⚖</div><h2>منحنى الوزن</h2></div>${lineChart(B.filter(b=>b.weight).map(b=>({x:b.week,y:+b.weight})),"كجم")}</div>
     <div class="card"><div class="card-h"><div class="ic">📐</div><h2>منحنى الوسط</h2></div>${lineChart(B.filter(b=>b.waist).map(b=>({x:b.week,y:+b.waist})),"سم")}</div>`;
   restoreWeekChips(el,window._wsX); window._wsX=null;
   el.querySelectorAll("[data-w]").forEach(b=>b.onclick=()=>{ window._wsX=weekChipsX(el); S.bodyWeek=+b.dataset.w; viewMeasures(el);});
+  if(window.mofitHeat) mofitHeat.fill(p.id);
   $("#bSave").onclick=async()=>{
     const v=k=>el.querySelector(`[data-k="${k}"]`).value;
     const rec={client_id:p.id,week:sel,log_date:v("log_date")||null,notes:v("notes").trim()||null,updated_at:new Date().toISOString()};
