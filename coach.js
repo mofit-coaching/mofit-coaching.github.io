@@ -178,11 +178,12 @@ function setupData(el){
       <div class="grid3"><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">BMR</div><div class="v num">${fmt(t.bmr)}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">TDEE</div><div class="v num">${fmt(t.tdee)}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">السعرات</div><div class="v num" style="color:var(--acc)">${fmt(t.kcal)}</div></div>
       <div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">بروتين</div><div class="v num">${fmt(t.P)}</div><div class="s">جم${t.P&&p.start_weight?" · "+fmt(t.P/p.start_weight,2)+" جم/كجم":""}</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">كارب</div><div class="v num">${fmt(t.C)}</div><div class="s">جم</div></div><div class="stat dark" style="background:rgba(255,255,255,.08)"><div class="l">دهون</div><div class="v num">${fmt(t.F)}</div><div class="s">جم</div></div></div></div>
     <div class="card"><div class="card-h"><div class="ic acc">💳</div><h2>الاشتراك<small>${(s=>s?s.icon+" "+esc(s.text):"لم يحدد")(subStatus(p))}</small></h2></div>
+      ${typeof subPickerHTML==="function"?subPickerHTML(p):""}
       <div class="grid2"><label class="f">الباقة<input id="sPlan" placeholder="شهري / 3 شهور…" value="${esc(p.sub_plan??"")}"></label>
       <label class="f">السعر<input id="sPrice" inputmode="decimal" value="${esc(p.sub_price??"")}"></label>
       <label class="f">من${djField(`<input type="date" id="sStart" value="${esc(p.sub_start??"")}">`,p.sub_start)}</label>
       <label class="f">إلى${djField(`<input type="date" id="sEnd" value="${esc(p.sub_end??"")}">`,p.sub_end)}</label></div>
-      <div class="row" style="margin-bottom:10px">${[[1,0],[3,1],[6,2],[12,6]].map(([m,f])=>`<button class="chip" data-sm="${m+f}" data-plan="${f?esc(planTitle({months:m,free_months:f})):"شهري"}">${f?`${m}+${f} 🎁`:"+1 شهر"}</button>`).join("")}<label class="row" style="gap:6px;margin-inline-start:auto;font-weight:700"><input type="checkbox" id="sPaid" style="width:auto;min-height:0" ${p.sub_paid?"checked":""}> مدفوع</label></div>
+      <div class="row" style="margin-bottom:10px"><label class="row" style="gap:6px;margin-inline-start:auto;font-weight:700"><input type="checkbox" id="sPaid" style="width:auto;min-height:0" ${p.sub_paid?"checked":""}> مدفوع</label></div>
       ${"bonus_weeks" in p?`<label class="f">🎁 أسابيع هدية (بتتضاف على أسابيع الباقة)<input id="sBonus" inputmode="numeric" value="${esc(p.bonus_weeks??0)}"></label><p class="hint">الباقة: ${planBaseWeeks(p)??"—"} أسبوع · الإجمالي للعميل: ${planBaseWeeks(p)===null?"مفتوح":maxWeek(p)} أسبوع</p>`:`<p class="hint">الأسابيع الظاهرة للعميل: ${planBaseWeeks(p)===null?"مفتوحة (حدد التواريخ)":planBaseWeeks(p)+" أسبوع"}</p>`}
       <label class="f">ملاحظات الدفع<input id="sNotes" value="${esc(p.sub_notes??"")}"></label>
       <label class="f">📱 رقم واتساب العميل (للتذكيرات)<input id="sPhone" inputmode="tel" dir="ltr" placeholder="01xxxxxxxxx" value="${esc(p.phone??"")}"></label>
@@ -191,7 +192,7 @@ function setupData(el){
       <label class="f">الاسم<input data-x="full_name" value="${esc(p.full_name??"")}"></label>${profileFields(p)}
       <label class="f">ملاحظات الكوتش (خاصة – العميل مش بيشوفها)<textarea rows="2" data-x="coach_notes" placeholder="بيتحمل…"></textarea></label>
       <button class="btn primary block" id="pSave">حفظ البيانات</button></div>`;
-  el.querySelectorAll("[data-sm]").forEach(b=>b.onclick=()=>{ const st=$("#sStart").value||today(); $("#sStart").value=st; const d=new Date(st+"T00:00:00"); d.setMonth(d.getMonth()+(+b.dataset.sm)); d.setDate(d.getDate()-1); $("#sEnd").value=d.toISOString().slice(0,10); djSync($("#sStart")); djSync($("#sEnd")); $("#sPlan").value=b.dataset.plan; });
+  if(typeof wireSubPicker==="function") wireSubPicker(el);
   el.insertAdjacentHTML("afterbegin",healthCard(p)+painCard(p)+'<div class="card" id="aicH" hidden></div>'); fillCoachNote(el,p); el.insertAdjacentHTML("beforeend",assessmentCardHTML(p)); wireAssessment($("#ohsa"),p);
   if(typeof aiClientCard==="function") aiClientCard(p);
   el.querySelectorAll("[data-pres]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("client_events").update({resolved_at:new Date().toISOString()}).eq("id",b.dataset.pres); if(error) return toast("تعذر الحفظ"); await loadEvents(); toast("تم ✓"); setupData(el); });
@@ -652,4 +653,4 @@ async function viewAssign(el){
   }
   $("#asgBack").onclick=()=>viewClients(el);
   paint();
-}
+       }
