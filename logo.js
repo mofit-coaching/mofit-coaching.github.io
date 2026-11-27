@@ -23,6 +23,8 @@ function build(art){
   return true;
 }
 function play(art){
+  const sec=art.closest("section")||art.parentElement;
+  if(sec) sec.classList.add("logo-intro");
   art.classList.remove("logo-on","logo-done");
   void art.offsetWidth;
   art.classList.add("logo-on");
