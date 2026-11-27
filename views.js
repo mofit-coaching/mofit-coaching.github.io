@@ -164,8 +164,9 @@ async function viewHome(el){
   const tot=sumMacros(meals.data||[]);
   $("#hN").innerHTML=`<div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>${niceDate(today())}</small></h2><button class="btn sm" id="goFood">سجّل أكلك</button></div>
     <div style="display:flex;gap:16px;align-items:center">${ring(tot.kcal,t.kcal||1,{size:118,label:fmt(tot.kcal),sub:"من "+fmt(t.kcal)+" kcal"})}
-    <div style="flex:1">${macroRow("بروتين",tot.P,t.P,"جم")}${macroRow("كارب",tot.C,t.C,"جم","navy")}${macroRow("دهون",tot.F,t.F,"جم","navy")}</div></div>`;
+    <div style="flex:1">${macroRow("بروتين",tot.P,t.P,"جم")}${macroRow("كارب",tot.C,t.C,"جم","navy")}${macroRow("دهون",tot.F,t.F,"جم","navy")}</div></div>${window.egyScanOpen?`<button class="btn sm navy block" id="goScan" style="margin-top:10px">📸 صوّر أكلك — أكل مصري ≈</button>`:""}`;
   $("#goFood").onclick=()=>{ S.tab="food"; S.date=today(); render(); };
+  const goScan=$("#goScan"); if(goScan) goScan.onclick=()=>window.egyScanOpen();
   if(S.dietPending){ const hn=$("#hN"); hn.className="card plan-wait"; hn.innerHTML=planningInner("food"); }
   $("#hF").innerHTML=`<div class="card-h"><div class="ic acc">🔥</div><h2>الفشل العضلي<small>الأسبوع ${wk}</small></h2></div>`+failureSummary((sets.data||[]).filter(s=>s.week===wk));
   const H=hab.data||[];
@@ -635,4 +636,4 @@ async function homeCheckinCard(p,wk){
     `<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>متابعة الأسبوع ${wk}<small>${thisW?(thisW.reviewed_at?"✓✓ الكوتش رد":"✓ اتبعتت – مستنية رد الكوتش"):"لسه ما اتبعتتش – وزن + صور + إحساسك"}</small></h2><button class="btn sm ${thisW?"":"primary"}" id="goCI">${thisW?"عرض":"ابعت"}</button></div>
      ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
   $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
-     }
+                                                              }
