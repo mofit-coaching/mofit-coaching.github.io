@@ -62,18 +62,19 @@ function fmtNum(n){ return (Math.round(n)||0).toLocaleString("en-US"); }
 function tons(kg){ return kg>=1000? (kg/1000).toFixed(kg>=10000?0:1)+" طن" : fmtNum(kg)+" كجم"; }
 
 function compute(sets){
-  let kg=0, cnt=0, wks={};
+  let kg=0, cnt=0, maxW=0, wks={};
   (sets||[]).forEach(s=>{
     if(s.reps==null && s.weight==null) return;
     cnt++;
     wks[s.week]=1;
     if(s.reps!=null && s.weight!=null) kg += (+s.reps||0)*(+s.weight||0);
+    if(s.weight!=null && +s.weight>maxW) maxW=+s.weight;
   });
   const i=Math.max(0,RANKS.map(r=>r.min).filter(m=>m<=kg).length-1);
   const cur=RANKS[i], next=RANKS[i+1]||null;
   const from=cur.min, to=next?next.min:null;
   const pct=next?Math.max(2,Math.min(100,Math.round((kg-from)/(to-from)*100))):100;
-  return {kg,cnt,weeks:Object.keys(wks).length,cur,next,pct};
+  return {kg,cnt,maxW,weeks:Object.keys(wks).length,cur,next,pct};
 }
 
 function html(d){
@@ -83,16 +84,16 @@ function html(d){
     <div class="rk-top">
       <div class="rk-badge">${r.ic}</div>
       <div class="rk-meta"><div class="rk-k">رتبتك</div><div class="rk-name">${r.n}</div><div class="rk-tag">${r.tag}</div></div>
-      <div class="rk-num"><b>${fmtNum(d.kg)}</b><span>كجم مرفوعة</span></div>
+      <div class="rk-num"><b>${tons(d.kg)}</b><span>مرفوعة</span></div>
     </div>
     <div class="rk-ladder">${ladder}</div>
     ${d.next?`<div class="rk-bar"><i data-w="${d.pct}%"></i></div>
-      <div class="rk-next"><span>باقي <b>${fmtNum(d.next.min-d.kg)} كجم</b> لرتبة <b>${d.next.n}</b></span><span>${d.pct}%</span></div>`
+      <div class="rk-next"><span>باقي <b>${tons(d.next.min-d.kg)}</b> لرتبة <b>${d.next.n}</b></span><span>${d.pct}%</span></div>`
       :`<div class="rk-bar"><i data-w="100%"></i></div><div class="rk-next"><span>وصلت آخر رتبة — <b>${r.n}</b></span><span>100%</span></div>`}
     <div class="rk-stats">
       <div class="rk-s"><b>${fmtNum(d.cnt)}</b><span>مجموعة مسجلة</span></div>
       <div class="rk-s"><b>${d.weeks}</b><span>أسبوع تمرين</span></div>
-      <div class="rk-s"><b>${tons(d.kg)}</b><span>إجمالي الحديد</span></div>
+      <div class="rk-s"><b>${d.maxW?fmtNum(d.maxW)+" كجم":"—"}</b><span>أثقل وزن</span></div>
     </div>
     ${d.cnt?`<p class="rk-note">الرتبة بتتحسب من سجلك أنت بس: مجموع (عدات × وزن) لكل مجموعة سجلتها. المجموعات بوزن الجسم بتتحسب مجموعة، مش كيلو.</p>`
       :`<p class="rk-empty">سجّل أول مجموعة وتبدأ رتبتك من هنا.</p>`}
