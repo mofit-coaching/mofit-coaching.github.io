@@ -50,12 +50,12 @@ function bodyHTML(cur, prev){
 }
 
 function cardHTML(){
-  return `<div class="card heat" id="heatCard"><div class="card-h"><div class="ic acc">🔥</div><h2>خريطة الحرارة<small>من مجموعاتك المسجلة – الأسبوع ده</small></h2></div><div id="heatBody"><p class="hint">بنحسب من سجلك…</p></div></div>`;
+  return `<div class="card mheat" id="heatCard"><div class="card-h"><div class="ic acc">🔥</div><h2>خريطة الحرارة<small>من مجموعاتك المسجلة – الأسبوع ده</small></h2></div><div id="heatBody"><p class="hint">بنحسب من سجلك…</p></div></div>`;
 }
 
 async function fill(clientId){
   const box=document.getElementById("heatBody");
-  if(!box||!window.sb) return;
+  if(!box||typeof sb==="undefined") return;
   const wk=+(typeof currentWeek==="function"?currentWeek(S.client):S.week)||+S.week||1;
   const weeks=[wk, wk-1].filter(w=>w>=1);
   try{
