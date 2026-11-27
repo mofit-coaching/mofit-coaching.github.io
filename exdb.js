@@ -28,7 +28,9 @@
         <div style="text-align:center;padding:24px 8px;color:var(--muted,#9aa3c7)"><div style="font-size:2rem;margin-bottom:8px">🏋️</div>مكتبة الصور لسه مش فيها التمرين ده — اسأل كابتن محمد وهيوضحهولك.</div>`);
         return;
       }
-      const imgs=[...Array(Math.min(2,e.n||0))].map((_,i)=>`<img src="exdb/img/${e.id}_${i}.jpg" alt="" class="${i===0?'on':''}" ${i>0?'loading="lazy"':''}>`).join("");
+      const base=e.u||"exdb/img/";
+      const src=i=>e.u?`${base}${i}.jpg`:`${base}${e.id}_${i}.jpg`;
+      const imgs=e.id?[...Array(Math.min(2,e.n||0))].map((_,i)=>`<img src="${src(i)}" alt="" class="${i===0?'on':''}" ${i>0?'loading="lazy"':''}>`).join(""):"";
       const body=openSheet(`<div class="between" style="margin-bottom:10px"><b>${esc(name)}</b><button class="btn sm ghost" onclick="closeSheet()">✕</button></div>
         ${imgs?`<div class="exdb-ph">${imgs}<div class="exdb-dots">${imgs&&e.n>1?'<i class="on"></i><i></i>':''}</div></div>`:""}
         <ol class="exdb-steps">${e.s.map((s,i)=>`<li><b>${i+1}</b><span>${esc(s)}</span></li>`).join("")}</ol>`);

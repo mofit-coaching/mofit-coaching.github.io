@@ -17,7 +17,7 @@ function profileFields(p={}){
     <label class="f">مستوى النشاط<select data-p="activity_factor">${ACTIVITY.map(([l,v])=>`<option value="${v}" ${(+p.activity_factor||1.2)===v?"selected":""}>${l}</option>`).join("")}</select></label>
     <label class="f">الهدف<select data-p="goal">${GOALS.map(([l])=>`<option ${p.goal===l?"selected":""}>${l}</option>`).join("")}</select></label>
     <label class="f">سعرات يدوية (اختياري)<input inputmode="decimal" data-p="manual_kcal" value="${esc(p.manual_kcal??"")}"></label>
-    <label class="f">بروتين جم/كجم (اختياري)<input inputmode="decimal" data-p="protein_gpk" value="${esc(p.protein_gpk??"")}"></label></div>
+    <label class="f">بروتين جم/كجم (1.6-2.2)<input inputmode="decimal" data-p="protein_gpk" placeholder="1.8" value="${esc(p.protein_gpk??"")}"></label></div>
     <div class="grid3"><label class="f">بروتين %<input inputmode="decimal" data-p="p_pct" value="${Math.round((p.p_pct??0.3)*100)}"></label>
     <label class="f">كارب %<input inputmode="decimal" data-p="c_pct" value="${Math.round((p.c_pct??0.4)*100)}"></label>
     <label class="f">دهون %<input inputmode="decimal" data-p="f_pct" value="${Math.round((p.f_pct??0.3)*100)}"></label></div>`;
@@ -648,4 +648,4 @@ async function viewAssign(el){
   }
   $("#asgBack").onclick=()=>viewClients(el);
   paint();
-}
+           }
