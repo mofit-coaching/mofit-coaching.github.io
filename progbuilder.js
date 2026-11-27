@@ -92,7 +92,7 @@ function pbDraft(p,body){
         <span class="pill">السعرات — قبل: ${tCur.kcal?fmt(tCur.kcal):"—"}</span><span class="pill acc">بعد: ${fmt(tNew.kcal)}</span>
         <span class="pill">بروتين — قبل: ${tCur.P?fmt(tCur.P)+" جم":"—"}</span><span class="pill acc">بعد: ${fmt(tNew.P)} جم (1.8 جم/كجم)</span>
       </div></div>`:""}
-    <label class="f" style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="pbDoTrain" checked style="width:20px;height:20px;min-height:0;margin-top:2px"><span><b>استبدال برنامج التمرين الحالي بالمسودة</b><br><small class="muted">⚠ بيمسح برنامج العميل الحالي والمجموعات المسجلة على تمارينه — برنامجك الأساسي والقوالب مش بيتلمسوا</small></span></label>
+    <label class="f" style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="pbDoTrain" checked style="width:20px;height:20px;min-height:0;margin-top:2px"><span><b>استبدال برنامج التمرين الحالي بالمسودة</b><br><small class="muted">البرنامج الحالي بينتقل للأرشيف مع مجموعاته (تقدر ترجعه) — برنامجك الأساسي والقوالب مش بيتلمسوا</small></span></label>
     ${tNew.kcal?`<label class="f" style="display:flex;gap:8px;align-items:flex-start"><input type="checkbox" id="pbDoFood" style="width:20px;height:20px;min-height:0;margin-top:2px"><span><b>تطبيق أهداف الأكل</b> <small class="muted">(سعرات يدوية ${fmt(tNew.kcal)} + بروتين 1.8 جم/كجم)</small></span></label>`:""}
     <div class="row"><button class="btn grow" data-close2>إلغاء</button><button class="btn primary grow" id="pbApply">اعتماد المسودة ✓</button></div>`;
   host.querySelector("[data-close2]").onclick=closeSheet;
@@ -100,17 +100,16 @@ function pbDraft(p,body){
   host.querySelector("#pbApply").onclick=async()=>{
     const doTrain=host.querySelector("#pbDoTrain").checked, doFood=!!host.querySelector("#pbDoFood")?.checked;
     if(!doTrain&&!doFood) return toast("اختار اللي هيتطبق من المسودة");
-    if(doTrain && S.program.length && !confirm(`استبدال برنامج ${p.full_name||"العميل"} الحالي بمسودة «${sys.name}»؟\n\nهيتمسح البرنامج الحالي وكل المجموعات المسجلة على تمارينه، ومينفعش ترجعها.\n\nمتأكد؟`)) return;
+    if(doTrain && S.program.length && !confirm(`استبدال برنامج ${p.full_name||"العميل"} الحالي بمسودة «${sys.name}»؟\n\nالبرنامج الحالي والمجموعات المسجلة عليه بينتقلوا للأرشيف (تقدر ترجعهم)، والمسودة بتتطبق مرة واحدة: لو حصل خطأ البرنامج القديم بيفضل زي ما هو.\n\nمتأكد؟`)) return;
     const btn=host.querySelector("#pbApply"); btn.disabled=true; btn.textContent="⏳ بيتطبق…";
     if(doTrain){
-      const { error:de } = await sb.from("program_exercises").delete().eq("client_id",p.id);
-      if(de){ btn.disabled=false; btn.textContent="اعتماد المسودة ✓"; return toast(de.message); }
-      const { error } = await sb.from("program_exercises").insert(planRows(p.id, plan));
-      if(error){ btn.disabled=false; btn.textContent="اعتماد المسودة ✓"; return toast(error.message); }
-      const { error:pe } = await sb.from("profiles").update({training_days:plan.length, split_key:sys.key, split_name:sys.name+" (مسودة معتمدة)", level, goal, program_started_at:new Date().toISOString(), deload_weeks:(typeof DELOAD_DEFAULT!=="undefined"?DELOAD_DEFAULT[level]:null)||[]}).eq("id",p.id);
-      if(pe){ btn.disabled=false; btn.textContent="اعتماد المسودة ✓"; return toast(pe.message); }
-    }
-    if(doFood){
+      const payload={p_client_id:p.id, p_rows:planRows(p.id, plan),
+        p_profile:{training_days:plan.length, split_key:sys.key, split_name:sys.name+" (مسودة معتمدة)", level, goal, program_started_at:new Date().toISOString(), deload_weeks:(typeof DELOAD_DEFAULT!=="undefined"?DELOAD_DEFAULT[level]:null)||[]},
+        p_food:(doFood&&tNew.kcal)?{manual_kcal:Math.round(tNew.kcal), protein_gpk:1.8}:null};
+      const { error } = await sb.rpc("apply_program_draft", payload);
+      if(error){ btn.disabled=false; btn.textContent="اعتماد المسودة ✓";
+        return toast(/apply_program_draft|Could not find/i.test(error.message||"")?"لازم الأول program-builder.sql يتشغل في Supabase (مرة واحدة)":error.message); }
+    } else if(doFood){
       const { error:fe } = await sb.from("profiles").update({manual_kcal:Math.round(tNew.kcal), protein_gpk:1.8}).eq("id",p.id);
       if(fe){ btn.disabled=false; btn.textContent="اعتماد المسودة ✓"; return toast(fe.message); }
     }
