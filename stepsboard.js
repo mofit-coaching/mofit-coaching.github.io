@@ -69,6 +69,13 @@ function css(){ if(document.getElementById("stpCss")) return; const st=document.
 .stp-ch{position:relative;display:flex;align-items:flex-end;gap:7px;height:96px;margin-top:16px}
 .stp-col{flex:1;height:100%;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;gap:5px}
 .stp-col u{display:block;width:100%;border-radius:8px 8px 4px 4px;text-decoration:none;background:linear-gradient(180deg,#475569,#334155)}
+.stp-col u{transform-origin:bottom center;animation:stpGrow .78s cubic-bezier(.22,.9,.24,1) both}
+@keyframes stpGrow{from{transform:scaleY(.03);opacity:.35}to{transform:scaleY(1);opacity:1}}
+.stp-bar i{transform-origin:right center;animation:stpFill .95s cubic-bezier(.22,.9,.24,1) both}
+@keyframes stpFill{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.stp-n b{animation:stpPop .5s cubic-bezier(.34,1.4,.64,1) both}
+@keyframes stpPop{from{opacity:0;transform:translateY(6px) scale(.94)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.stp-col u,.stp-bar i,.stp-n b{animation:none}}
 .stp-col.hit u{background:linear-gradient(180deg,#FDBA74,#F97316)}
 .stp-col.td u{background:linear-gradient(180deg,#FB923C,#EA580C);box-shadow:0 0 16px rgba(249,115,22,.65)}
 .stp-col.no u{background:rgba(255,255,255,.08)}
@@ -91,7 +98,7 @@ async function clientCard(host,p,title){
   host.innerHTML=`<div class="stp-c"><div class="stp-h"><div class="stp-ic">👣</div><div class="stp-t"><b>${title||"خطواتك"}</b><small>${when(last.log_date)}</small></div><span class="stp-pill ${pc>=100?"ok":""}">${pc>=100?"🔥 ":""}${pc}% من الهدف</span></div>
     <div class="stp-n"><b>${N(last.steps)}</b><span>خطوة · الهدف ${N(goal)}</span></div>
     <div class="stp-bar"><i style="width:${Math.max(3,Math.min(100,raw))}%"></i></div>
-    <div class="stp-ch"><div class="stp-gl" style="bottom:${Math.round(goal/mx*CH)+19}px"><em>الهدف</em></div>${days.map(d=>{ const v=by[d]||0, h=v?Math.max(8,Math.round(v/mx*CH)):4, cl=d===today()?"td":v>=goal?"hit":!v?"no":""; return `<div class="stp-col ${cl}" title="${d}: ${N(v)}"><u style="height:${h}px"></u><small>${DAYN[new Date(d+"T12:00:00").getDay()]}</small></div>`; }).join("")}</div></div>`;
+    <div class="stp-ch"><div class="stp-gl" style="bottom:${Math.round(goal/mx*CH)+19}px"><em>الهدف</em></div>${days.map((d,i)=>{ const v=by[d]||0, h=v?Math.max(8,Math.round(v/mx*CH)):4, cl=d===today()?"td":v>=goal?"hit":!v?"no":""; return `<div class="stp-col ${cl}" title="${d}: ${N(v)}"><u style="height:${h}px;animation-delay:${i*55}ms"></u><small>${DAYN[new Date(d+"T12:00:00").getDay()]}</small></div>`; }).join("")}</div></div>`;
 }
 window.stepsCoachCard=coachCard;
 window.stepsClientCard=clientCard;
