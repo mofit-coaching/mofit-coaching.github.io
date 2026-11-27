@@ -1,149 +1,49 @@
-<!DOCTYPE html>
-<html lang="ar" dir="rtl">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
-<link rel="preconnect" href="https://bqxyyrmtufureewxneoe.supabase.co" crossorigin>
-<meta name="theme-color" content="#0F172A">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Mofit</title>
-<link rel="manifest" href="manifest.json">
-<link rel="icon" href="icon.svg" type="image/svg+xml">
-<link rel="icon" href="icon-192.png" sizes="192x192">
-<link rel="apple-touch-icon" href="apple-touch-icon.png">
-<meta name="apple-mobile-web-app-title" content="Mofit">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="format-detection" content="telephone=no">
-<style>html{background:#0A1020}#boot{position:fixed;inset:0;z-index:999;display:grid;place-items:center;background:radial-gradient(500px 360px at 80% 10%,rgba(255,107,26,.45),transparent 62%),radial-gradient(420px 320px at 0% 90%,rgba(91,108,255,.3),transparent 62%),#0A1020;animation:bootout .5s ease 1.1s forwards}#boot b{display:block;font:400 2.8rem/1 Anton,Outfit,system-ui,sans-serif;letter-spacing:.14em;color:#fff;text-align:center;animation:bootpop .7s cubic-bezier(.2,.9,.2,1) both}#boot b i{font-style:normal;color:#FF6B1A}#boot .ring{width:74px;height:74px;margin:0 auto 22px;animation:spin .9s linear infinite}#boot .ring svg{display:block}@keyframes spin{to{transform:rotate(360deg)}}@keyframes bootpop{from{opacity:0;transform:scale(.8)}}@keyframes bootout{to{opacity:0;visibility:hidden}}@media(prefers-reduced-motion:reduce){#boot{animation-duration:.01s;animation-delay:.3s}#boot *{animation:none!important}}</style>
-<meta name="description" content="Mofit – تمرينك وأكلك ومتابعتك مع الكوتش في مكان واحد">
-<link rel="canonical" href="https://mofit-coaching.github.io/">
-<meta property="og:type" content="website">
-<meta property="og:site_name" content="Mofit">
-<meta property="og:title" content="Mofit – تمرينك وأكلك ومتابعتك مع الكوتش">
-<meta property="og:description" content="برنامج تمرين مخصص، نظام غذائي محسوب، ومتابعة أسبوعية مع الكوتش في تطبيق واحد.">
-<meta property="og:url" content="https://mofit-coaching.github.io/">
-<meta property="og:image" content="https://bqxyyrmtufureewxneoe.supabase.co/storage/v1/object/public/public-assets/5-og-card.jpg">
-<meta property="og:image:type" content="image/jpeg">
-<meta property="og:image:alt" content="Mofit – برنامجك وتغذيتك وتطورك مع الكوتش في مكان واحد">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
-<meta property="og:locale" content="ar_EG">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="Mofit – تمرينك وأكلك ومتابعتك مع الكوتش">
-<meta name="twitter:description" content="برنامج تمرين مخصص، نظام غذائي محسوب، ومتابعة أسبوعية مع الكوتش في تطبيق واحد.">
-<meta name="twitter:image" content="https://bqxyyrmtufureewxneoe.supabase.co/storage/v1/object/public/public-assets/5-og-card.jpg">
-<link rel="stylesheet" href="styles.css?v=gym20261127">
-<link rel="stylesheet" href="design.css?v=gym20261127">
-<link rel="stylesheet" href="icons-anim.css?v=gym20261127">
-<link rel="stylesheet" href="coachshell.css?v=gym20261127">
-<link rel="stylesheet" href="dark.css?v=gym20261127">
-<link rel="stylesheet" href="fonts.css?v=gym20261127">
-<link rel="stylesheet" href="mofit-tokens.css?v=gym20261127">
-<link rel="stylesheet" href="mofit-look.css?v=gym20261127">
-<link rel="stylesheet" href="mofit-home.css?v=gym20261127">
-<link rel="stylesheet" href="mofit-breathe.css?v=gym20261127">
-<link rel='stylesheet' href='mofit-warn.css?v=gym20261127'>
-<link rel='stylesheet' href='mofit-contrast.css?v=gym20261127'>
-</head>
-<body>
-<script defer src="search.js"></script>
-<script defer src="voice.js"></script>
-<script defer src="install.js"></script>
-<noscript><p style="padding:24px;text-align:center;font-family:sans-serif">Mofit محتاج JavaScript عشان يشتغل.</p></noscript>
-<div id="boot" aria-hidden="true"><div><div class="ring"><svg viewBox="0 0 64 64" width="74" height="74" fill="none"><rect x="6" y="22" width="8" height="20" rx="2" fill="#FF6B1A"/><rect x="14" y="16" width="8" height="32" rx="2" fill="#FF6B1A"/><rect x="22" y="29" width="20" height="6" rx="2" fill="#fff"/><rect x="42" y="16" width="8" height="32" rx="2" fill="#FF6B1A"/><rect x="50" y="22" width="8" height="20" rx="2" fill="#FF6B1A"/></svg></div><b>MO<i>FIT</i></b></div></div>
-<section id="loginView" class="login hidden">
-  <div class="login-art"><svg class="hero-svg" viewBox="0 0 320 130" aria-hidden="true"><defs><linearGradient id="hg" x1="0" x2="1"><stop offset="0" stop-color="#FF6B1A"/><stop offset="1" stop-color="#FFB347"/></linearGradient></defs><circle class="hs-o hs-o1" cx="160" cy="65" r="52" fill="none" stroke="rgba(255,255,255,.14)" stroke-dasharray="4 8"/><circle class="hs-o hs-o2" cx="160" cy="65" r="62" fill="none" stroke="rgba(255,107,26,.35)" stroke-dasharray="2 14"/><path class="hs-pulse" d="M10 65 H110 L124 30 L142 100 L158 48 L170 65 H310" fill="none" stroke="url(#hg)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/><g class="hs-db"><rect x="136" y="55" width="48" height="10" rx="5" fill="#fff" opacity=".0"/></g><circle class="hs-dot" cx="160" cy="65" r="4" fill="#FFB347"/></svg><h1 class="logo-big">MO<b>FIT</b></h1><p>برنامجك · تغذيتك · تطورك — في مكان واحد</p></div>
-  <div class="login-card">
-  <div class="ltabs" role="tablist"><button type="button" class="ltab on" data-lt="login" role="tab">🔐 تسجيل الدخول</button><button type="button" class="ltab" data-lt="plans" role="tab">💰 الأسعار والعروض</button><button type="button" class="ltab" data-lt="signup" role="tab">✨ حساب جديد</button></div>
-  <form id="loginForm">
-    <label class="f">الإيميل<input id="loginEmail" type="email" autocomplete="username" required></label>
-    <label class="f">كلمة السر<input id="loginPass" type="password" autocomplete="current-password" required></label>
-    <p class="err" id="loginErr"></p>
-    <button class="btn primary block" type="submit">دخول</button>
-    <p class="login-links"><a id="forgotLink" target="_blank" rel="noopener">نسيت كلمة السر؟</a> · <a href="#prices" onclick="loginTab('plans');return false">لسه مش مشترك؟ شوف العروض</a></p>
-  </form>
-  <div id="signupPane" class="hidden"></div>
-  <div id="plansPane" class="hidden">
-    <p class="hint" style="margin-top:0">اختار مدة الاشتراك، وبعدين الباقة – هيفتحلك واتساب برسالة جاهزة للكوتش.</p>
-    <div id="plansBox"></div>
-    <a class="btn block wa-btn" id="askLink" target="_blank" rel="noopener">💬 عندك سؤال؟ كلّم الكوتش واتساب</a>
-  </div>
-  </div>
-  <section id="showcase" class="login-landing" aria-label="عن موفيت"></section>
-</section>
-<section id="appView" class="hidden">
-  <header class="top" id="top"></header>
-  <main id="main"></main>
-  <nav class="nav" id="nav"></nav>
-</section>
-<div id="timer" class="timer hidden" role="status" aria-live="polite"></div>
-<div id="sheet" class="sheet hidden" role="dialog" aria-modal="true" aria-label="نافذة"><div class="sheet-bg"></div><div class="sheet-card"><div class="sheet-grab"></div><div id="sheetBody"></div></div></div>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.119.2/dist/umd/supabase.js" integrity="sha384-A97u3Qnt9GZHURO9YJZRe7VQgGUeFzcv6I1oIGnUTxQrCxnpQMwR0/G8F2zt9abZ" crossorigin="anonymous"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.6/Sortable.min.js" integrity="sha384-HZZ/fukV+9G8gwTNjN7zQDG0Sp7MsZy5DDN6VfY3Be7V9dvQpEpR2jF2HlyFUUjU" crossorigin="anonymous"></script>
-<script src="motion.js?v=gym20261127"></script>
-<script src="core.js?v=gym20261127"></script>
-<script src="design.js?v=gym20261127"></script>
-<script src="icons.js?v=gym20261127"></script>
-<script src="data.js?v=gym20261127"></script>
-<script src="data-systems2.js?v=gym20261127"></script>
-<script src="data-systems3.js?v=gym20261127"></script>
-<script src="data-systems4.js?v=gym20261127"></script>
-<script src="data-rehab2.js?v=gym20261127"></script>
-<script src="media.js?v=gym20261127"></script>
-<script src="pro.js?v=gym20261127"></script>
-<script src="lab.js?v=gym20261127"></script>
-<script src="anatomy.js?v=gym20261127"></script>
-<script src="health.js?v=gym20261127"></script>
-<script src="posing.js?v=gym20261127"></script>
-<script src="pose-results.js?v=pose-results-20261126b"></script>
-<script src="pose-annotate.js?v=pose-scan-20261126-2"></script>
-<script src="formlab.js?v=formlab-20261127-2"></script>
-<script src="minerals.js?v=gym20261127"></script>
-<script src="ghealth.js?v=gym20261127"></script>
-<script src="stepsboard.js?v=gym20261127"></script>
-<script src="push.js?v=gym20261127"></script>
-<script src="confetti.js?v=gym20261127"></script>
-<script src="celebrate.js?v=gym20261127"></script>
-<script src="anims.js?v=gym20261127"></script>
-<script src="charts.js?v=gym20261127"></script>
-<script src="exdb-data.js?v=gym20261127"></script>
-<script src="exdb.js?v=gym20261127"></script>
-<script src="receipts-data.js?v=gym20261127"></script>
-<script src="receipts.js?v=gym20261127"></script>
-<script src="supps.js?v=gym20261127"></script>
-<script src="training.js?v=gym20261127"></script>
-<script src="sharecard.js?v=gym20261127"></script>
-<script src="prices.js?v=gym20261127"></script>
-<script src="rtl.js?v=2"></script>
-<script src="views.js?v=gym20261127"></script>
-<script src="coach.js?v=gym20261127"></script>
-<script src="signup.js?v=gym20261127"></script>
-<script src="qrcode.js?v=gym20261127"></script>
-<script src="invite.js?v=gym20261127"></script>
-<script src="referral.js?v=gym20261127"></script>
-<script src="transform.js?v=gym20261127"></script>
-<script src="chat.js?v=gym20261127"></script><script src="annotate.js"></script>
-<script src="aichat.js?v=gym20261127"></script>
-<script src="ai.js?v=gym20261127"></script>
-<script src="inbox.js?v=gym20261127"></script>
-<script src="subs.js?v=gym20261127"></script>
-<script src="showcase.js?v=gym20261127"></script><script src="screens.js?v=gym20261127"></script><script src="flame.js?v=gym20261127"></script>
-<script src="photos.js?v=gym20261127"></script><script src="gallery.js"></script><script src="firstweek.js?v=gym20261127"></script><script src="league.js?v=gym20261127"></script><script src="coachshell.js?v=gym20261127"></script><script src="stepper.js?v=gym20261127"></script>
+/* ======================================================================
+   Mofit service worker — Workbox 7 (MIT, vendored in wb/, no CDN needed).
+   - App shell precached at install (revisioned by the cache tag V)
+   - Navigations: NetworkFirst, falls back to the precached shell offline
+   - Same-origin + CDN static assets: StaleWhileRevalidate
+   - Supabase API calls are never cached (no route matches them)
+   If Workbox fails to load, the worker stays a passthrough (no caching).
+   ====================================================================== */
+importScripts("wb/workbox-sw.js");
+const V="receipts-20261127";
+const SHELL0=["./","rolling.js","sounds.js","crop.js","ba-slider.js","instant.js","index.html","styles.css?v=gym20261127","design.css?v=gym20261127","fonts.css?v=gym20261127","mofit-tokens.css?v=gym20261127","mofit-look.css?v=gym20261127","mofit-home.css?v=gym20261127","mofit-breathe.css?v=gym20261127","mofit-warn.css?v=gym20261127","mofit-contrast.css?v=gym20261127","fonts/Anton-400-latin.woff2","fonts/Changa-700-arabic.woff2","fonts/Changa-700-latin.woff2","fonts/Changa-800-arabic.woff2","fonts/Changa-800-latin.woff2","fonts/IBMPlexSansArabic-400-arabic.woff2","fonts/IBMPlexSansArabic-400-latin.woff2","fonts/IBMPlexSansArabic-600-arabic.woff2","fonts/IBMPlexSansArabic-600-latin.woff2","fonts/IBMPlexSansArabic-700-arabic.woff2","fonts/IBMPlexSansArabic-700-latin.woff2","fonts/Outfit-600-latin.woff2","fonts/Outfit-700-latin.woff2","fonts/Outfit-800-latin.woff2","icons-anim.css?v=gym20261127","coachshell.css?v=gym20261127","dark.css?v=gym20261127","coachshell.js?v=gym20261127","design.js?v=gym20261127","motion.js?v=gym20261127","core.js?v=gym20261127","data.js?v=gym20261127","data-systems2.js?v=gym20261127","data-systems3.js?v=gym20261127","data-systems4.js?v=gym20261127","data-rehab2.js?v=gym20261127","media.js?v=gym20261127","pro.js?v=gym20261127","lab.js?v=gym20261127","anatomy.js?v=gym20261127","health.js?v=gym20261127","posing.js?v=gym20261127","pose-annotate.js?v=gym20261127","formlab.js?v=formlab-20261127-2","minerals.js?v=gym20261127","ghealth.js?v=gym20261127","stepsboard.js?v=gym20261127","push.js?v=gym20261127","confetti.js?v=gym20261127","celebrate.js?v=gym20261127","lottie.min.js?v=gym20261127","anims.js?v=gym20261127","chart.min.js?v=gym20261127","charts.js?v=gym20261127","exdb-data.js?v=gym20261127","exdb.js?v=gym20261127","coachbrain.js?v=brain-20261127","receipts-data.js?v=gym20261127","receipts.js?v=gym20261127","dayjs.min.js","dayjs-relative.js","dayjs-ar.js","swiper.js","vendor/swiper-bundle.min.js","vendor/swiper-bundle.min.css","barcode.js","vendor/zxing.min.js","dates.js?v=gym20261127","vcall.js","ctable.js","ccalendar.js","tour.js","plyrwrap.js","exdrag.js","lottie-star.json","lottie-dumbbell.json","icons.js?v=gym20261127","supps.js?v=gym20261127","views.js?v=gym20261127","coach.js?v=gym20261127","signup.js?v=gym20261127","qrcode.js?v=gym20261127","invite.js?v=gym20261127","referral.js?v=gym20261127","transform.js?v=gym20261127","chat.js?v=gym20261127","aichat.js?v=gym20261127","ai.js?v=gym20261127","inbox.js?v=gym20261127","subs.js?v=gym20261127","screens.js?v=gym20261127","showcase.js?v=gym20261127","flame.js?v=gym20261127","photos.js?v=gym20261127","firstweek.js?v=gym20261127","league.js?v=gym20261127","prices.js?v=gym20261127","training.js?v=gym20261127","sharecard.js?v=gym20261127","annotate.js","diet-pdf.js","fx-avatars.js","fx-rings.js","fx-spring.js","fx-tooltips.js","gallery.js","input-safety.js","install.js","popups.js","rtl.js?v=1","search.js","stepper.js","voice.js","xlsx-export.js","manifest.json","icon.svg","icon-192.png","icon-512.png","apple-touch-icon.png","icon-maskable-512.png","404.html"];
+const SHELL=SHELL0;
+if(self.workbox){
+  const wb=self.workbox;
+  wb.setConfig({modulePathPrefix:"wb/"});
+  wb.precaching.precacheAndRoute(SHELL.map(u=>({url:u,revision:V})));
+  wb.precaching.cleanupOutdatedCaches();
+  wb.routing.registerRoute(({request})=>request.mode==="navigate",
+    new wb.strategies.NetworkFirst({cacheName:"mofit-pages-"+V,networkTimeoutSeconds:8}));
+  wb.routing.registerRoute(({url})=>/cdn\.jsdelivr\.net\/npm\/@mediapipe\/tasks-vision@1\.2\.3\//.test(url.href)||/storage\.googleapis\.com\/mediapipe-models\/pose_landmarker\//.test(url.href),
+    new wb.strategies.CacheFirst({cacheName:"mofit-pose-v1"}));
+  wb.routing.registerRoute(({url,request})=>request.method==="GET"&&(url.origin===location.origin||/jsdelivr|googleapis|gstatic/.test(url.hostname)),
+    new wb.strategies.StaleWhileRevalidate({cacheName:"mofit-static-"+V}));
+  self.addEventListener("install",e=>self.skipWaiting());
+  self.addEventListener("activate",e=>{
+    e.waitUntil(caches.keys().then(ks=>Promise.all(ks.filter(k=>k.indexOf("mofit-")===0&&k.indexOf("mofit-pose")!==0&&k.indexOf(V)===-1).map(k=>caches.delete(k)))).then(()=>self.clients.claim()).then(()=>self.clients.matchAll({type:"window"})).then(cs=>cs.forEach(c=>c.postMessage({type:"mofit-sw-activated",V:V+"-act"}))));
+  });
+}
 
-<script src="xlsx-export.js"></script>
-<script src="diet-pdf.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.7/dist/purify.min.js" integrity="sha384-qJNkHwhlYywDHfyoEe1np+1lYvX/8x+3gHCKFhSSBMQyCFlvFnn+zXmaebXl21rV" crossorigin="anonymous"></script>
-<script src="input-safety.js"></script>
-<script src="popups.js"></script>
-<script src="dayjs.min.js"></script>
-<script src="fx-tooltips.js"></script>
-<script src="fx-avatars.js"></script>
-<script src="fx-rings.js"></script>
-<script src="fx-spring.js"></script>
-<script src="dayjs-relative.js"></script>
-<script src="dayjs-ar.js"></script>
-<script src="dates.js?v=gym20261127"></script><script src="barcode.js"></script><script src="swiper.js"></script><script src="exdrag.js"></script><script src="plyrwrap.js"></script><script src="tour.js"></script><script src="rolling.js"></script><script src="sounds.js"></script><script src="crop.js"></script><script src="ba-slider.js"></script><script defer src="instant.js"></script><script src="ccalendar.js"></script><script src="ctable.js"></script><script src="vcall.js"></script></body>
-</html>
+/* web push: show the notification, then focus/open the app on tap */
+self.addEventListener("push",e=>{
+  let d={}; try{ d=e.data?e.data.json():{}; }catch(_){ }
+  e.waitUntil(self.registration.showNotification(d.title||"Mofit",{
+    body:d.body||"", icon:"icon-192.png", badge:"icon-192.png",
+    tag:d.tag||"mofit", dir:"rtl", lang:"ar",
+    data:{url:(d.url||"./")}
+  }));
+});
+self.addEventListener("notificationclick",e=>{
+  e.notification.close();
+  const url=(e.notification.data&&e.notification.data.url)||"./";
+  e.waitUntil(clients.matchAll({type:"window",includeUncontrolled:true}).then(list=>{
+    for(const c of list){ if("focus" in c) return c.focus(); }
+    return clients.openWindow(url);
+  }));
+});
+
+
 
