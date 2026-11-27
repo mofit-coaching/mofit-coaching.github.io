@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TEST — offline training sync</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="dark.css">
+<link rel="stylesheet" href="fonts.css">
+<link rel="stylesheet" href="mofit-tokens.css">
+<link rel="stylesheet" href="mofit-look.css">
+<style>
+  body{font-family:"Cairo",sans-serif;background:#060B17;color:#e8ecf8;margin:0;max-width:480px;margin-inline:auto;padding-bottom:60px}
+  #testbar{background:#DC2626;color:#fff;font-weight:800;text-align:center;padding:8px;font-size:.9rem}
+  .tcard{background:#0D1730;border:1px solid #1B2A49;border-radius:14px;margin:10px 14px;padding:12px 14px}
+  .tcard b{font-size:.88rem}
+  .pass{color:#4ADE80}.fail{color:#F87171}
+  .tcard small{display:block;color:#9aa3c7;margin-top:4px;font-size:.72rem;direction:ltr;text-align:left}
+  #sheet{position:fixed;inset:0;z-index:60}
+</style>
+</head>
+<body>
+<div id="testbar">⚠️ TEST — مزامنة الأوفلاين (سيرفر وهمي، مفيش بيانات حقيقية) ⚠️</div>
+<div id="results"></div>
+<div id="sheet" class="sheet hidden"><div class="sheet-bg"></div><div class="sheet-card"><div class="sheet-grab"></div><div id="sheetBody"></div></div></div>
+<script>
+/* ---------- stubs for app globals pro.js expects ---------- */
+const $=s=>document.querySelector(s);
+const esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function openSheet(html){ $("#sheetBody").innerHTML=html; $("#sheet").classList.remove("hidden"); return $("#sheetBody"); }
+function closeSheet(){ $("#sheet").classList.add("hidden"); $("#sheetBody").innerHTML=""; }
+let TOASTS=[];
+function toast(m){ TOASTS.push(String(m)); }
+let ONLINE=true;
+Object.defineProperty(navigator,"onLine",{get:()=>ONLINE,configurable:true});
+
+/* ---------- fake Supabase server (in-memory, with failure modes) ---------- */
+const SERVER={ tables:{}, mode:"ok", log:[] };
+function srvUpsert(table,row,onConflict){
+  const T=SERVER.tables[table]=SERVER.tables[table]||{};
+  const key=onConflict.split(",").map(c=>String(row[c])).join("|");
+  T[key]={...(T[key]||{}),...row,id:T[key]?.id||("srv-"+Object.keys(T).length)};
+  return T[key];
+}
+window.sb={ from(table){ return {
+  upsert(row,opts){ return { select(){ return { single: async()=>{
+    SERVER.log.push(["upsert",table,JSON.stringify(row)]);
+    if(SERVER.mode==="net") throw new TypeError("Load failed");
+    if(SERVER.mode==="hard") return { data:null, error:{ message:"new row violates row-level security policy" } };
+    return { data:srvUpsert(table,row,opts.onConflict), error:null };
+  } }; } }; },
+  insert(row){ return { select(){ return { single: async()=>{
+    SERVER.log.push(["insert",table,JSON.stringify(row)]);
+    if(SERVER.mode==="net") throw new TypeError("Load failed");
+    if(SERVER.mode==="hard") return { data:null, error:{ message:"duplicate key value" } };
+    const T=SERVER.tables[table]=SERVER.tables[table]||{}; const id="srv-"+Object.keys(T).length; T[id]={...row,id}; return { data:T[id], error:null };
+  } }; } }; },
+  delete(){ const chain={ eq(k,v){ chain._m=chain._m||{}; chain._m[k]=v; return chain; },
+    then(res){ (async()=>{ if(SERVER.mode==="net") throw new TypeError("Load failed"); return {data:null,error:null}; })().then(res); return chain; } };
+    return chain; }
+}; } };
+</script>
+<script src="pro.js"></script>
+<script>
+/* ---------- test runner ---------- */
+const R=document.getElementById("results");
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function report(name,ok,detail){
+  R.insertAdjacentHTML("beforeend",`<div class="tcard"><b class="${ok?"pass":"fail"}">${ok?"✅":"❌"} ${esc(name)}</b>${detail?`<small>${esc(detail)}</small>`:""}</div>`);
+}
+function reset(){ localStorage.clear(); SERVER.tables={}; SERVER.log=[]; SERVER.mode="ok"; TOASTS=[]; ONLINE=true; }
+const SET1=ex=>({op:"upsert",table:"set_logs",row:{client_id:"c1",exercise_id:ex,week:2,set_no:1,reps:10,weight:100,rir:2},onConflict:"exercise_id,week,set_no"});
+
+(async()=>{
+  /* 1) offline write is queued, never attempted against the server */
+  reset(); ONLINE=false;
+  const r1=await dbWrite(SET1("ex1"));
+  report("أوفلاين: التسجيل بيتحفظ على الموبايل (queued)", r1.queued===true && queue().length===1 && SERVER.log.length===0, "queue="+queue().length+" serverCalls="+SERVER.log.length);
+
+  /* 2) second offline write of the SAME set replaces the first (no double-send of stale values) */
+  const j2=SET1("ex1"); j2.row.weight=110; j2.row.reps=8;
+  await dbWrite(j2);
+  report("تعديل نفس المجموعة أوفلاين بيستبدل القديم مش بيضاعفه", queue().length===1 && queue()[0].row.weight===110, "queue="+queue().length+" weight="+(queue()[0]||{}).row?.weight);
+
+  /* 3) queue survives reload (localStorage persistence) */
+  const persisted=JSON.parse(localStorage.getItem("mofit_queue")||"[]").length;
+  report("الطابور بيفضل محفوظ بعد قفلة التطبيق", persisted===1, "mofit_queue rows="+persisted);
+
+  /* 4) back online: flush sends it, queue empties, user sees confirmation */
+  ONLINE=true; await flushQueue(); await sleep(20);
+  const srvRow=(SERVER.tables.set_logs||{})["ex1|2|1"];
+  report("النت رجع: التسجيل اتبعت والطابور اتفضى", queue().length===0 && srvRow && srvRow.weight===110 && TOASTS.some(t=>t.includes("اتبعت")), "serverWeight="+(srvRow||{}).weight+" toasts="+TOASTS.join(";"));
+
+  /* 5) network drops mid-flush: nothing is lost, job is re-queued */
+  reset(); ONLINE=false; await dbWrite(SET1("ex2"));
+  ONLINE=true; SERVER.mode="net"; await flushQueue(); await sleep(20);
+  report("قطوعة نص الإرسال: مفيش حاجة بتضيع، التسجيل بيرجع الطابور", queue().length===1 && !(SERVER.tables.set_logs||{})["ex2|2|1"], "queue="+queue().length);
+  SERVER.mode="ok"; await flushQueue(); await sleep(20);
+  report("بعد رجوع النت بيتبعت عادي", queue().length===0 && !!(SERVER.tables.set_logs||{})["ex2|2|1"], "");
+
+  /* 6) server rejection (RLS etc.): goes to dead-letter, NOT silently dropped; retry works */
+  reset(); ONLINE=false; await dbWrite(SET1("ex3"));
+  ONLINE=true; SERVER.mode="hard"; await flushQueue(); await sleep(20);
+  const deadOk=deadQueue().length===1 && queue().length===0 && TOASTS.some(t=>t.includes("محتاج مراجعة")||t.includes("متسجلش"));
+  report("رفض من السيرفر: بيتحفظ في قائمة المراجعة مش بيترمي", deadOk, "dead="+deadQueue().length+" toasts="+TOASTS.join(";"));
+  drawOffline();
+  const barTxt=(document.getElementById("offbar")||{}).textContent||"";
+  report("شريط الأوفلاين بيوري إن في تسجيل محتاج مراجعة", barTxt.includes("مراجعة"), barTxt.trim());
+  SERVER.mode="ok"; retryDead(); await sleep(30);
+  report("إعادة المحاولة بتبعته وتفضّي قائمة المراجعة", deadQueue().length===0 && !!(SERVER.tables.set_logs||{})["ex3|2|1"], "dead="+deadQueue().length);
+
+  /* 7) a direct online write supersedes a stale queued write of the same set */
+  reset(); ONLINE=false; await dbWrite(SET1("ex4")); // weight 100 queued
+  ONLINE=true; const j7=SET1("ex4"); j7.row.weight=120;
+  await dbWrite(j7); await sleep(30); await flushQueue(); await sleep(20);
+  const srv7=(SERVER.tables.set_logs||{})["ex4|2|1"];
+  const sent100=SERVER.log.filter(l=>l[0]==="upsert"&&l[2].includes('"weight":100')).length;
+  report("تسجيل مباشر والنت شغال بيلغي النسخة القديمة في الطابور", srv7 && srv7.weight===120 && sent100===0, "serverWeight="+(srv7||{}).weight+" staleSent="+sent100);
+
+  /* 8) upsert is idempotent server-side: re-sending the same record never duplicates */
+  reset(); ONLINE=false; await dbWrite(SET1("ex5"));
+  ONLINE=true; await flushQueue(); await sleep(20);
+  const rowsBefore=Object.keys(SERVER.tables.set_logs).length;
+  await execWrite(SET1("ex5")); await execWrite(SET1("ex5"));
+  const rowsAfter=Object.keys(SERVER.tables.set_logs).length;
+  report("إعادة إرسال نفس المجموعة مرة واتنين = صف واحد بس", rowsBefore===1 && rowsAfter===1, "rows="+rowsAfter);
+
+  /* 9) finish-workout record (workout_sessions) queues the same way */
+  reset(); ONLINE=false;
+  const ws=await dbWrite({op:"upsert",table:"workout_sessions",row:{client_id:"c1",log_date:"2026-11-27",day_no:2,week:2,duration_min:55,rpe:8,volume:4500},onConflict:"client_id,log_date,day_no"});
+  ONLINE=true; await flushQueue(); await sleep(20);
+  report("تسجيل خلاصة التمرين (workout_sessions) بيتحفظ ويتبعت زي المجموعات", ws.queued===true && Object.keys(SERVER.tables.workout_sessions||{}).length===1, "");
+
+  /* 10) offline banner appears while offline and disappears after sync */
+  reset(); ONLINE=false; await dbWrite(SET1("ex6")); drawOffline();
+  const offShown=!!document.getElementById("offbar") && document.getElementById("offbar").textContent.includes("أوفلاين");
+  ONLINE=true; await flushQueue(); await sleep(20);
+  const gone=!document.getElementById("offbar");
+  report("شريط الأوفلاين بيظهر أوفلاين ويختفي بعد المزامنة", offShown && gone, "shown="+offShown+" gone="+gone);
+
+  const fails=R.querySelectorAll(".fail").length, total=R.querySelectorAll(".tcard").length;
+  R.insertAdjacentHTML("afterbegin",`<div class="tcard" style="text-align:center"><b class="${fails?"fail":"pass"}" style="font-size:1.05rem">${fails?"❌ في "+fails+" اختبار واقع":"✅ كل الاختبارات نجحت"} (${total-fails}/${total})</b></div>`);
+  document.title=fails?"❌ offline tests":"✅ offline tests";
+})();
+</script>
+</body>
+</html>
