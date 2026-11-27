@@ -1,7 +1,8 @@
 /* MOFIT logo assembly: on the landing page the wordmark is built in front of the visitor.
-   A bar slides in, two plates clamp onto the ends, then MO FIT drops in with a faint clank ring.
+   The bar draws out from the middle, opens, and MO FIT comes out of the opening; the plates clamp
    The intro waits for the boot screen to clear, so the build is actually seen, and it replays
-   when the visitor comes back to the login view. Pure CSS/SVG, no images, respects reduced motion. */
+   onto the ends with a faint clank ring. The hero heartbeat keeps drawing on top throughout.
+   Replays when the visitor comes back to the login view. Pure CSS/SVG, no images, reduced-motion safe. */
 (function(){
 if(window.__mofitLogo) return; window.__mofitLogo=1;
 const PLATE=(cls,color)=>`<svg class="lp-plate ${cls}" viewBox="0 0 120 120" aria-hidden="true">
@@ -17,7 +18,7 @@ function build(art){
   const wrap=document.createElement("div");
   wrap.className="logo-assembly";
   wrap.setAttribute("aria-hidden","true");
-  wrap.innerHTML=`<span class="lp-bar"></span>${PLATE("lp-l","#FF6B1A")}${PLATE("lp-r","#FFB347")}<span class="lp-clank"></span>`;
+  wrap.innerHTML=`<span class="lp-bar"><i class="lp-a"></i><i class="lp-b"></i></span>${PLATE("lp-l","#FF6B1A")}${PLATE("lp-r","#FFB347")}<span class="lp-clank"></span>`;
   big.parentNode.insertBefore(wrap,big);
   /* keep the wordmark where it is: the brand wordmark has its own entrance animation,
      and re-parenting it broke that. The barbell builds around it. */
