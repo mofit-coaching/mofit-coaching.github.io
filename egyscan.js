@@ -51,10 +51,15 @@
   .es-thumb{width:64px;height:64px;border-radius:14px;object-fit:cover;border:1.5px solid var(--soft,#E2E8F0);flex:none}
   .es-srcline{margin-top:10px;font-size:.72rem;color:var(--slate,#64748B);line-height:1.8;background:var(--acc-soft,#FFF7ED);border-radius:12px;padding:8px 10px}
   .es-approx{display:inline-block;background:#FEF3C7;color:#92400E;font-weight:800;font-size:.68rem;border-radius:99px;padding:2px 9px;margin-inline-start:6px;vertical-align:middle}
+  .es-meals{display:flex;flex-direction:column;gap:8px;margin-top:8px}
+  .es-meal{display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:16px;border:1.5px solid var(--soft,#E2E8F0);background:var(--card,#fff);font-weight:800;font-size:.95rem;color:var(--ink,#0F172A);cursor:pointer;font-family:inherit;text-align:start;transition:transform .12s,border-color .15s}
+  .es-meal span{font-size:1.3rem}
+  .es-meal:active{transform:scale(.98);border-color:var(--acc,#F97316)}
   @media (prefers-color-scheme:dark){
     .es-dish{background:#1E293B;border-color:#334155}
     .es-dish b{color:#F1F5F9}
     .es-galbtn{color:#CBD5E1;border-color:#334155}
+    .es-meal{background:#1E293B;border-color:#334155;color:#F1F5F9}
   }
   @media (prefers-reduced-motion:reduce){.es-openbtn,.es-cambtn,.es-dish{transition:none}}`;
   const st=document.createElement("style"); st.textContent=CSS; document.head.appendChild(st);
@@ -208,6 +213,33 @@
       closeSheet();
     };
   }
+
+  /* ---------- standalone entry: the «📸 صوّر أكلك» button on the home
+     nutrition card (تغذية النهارده). Picks the meal, then runs the same
+     camera -> dish -> portion flow and logs straight into meal_items. */
+  window.egyScanOpen=function(){
+    const p=typeof S!=="undefined"&&S.client; if(!p) return;
+    const icons=typeof MEAL_ICONS!=="undefined"?MEAL_ICONS:[];
+    const n=Math.max(1,Math.min(+p.meals_per_day||3,8));
+    const body=openSheet(`<div class="between"><b style="font-size:1.05rem">📸 صوّر أكلك</b><button type="button" class="btn sm ghost" data-close>✕</button></div>
+      <p class="muted" style="margin:8px 0 2px">سجّل في أنهي وجبة؟</p>
+      <div class="es-meals">${Array.from({length:n},(_,i)=>{ const m=i+1; return `<button type="button" class="es-meal" data-m="${m}"><span>${esc(icons[m-1]||"🍽")}</span>${esc(mealName(p,m))}</button>`; }).join("")}</div>
+      <p class="es-note">هتصوّر الأكل وتختار الأكلة من القايمة المصرية — وكل القيم <b>تقدير تقريبي ≈</b></p>`);
+    body.querySelector("[data-close]").onclick=closeSheet;
+    body.querySelectorAll("[data-m]").forEach(b=>b.onclick=()=>{
+      const m=+b.dataset.m;
+      PHOTO=null;
+      camScreen("صوّر أكلك — "+mealName(p,m), async(food,qty)=>{
+        const logDate=(S.tab==="food"&&S.date)?S.date:today();
+        const rec={client_id:p.id,log_date:logDate,meal_no:m,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty)};
+        if(typeof mineralCalc==="function") Object.assign(rec,mineralCalc(food,qty));
+        const { error }=await sb.from("meal_items").insert(rec);
+        if(error){ toast(error.message); return; }
+        toast("✓ اتسجل");
+        if(typeof render==="function") render();
+      });
+    });
+  };
 
   /* ---------- hook the food picker (same pattern as barcode.js) ---------- */
   function wrap(){
