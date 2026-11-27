@@ -31,6 +31,14 @@
   .btn.block{width:100%}
   .between{display:flex;justify-content:space-between;align-items:center}
   .card{background:#fff;border-radius:16px;padding:12px}
+  .card-h{display:flex;gap:10px;align-items:center;margin-bottom:8px}
+  .card-h h2{flex:1;font-size:1rem;margin:0}
+  .card-h h2 small{display:block;font-weight:400;font-size:.72rem;color:var(--slate,#64748B)}
+  .ic{width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:var(--soft,#F1F5F9);flex:none}
+  .ic.acc{background:var(--acc-soft,#FFF7ED)}
+  .btn.navy{background:#0F172A;color:#fff}
+  .ringstub{width:118px;height:118px;border-radius:50%;background:conic-gradient(var(--acc,#F97316) 0 38%,#F1F5F9 38% 100%);display:flex;align-items:center;justify-content:center;flex:none}
+  .ringstub i{width:86px;height:86px;border-radius:50%;background:#fff;display:flex;align-items:center;justify-content:center;font-style:normal;font-weight:800}
   .empty{text-align:center;padding:28px 10px;color:var(--slate,#64748B)}
   .empty .big{font-size:2rem;display:block;margin-bottom:8px}
   .muted{color:var(--slate,#64748B);font-size:.82rem}
@@ -50,6 +58,15 @@
 </div>
 <div id="sheet" class="hidden"><div id="sheetBody"></div></div>
 
+<h3 style="margin:18px 0 4px">محاكاة كارد «تغذية النهارده» (الرئيسية)</h3>
+<p class="muted">نفس ماركب views.js الحقيقي بعد إضافة زرار «📸 صوّر أكلك» — بأرقام تجريبية.</p>
+<div class="card" id="hN">
+  <div class="card-h"><div class="ic acc">🍽</div><h2>تغذية النهارده<small>الجمعة ٢٧ نوفمبر</small></h2><button class="btn sm" id="goFood">سجّل أكلك</button></div>
+  <div style="display:flex;gap:16px;align-items:center"><div class="ringstub"><i>1,140</i></div>
+  <div style="flex:1"><div class="muted">بروتين 72 / 160 جم</div><div class="muted">كارب 120 / 300 جم</div><div class="muted">دهون 38 / 80 جم</div></div></div>
+  <button class="btn sm navy block" id="goScan" style="margin-top:10px">📸 صوّر أكلك — أكل مصري ≈</button>
+</div>
+
 <script>
 /* ---- minimal stubs of the app's globals (no real app code, no real data) ---- */
 const $ = s => document.querySelector(s);
@@ -67,6 +84,23 @@ function openFoodPicker(title, onPick, opts={}){
   body.querySelector("[data-close]").onclick=closeSheet;
 }
 window.openFoodPicker=openFoodPicker;
+/* stubs the standalone card entry uses (same names as the app's globals) */
+const S={tab:"home",date:"2026-11-27",client:{id:"demo-client",meals_per_day:4,meal_names:["الفطار","الغدا","العشا","سناك"]}};
+const MEAL_ICONS=["🍳","🍗","🥗","🍎","🥤","🍽","🥛","🍌"];
+function mealName(p,m){ return (p.meal_names&&p.meal_names[m-1])||("وجبة "+m); }
+function today(){ return S.date; }
+function render(){}
+function foodCalc(f,qty){ const k=qty/100; return {kcal:+(f.kcal*k).toFixed(1),protein:+(f.protein*k).toFixed(1),carbs:+(f.carbs*k).toFixed(1),fat:+(f.fat*k).toFixed(1)}; }
+/* sb stub: shows the exact meal_items row that would be inserted */
+const sb={from:()=>({insert:async(rec)=>{
+  closeSheet();
+  toast("✓ اتسجل");
+  document.getElementById("tLog").insertAdjacentHTML("afterbegin",
+    `<div class="card" style="margin-top:8px"><b>${esc(rec.food_name)}</b> · ${fmt(rec.qty)} ${esc(rec.unit)} · ${fmt(rec.kcal)} kcal<br>
+     <small class="muted">ب ${fmt(rec.protein,1)} · ك ${fmt(rec.carbs,1)} · د ${fmt(rec.fat,1)} · وجبة ${rec.meal_no} · ${esc(rec.log_date)} · client=${esc(rec.client_id)}</small></div>`);
+  return {error:null};
+}})};
+document.getElementById("goScan").onclick=()=>window.egyScanOpen();
 /* demo onPick: shows exactly what would be logged to meal_items */
 function demoPick(food,qty){
   closeSheet();
@@ -109,10 +143,22 @@ document.getElementById("tSkip").onclick=()=>{
 };
 /* hash-driven auto steps for headless screenshots:
    #1 picker with the new button · #2 camera screen with photo
-   #3 dish grid · #4 dish detail (koshari) · #5 logged result */
+   #3 dish grid · #4 dish detail (koshari) · #5 logged result
+   #6 nutrition card with the new button · #7 meal chooser from the card
+   #8 full flow from the card (meal -> no photo -> koshari -> logged row) */
 addEventListener("load",async()=>{
   const h=location.hash;
   if(!h) return;
+  if(h==="#6") return;
+  if(h==="#7"||h==="#8"){
+    document.getElementById("goScan").click();
+    if(h==="#7") return;
+    document.querySelector('#sheetBody [data-m="2"]').click();
+    document.getElementById("esGo").click();
+    document.querySelector('#esGrid [data-id="koshari"]').click();
+    document.getElementById("esAdd").click();
+    return;
+  }
   document.getElementById("tOpen").click();
   if(h==="#1") return;
   document.querySelector("#sheetBody .es-openbtn").click();
