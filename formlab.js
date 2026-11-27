@@ -634,7 +634,7 @@
   function flLoadScript(src) {
     return new Promise((res, rej) => {
       const sc = document.createElement("script");
-      sc.src = src + "?v=formlab-20261127"; sc.onload = res; sc.onerror = rej;
+      sc.src = src + "?v=formlab-20261127-5"; sc.onload = res; sc.onerror = rej;
       document.head.appendChild(sc);
     });
   }
@@ -787,7 +787,16 @@
       await flEnsureModel();
       const fps = /iPhone|iPad|Android/i.test(navigator.userAgent) ? 5 : 6;
       const res = await apTrack(video, fps, (f2, stage) => show(Math.max(0.03, f2), stage === "warming" ? "جاري تجهيز النموذج…" : "جاري تحليل المجموعة…"));
-      if (!res.frames.length) { show(1, "مفيش جسم واضح"); toast("مفيش جسم واضح في الفيديو — صوّر الجسم كامل من الجنب"); return; }
+      if (!res.frames.length) {
+        const d = res.diag || {}, code = [d.delegate, d.w + "x" + d.h, (d.tries || []).join(","), "err" + (res.errors || []).length].join(" ");
+        const blank = (res.errors || []).indexOf("blank-frames") >= 0;
+        const msg = blank ? "المتصفح مقدرش يقرا صورة الفيديو (شاشة سودا). جرّب تصوّر الفيديو بالكاميرا العادية وارفعه تاني"
+          : (res.errors && res.errors.length) ? "التحليل مشتغلش على الجهاز ده. ابعت الكود ده لمحمد: " + code
+          : "مفيش جسم واضح في الفيديو — صوّر الجسم كامل من الجنب";
+        show(1, blank || (res.errors && res.errors.length) ? "تعذر التحليل" : "مفيش جسم واضح");
+        console.warn("MOFIT form lab: no body found", code, (res.errors || []).slice(0, 3));
+        toast(msg); return;
+      }
       const ar = (video.videoWidth && video.videoHeight) ? video.videoWidth / video.videoHeight : 0.5625;
       const track = { fps: res.fps, ar, frames: res.frames };
       show(0.98, "جاري حساب التقييم…");
