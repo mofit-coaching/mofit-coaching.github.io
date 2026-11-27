@@ -30,6 +30,16 @@ function play(art){
   art.classList.remove("logo-on","logo-done");
   void art.offsetWidth;
   art.classList.add("logo-on");
+  /* the wordmark waits small and low inside the closed bar, then grows up out of the opening.
+     Web Animations keeps this off the brand's own wordmark animation properties. */
+  const big=art.querySelector(".logo-big");
+  if(big&&big.animate){
+    big.getAnimations().forEach(a=>{ if(a.id==="lpOut") a.cancel(); });
+    const a=big.animate(
+      [{opacity:0,scale:"0.42",translate:"0px 10px"},{opacity:1,scale:"1",translate:"0px 0px"}],
+      {duration:500,delay:950,easing:"cubic-bezier(.2,1.15,.25,1)",fill:"both"});
+    a.id="lpOut";
+  }
   clearTimeout(timer);
   timer=setTimeout(()=>art.classList.add("logo-done"),2600);
   lastPlay=Date.now();
