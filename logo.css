@@ -1,0 +1,30 @@
+/* MOFIT logo assembly styles. Brand: navy base, orange-gold plates. */
+.logo-assembly{position:relative;display:inline-flex;align-items:center;justify-content:center;padding:14px 30px;isolation:isolate}
+.logo-assembly .lp-bar{position:absolute;left:50%;top:50%;width:min(260px,72vw);height:10px;margin:-5px 0 0 calc(min(260px,72vw) / -2);border-radius:6px;
+  background:linear-gradient(90deg,rgba(255,107,26,.15),#FF6B1A 18%,#FFB347 50%,#FF6B1A 82%,rgba(255,107,26,.15));
+  box-shadow:0 0 18px rgba(255,107,26,.45);transform:scaleX(0);transform-origin:center;opacity:0;z-index:0}
+.logo-assembly .lp-plate{position:absolute;top:50%;width:58px;height:58px;margin-top:-29px;opacity:0;z-index:1;filter:drop-shadow(0 6px 14px rgba(255,107,26,.35))}
+.logo-assembly .lp-l{left:-14px;transform:translateX(-120px) rotate(-38deg) scale(.8)}
+.logo-assembly .lp-r{right:-14px;transform:translateX(120px) rotate(38deg) scale(.8)}
+.logo-assembly .logo-big{position:relative;z-index:2;margin:0;transform-origin:center bottom}
+.logo-assembly .lp-clank{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;border:2px solid rgba(255,179,71,.85);opacity:0;z-index:3}
+
+.logo-on .lp-bar{animation:lpBar .55s cubic-bezier(.2,.9,.2,1) .1s both}
+.logo-on .lp-l{animation:lpPlateL .6s cubic-bezier(.22,1.2,.3,1) .55s both}
+.logo-on .lp-r{animation:lpPlateR .6s cubic-bezier(.22,1.2,.3,1) .62s both}
+.logo-on .logo-big{animation:lpWord .62s cubic-bezier(.2,1.1,.25,1) .95s both}
+.logo-on .lp-clank{animation:lpClank .7s ease-out 1.5s both}
+
+@keyframes lpBar{from{transform:scaleX(0);opacity:0}to{transform:scaleX(1);opacity:1}}
+@keyframes lpPlateL{from{transform:translateX(-120px) rotate(-38deg) scale(.8);opacity:0}to{transform:none;opacity:1}}
+@keyframes lpPlateR{from{transform:translateX(120px) rotate(38deg) scale(.8);opacity:0}to{transform:none;opacity:1}}
+@keyframes lpWord{0%{opacity:0;transform:translateY(10px) scale(.86)}70%{opacity:1;transform:translateY(-1px) scale(1.02)}100%{opacity:1;transform:none}}
+@keyframes lpClank{0%{opacity:.9;transform:scale(.4)}100%{opacity:0;transform:scale(3.4)}}
+
+@media(prefers-reduced-motion:reduce){
+  .logo-on .lp-bar,.logo-on .lp-l,.logo-on .lp-r,.logo-on .logo-big,.logo-on .lp-clank{animation:none}
+  .logo-on .lp-bar{transform:scaleX(1);opacity:1}
+  .logo-on .lp-l,.logo-on .lp-r{opacity:1;transform:none}
+  .logo-on .lp-clank{display:none}
+}
+@media(max-width:380px){.logo-assembly{padding:10px 22px}.logo-assembly .lp-plate{width:46px;height:46px;margin-top:-23px}}
