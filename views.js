@@ -310,7 +310,8 @@ async function viewTrain(el){
         const pr=e1rm(saved)||0; if(bestPrev[ex.id]>0&&pr>bestPrev[ex.id]*1.005){ celebratePR(alt||ex.name,pr,bestPrev[ex.id]); bestPrev[ex.id]=pr; }
         cacheSet(ck,logs); if(startTimer && !wasDone && rec.reps!==null && n<nSets) startRest(rec.rest_sec||restS, `${ex.name} · بعد مجموعة ${n}`);
       };
-      row.querySelectorAll("input,select").forEach(i=>i.addEventListener("change",()=>save(i.dataset.k==="reps"||i.dataset.k==="weight")));
+      /* the +/- steppers fire a synthetic change event (isTrusted=false): adjusting a number must never open the rest timer. It starts only when the user types a value, or taps "ابدأ الراحة". */
+      row.querySelectorAll("input,select").forEach(i=>i.addEventListener("change",ev=>save(ev.isTrusted!==false&&(i.dataset.k==="reps"||i.dataset.k==="weight"))));
       row.querySelector(".fail").onclick=e=>{ e.currentTarget.classList.toggle("on"); save(false); };
       setsEl.appendChild(row);
     }
