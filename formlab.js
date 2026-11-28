@@ -529,18 +529,145 @@
   }
 
   /* full analysis: returns { score, grade, checks, metrics, barPath } — pure, testable */
-  function flAnalyze(lift, track, summary) {
+  /* ---------- camera angle (front / back / side / diagonal) ---------- */
+  const FL_ANG = { front: { t: "أمامي", ic: "🧍" }, back: { t: "خلفي", ic: "🔙" }, side: { t: "جانبي", ic: "↔️" }, diag: { t: "قُطري (٣/٤)", ic: "↗️" } };
+  let flAngleOverride = null;
+  const flMedian = a => { a = a.filter(v => v != null && isFinite(v)).sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : null; };
+  /* one sample from a getter get(i) -> {x,y,v} | null; ar = width/height */
+  function flAngSample(get, ar) {
+    const a = get(11), b = get(12), c = get(23), d = get(24);
+    if (!a || !b || !c || !d) return null;
+    if (Math.min(a.v, b.v, c.v, d.v) < 0.4) return null;
+    const sw = Math.abs(a.x - b.x) * ar, sx = (a.x + b.x) / 2 * ar, sy = (a.y + b.y) / 2, hx = (c.x + d.x) / 2 * ar, hy = (c.y + d.y) / 2;
+    const tr = Math.hypot(sx - hx, sy - hy); if (tr < 0.05) return null;
+    const fv = [get(0), get(2), get(5)].map(p => p ? p.v : 0);
+    return { r: sw / tr, face: (fv[0] + fv[1] + fv[2]) / 3 };
+  }
+  function flAngFromSamples(S) {
+    S = S.filter(Boolean);
+    if (S.length < 3) return { key: null, yaw: null, conf: "low", n: S.length };
+    const r = flMedian(S.map(s => s.r)), face = flMedian(S.map(s => s.face));
+    const R0 = 0.68, yaw = Math.round(Math.acos(Math.min(1, r / R0)) * 180 / Math.PI);
+    const key = yaw < 30 ? (face >= 0.5 ? "front" : "back") : yaw < 65 ? "diag" : "side";
+    const spread = flMedian(S.map(s => Math.abs(Math.acos(Math.min(1, s.r / R0)) * 180 / Math.PI - yaw)));
+    const near = Math.min(Math.abs(yaw - 30), Math.abs(yaw - 65)) < 8;
+    const faceUnsure = yaw < 30 && face > 0.3 && face < 0.7;
+    return { key, yaw, r: +r.toFixed(2), face: +face.toFixed(2), conf: (near || faceUnsure || spread > 15) ? "low" : "high", n: S.length };
+  }
+  function flAngleOfTrack(track) {
+    const ar = track.ar || 0.5625;
+    const S = track.frames.filter((_, i) => i % 2 === 0).map(fr => flAngSample(i => { const p = fr.lms[i]; return p ? { x: p[0], y: p[1], v: p[2] == null ? 1 : p[2] } : null; }, ar));
+    return flAngFromSamples(S);
+  }
+  function flResolveAngle(track) {
+    const est = flAngleOfTrack(track);
+    if (flAngleOverride) return Object.assign({}, est, { key: flAngleOverride, manual: true, conf: "high" });
+    return est.key ? est : Object.assign(est, { key: "side", conf: "low", fallback: true });
+  }
+  /* checks that only make sense from the side (joint depth, bar path, forward lean) */
+  const FL_SIDE_ONLY = /العمق|مسار البار|مسار الحركة|ثبات المسار|ثبات نقطة النزول|البار قريب|الوزن قريب|ميل الجذع|استقامة الجذع|ثبات الضهر|الحركة من الحوض|الحوض والكتف|زاوية الكوع|مدى الحركة|مدى السحب|عمق السحب|فرد الذراع|القفلة فوق|التحكم في الرجوع/;
+  const FL_LOWER = { squat: 1, deadlift: 1, hinge: 1, lunge: 1, calf: 1, legmach: 1 };
+  function flChecksFB(frames, reps, model) {
+    const out = [];
+    const sl = frames.map(f => { const l = f.lms; if (!l || !l[11] || !l[12] || Math.min(l[11][2] == null ? 1 : l[11][2], l[12][2] == null ? 1 : l[12][2]) < MINV) return null; return Math.abs(Math.atan2((l[11][1] - l[12][1]), (l[11][0] - l[12][0]) * 0.5625) * 180 / Math.PI); }).map(v => v == null ? null : (v > 90 ? 180 - v : v));
+    const sls = flStat(sl);
+    if (sls) out.push(flCheck("استواء الكتفين", "ميل ±" + flN(sls.avg) + "°", sls.avg < 3.5 ? "ok" : sls.avg < 7 ? "mid" : "bad", 8, "الكتف الواحد أعلى من التاني — ظبّط وقفتك"));
+    const rt = flRefTrunk(frames);
+    const shift = flStat(frames.map(f => f.F && f.F.hp ? f.F.hp.x / rt : null));
+    if (shift) out.push(flCheck("ثبات الجسم يمين/شمال", "تذبذب ±" + flN(shift.sd * 100) + "٪ من طول الجذع", shift.sd < 0.08 ? "ok" : shift.sd < 0.16 ? "mid" : "bad", 10, "الجسم بيتحرك جنب — ثبّت الحوض"));
+    if (FL_LOWER[model]) {
+      const ys = frames.filter(f => f.F && f.F.knee && f.F.ankle);
+      const low = ys.slice().sort((a, b) => b.F.hp.y - a.F.hp.y).slice(0, Math.max(3, Math.floor(ys.length * 0.3)));
+      const ratios = low.map(f => { const l = f.lms; const kv = [25, 26, 27, 28].map(i => l[i] && (l[i][2] == null ? 1 : l[i][2]) >= MINV); if (kv.some(v => !v)) return null; const kd = Math.abs(l[25][0] - l[26][0]), ad = Math.abs(l[27][0] - l[28][0]); return ad > 0.02 ? kd / ad : null; });
+      const rs = flStat(ratios);
+      if (rs) out.push(flCheck("الركبة للداخل", "الركبتين " + flN(rs.avg * 100) + "٪ من عرض الرجلين", rs.avg >= 0.9 ? "ok" : rs.avg >= 0.75 ? "mid" : "bad", 14, "الركبة بتقع للداخل — ادفعها لبرا في اتجاه صوابع الرجل"));
+      const wl = flStat(low.map(f => { const l = f.lms; return l[25] && l[26] && l[25][2] >= MINV && l[26][2] >= MINV ? Math.abs(l[25][1] - l[26][1]) / rt : null; }));
+      if (wl) out.push(flCheck("توازن الرجلين", "فرق ارتفاع الركبتين " + flN(wl.avg * 100) + "٪", wl.avg < 0.12 ? "ok" : wl.avg < 0.25 ? "mid" : "bad", 8, "جنب أقل شغل من التاني — وزّع الوزن"));
+    }
+    return out;
+  }
+  /* lateral raise from front/back: per-arm raise angle, own rep detection */
+  function flRaiseSeries(frames) {
+    const side = s => frames.map(f => { const l = f.lms; const i = s === 0 ? [11, 13, 15, 23] : [12, 14, 16, 24]; const v = i.map(k => l[k] ? (l[k][2] == null ? 1 : l[k][2]) : 0); if (Math.min(v[0], v[2], v[3]) < MINV) return { t: f.t, a: null }; const P = k => ({ x: l[k][0] * 0.5625, y: l[k][1] }); return { t: f.t, a: flAngle(P(i[3]), P(i[0]), P(i[2])), el: v[1] >= MINV ? flAngle(P(i[0]), P(i[1]), P(i[2])) : null, trunk: f.F ? f.F.trunk : null, shy: l[i[0]][1], hpy: l[i[3]][1] }; });
+    return [side(0), side(1)];
+  }
+  function flRaiseReps(frames) {
+    const S = flRaiseSeries(frames);
+    const rng = s => { const v = s.map(p => p.a).filter(x => x != null).sort((a, b) => a - b); return v.length > 5 ? [v[Math.floor(v.length * 0.05)], v[Math.floor(v.length * 0.95)]] : null; };
+    const R = S.map(rng);
+    const idx = R[0] && R[1] ? ((R[1][1] - R[1][0]) > (R[0][1] - R[0][0]) ? 1 : 0) : R[0] ? 0 : R[1] ? 1 : -1;
+    if (idx < 0) return null;
+    const lo = R[idx][0], hi = R[idx][1];
+    if (hi - lo < 25) return { count: 0, list: [], series: S, arm: idx, ranges: R };
+    const raw = S[idx].filter(p => p.a != null), sm = raw.map((p, i) => ({ t: p.t, a: (raw[Math.max(0, i - 1)].a + p.a + raw[Math.min(raw.length - 1, i + 1)].a) / 3 }));
+    const up = lo + (hi - lo) * 0.65, dn = lo + (hi - lo) * 0.35;
+    const list = []; let st = "low", t0 = sm[0].t, peak = -1, tp = 0;
+    sm.forEach(p => {
+      if (st === "low") { if (p.a < dn) t0 = p.t; if (p.a > up) { st = "high"; peak = p.a; tp = p.t; } }
+      else { if (p.a > peak) { peak = p.a; tp = p.t; } if (p.a < dn) { list.push({ t0, t1: p.t, tBottom: tp, bottom: peak, dur: p.t - t0, down: p.t - tp, up: tp - t0, peak: true }); st = "low"; t0 = p.t; peak = -1; } }
+    });
+    const good = list.filter(r => r.dur >= 0.8 && r.dur <= 15);
+    const avg = k => good.length ? good.reduce((a, r) => a + r[k], 0) / good.length : null;
+    return { count: good.length, list: good, avgDown: avg("down"), avgUp: avg("up"), avgBottom: avg("bottom"), rom: good.length ? avg("bottom") - lo : 0, series: S, arm: idx, ranges: R };
+  }
+  function flChecksRaiseFB(frames, reps, rr) {
+    const out = [];
+    if (!rr || !rr.series) return out;
+    const S = rr.series, W = S[rr.arm], O = S[1 - rr.arm];
+    const spans = (reps && reps.list ? reps.list : []);
+    const peaks = spans.map(r => r.bottom);
+    const ra = flStat(peaks);
+    if (ra) out.push(flCheck("ارتفاع الرفعة", flN(ra.avg) + "° من الجسم", ra.avg >= 70 && ra.avg <= 100 ? "ok" : ra.avg >= 55 && ra.avg <= 115 ? "mid" : "bad", 14, ra.avg < 70 ? "ارفع لحد مستوى الكتف (٩٠° تقريبًا)" : "متعديش مستوى الكتف"));
+    const at = (arr, t) => arr.reduce((b, p) => p.a != null && (!b || Math.abs(p.t - t) < Math.abs(b.t - t)) ? p : b, null);
+    const els = flStat(spans.map(r => { const p = at(W, r.tBottom); return p ? p.el : null; }));
+    if (els) out.push(flCheck("ثني الكوع", flN(els.avg) + "° وقت الرفعة", els.avg >= 120 ? "ok" : els.avg >= 100 ? "mid" : "bad", 8, "الكوع بيتني كتير — خلّيه شبه مفرود بثنية خفيفة"));
+    const rest = flStat(W.filter(p => p.a != null && p.a < (rr.ranges[rr.arm][0] + 15)).map(p => p.trunk && p.shy != null ? (p.hpy - p.shy) / p.trunk : null));
+    const top = flStat(spans.map(r => { const p = at(W, r.tBottom); return p && p.trunk ? (p.hpy - p.shy) / p.trunk : null; }));
+    if (rest && top && rest.avg > 0) { const sh = Math.max(0, (1 - top.avg / rest.avg) * 100); out.push(flCheck("شد الكتف لفوق", flN(sh) + "٪", sh < 6 ? "ok" : sh < 12 ? "mid" : "bad", 8, "الكتف بيطلع ناحية ودنك — نزّله واستخدم الجانبي بس")); }
+    const tl = flStat(frames.map(f => f.F ? f.F.tilt : null));
+    if (tl) out.push(flCheck("ثبات الجسم", "تذبذب ±" + flN(tl.sd) + "°", tl.sd < 4 ? "ok" : tl.sd < 8 ? "mid" : "bad", 10, "الجسم بيميل مع الرفعة — وزن أخف وتحكم أكتر"));
+    if (reps && reps.avgDown != null) { const d = reps.avgDown; out.push(flCheck("التحكم في النزول", flN(d, 1) + " ثانية", d >= 1.5 ? "ok" : d >= 1 ? "mid" : "bad", 6, "انزل بتحكم — متسيبش الوزن يقع")); }
+    const rO = rr.ranges[1 - rr.arm];
+    if (rO && rO[1] - rO[0] >= 25 && O) {
+      const po = flStat(spans.map(r => { const p = at(O, r.tBottom); return p ? p.a : null; }));
+      if (po && ra) { const df = Math.abs(po.avg - ra.avg); out.push(flCheck("تماثل الدراعين", "فرق " + flN(df) + "°", df < 10 ? "ok" : df < 20 ? "mid" : "bad", 8, "دراع بيرفع أعلى من التانية — ركّز على الأضعف")); }
+    } else out.push(flCheck("ℹ️ ذراع واحدة", "اتحسب الذراع الأكتر حركة", "ok", 0, ""));
+    return out;
+  }
+  function flApplyAngle(checks, angle, model, frames, reps, rr) {
+    if (!angle || !angle.key) return checks;
+    const A = FL_ANG[angle.key];
+    const base = checks.filter(c => c.label.indexOf("ℹ️ حدود القياس") !== 0);
+    let out;
+    if (angle.key === "front" || angle.key === "back") {
+      out = base.map(c => FL_SIDE_ONLY.test(c.label) ? { label: c.label, val: "غير قابل للقياس من زاوية " + A.t, tone: "na", pts: 0, tip: "" } : c);
+      if (model === "raise" && rr) out = out.filter(c => c.tone === "na" ? false : true).filter(c => !/ثبات الجسم|التحكم في النزول|ارتفاع الرفعة/.test(c.label)).concat(flChecksRaiseFB(frames, reps, rr));
+      out = out.concat(flChecksFB(frames, reps, model));
+      /* hide NA rows that now have a front/back replacement of the same name */
+    } else if (angle.key === "diag") {
+      out = base.map(c => FL_SIDE_ONLY.test(c.label) && c.pts ? Object.assign({}, c, { val: c.val + " (تقريبي — زاوية قُطرية)", pts: Math.round(c.pts / 2) }) : c);
+      if (model === "raise" && rr) out = out.filter(c => !/ثبات الجسم|التحكم في النزول|ارتفاع الرفعة/.test(c.label)).concat(flChecksRaiseFB(frames, reps, rr));
+    } else out = base;
+    out.push(flCheck("📐 زاوية التصوير", A.t + (angle.manual ? " (اخترتها انت)" : angle.conf === "low" ? " (مش متأكد — غيّرها لو غلط)" : ""), "ok", 0, ""));
+    return out;
+  }
+
+  function flAnalyze(lift, track, summary, angle) {
     const frames = flFrames(track);
-    const reps = summary.reps || null;
+    angle = angle || flResolveAngle(track);
+    console.debug("MOFIT angle", JSON.stringify(angle));
+    let rr = null;
+    if (lift === "raise" && angle.key !== "side") rr = flRaiseReps(frames);
+    const reps = (rr || summary.reps) || null;
     const FL_CHECK = { squat: flChecksSquat, deadlift: flChecksDeadlift, bench: flChecksBench, ohp: flChecksOhp, hpress: flChecksHPress, vpress: flChecksVPress, row: flChecksRow, pulldown: flChecksPulldown, hinge: flChecksHinge, lunge: flChecksLunge, curl: flChecksCurl, extend: flChecksExtend, raise: flChecksRaise, calf: flChecksCalf, legmach: flChecksLegMach };
-    const checks = (FL_CHECK[lift] || flChecksGeneric)(frames, reps, summary);
+    const checks = flApplyAngle((FL_CHECK[lift] || flChecksGeneric)(frames, reps, summary), angle, lift, frames, reps, rr);
     const lost = checks.reduce((a, c) => a + c.pts, 0);
     let score = Math.max(5, Math.min(100, 100 - lost));
     if (lift === "generic") score = Math.min(score, 85); /* approximate model: honest cap */
     const grade = score >= 90 ? { t: "ممتاز 🏆", tone: "ok" } : score >= 75 ? { t: "كويس 💪", tone: "ok" } : score >= 60 ? { t: "محتاج شغل 🛠", tone: "mid" } : { t: "ركّز على الأساسيات 🎯", tone: "bad" };
     const bp = flBarPath(frames, lift);
     const metrics = {
-      v: 1, lift,
+      v: 1, lift, angle: angle.key, yaw: angle.yaw, angleManual: !!angle.manual,
       model: lift, approx: lift === "generic",
       score, reps: reps ? reps.count : 0,
       checks: checks.map(c => ({ label: c.label, val: c.val, tone: c.tone, pts: c.pts })),
@@ -552,7 +679,7 @@
       frames: track.frames.length,
       dur: summary.dur ? +summary.dur.toFixed(1) : null,
     };
-    return { score, grade, checks, metrics, barPath: bp, frames };
+    return { score, grade, checks, metrics, barPath: bp, frames, angle, reps };
   }
 
   window.FormLab = { analyze: flAnalyze, LIFTS: FL_LIFTS, modelFor: flModelFor, CANON: FL_CANON };
@@ -625,6 +752,12 @@
 .fl-dot.ok{background:#22C55E;box-shadow:0 0 8px rgba(34,197,94,.7)}
 .fl-dot.mid{background:#FACC15;box-shadow:0 0 8px rgba(250,204,21,.7)}
 .fl-dot.bad{background:#F43F5E;box-shadow:0 0 8px rgba(244,63,94,.7)}
+.fl-dot.na{background:#CBD5E1}
+.fl-angbar{margin:10px 0;padding:10px 12px;border:1.5px solid #BAE6FD;background:#F0F9FF;border-radius:14px;display:flex;flex-direction:column;gap:6px;color:#075985}
+.fl-angbar small{opacity:.85}
+.fl-angpick{display:flex;flex-wrap:wrap;gap:6px}
+.fl-angb{font:inherit;font-size:.8rem;font-weight:800;padding:6px 12px;border-radius:999px;border:1.5px solid #7DD3FC;background:#fff;color:#075985}
+.fl-angb.on{background:#0284C7;color:#fff;border-color:#0284C7}
 .fl-check .fl-cb{flex:1;display:block;min-width:0}
 .fl-check .cb b{display:block;font-size:.9rem;color:var(--navy)}
 .fl-check .cb small{color:var(--slate)}
@@ -740,19 +873,21 @@
       <div class="fl-hero-score">${ring(o.score, 100, { size: 110, stroke: 11, label: flN(o.score), sub: "من ١٠٠", color: tone === "ok" ? "#22C55E" : tone === "mid" ? "#FACC15" : "#F43F5E" })}
         <div class="gv"><span class="fl-grade ${o.grade.tone}">${o.grade.t}</span><small class="hint">${(o.metrics.reps || 0) > 0 ? "تقييم MOFIT الاسترشادي — " + o.metrics.reps + " عدات متعرف عليها" : "تقييم مبدئي من الحركة العامة — مفيش عدات واضحة في الفيديو"}</small></div></div>
       ${approx ? `<div class="fl-approx">🔎 تحليل تقريبي — التمرين ده ملوش نموذج مخصص لسه، فالتقييم من الحركة العامة (عدات · إيقاع · ثبات · اتزان) ومحددش تفاصيل زي العمق أو زاوية الكوع. أقصى تقييم هنا ٨٥.</div>` : ""}
+      ${o.angle && o.angle.key ? `<div class="fl-angbar"><b>📐 صُوّر من: ${FL_ANG[o.angle.key].t}</b>${o.angle.conf === "low" && !o.angle.manual ? `<small>مش متأكد من الزاوية — اختار الصح:</small>` : `<small>غلط؟ غيّر الزاوية:</small>`}<div class="fl-angpick">${["front", "back", "side", "diag"].map(k => `<button type="button" class="fl-angb${o.angle.key === k ? " on" : ""}" data-ang="${k}">${FL_ANG[k].t}</button>`).join("")}</div></div>` : ""}
       ${flGhostBox(o.lift, o.metrics, o.ghost)}
       <div class="card" style="box-shadow:none;border:1px solid var(--soft2,#EEF2F7)"><div class="card-h"><div class="ic acc">✅</div><h2>تفاصيل التقييم</h2></div>
-        ${checks.map(c => `<div class="fl-check"><span class="fl-dot ${c.tone}"></span><div class="fl-cb"><b>${flEsc(c.label)}</b><small>${flEsc(c.val)}</small>${c.tip && c.tone !== "ok" ? `<span class="fl-ct">💡 ${flEsc(c.tip)}</span>` : ""}</div>${c.pts ? `<b style="color:#BE123C">-${c.pts}</b>` : `<b style="color:#15803D">✓</b>`}</div>`).join("")}</div>
+        ${checks.map(c => `<div class="fl-check"><span class="fl-dot ${c.tone}"></span><div class="fl-cb"><b>${flEsc(c.label)}</b><small>${flEsc(c.val)}</small>${c.tip && c.tone !== "ok" ? `<span class="fl-ct">💡 ${flEsc(c.tip)}</span>` : ""}</div>${c.tone === "na" ? `<b style="color:#94A3B8">—</b>` : c.pts ? `<b style="color:#BE123C">-${c.pts}</b>` : `<b style="color:#15803D">✓</b>`}</div>`).join("")}</div>
       ${o.barPath ? flBarPathSVG(o.barPath, o.lift) : ""}
       ${repList.length ? `<div class="card" style="box-shadow:none;border:1px solid var(--soft2,#EEF2F7);margin-top:10px"><div class="card-h"><div class="ic dark">🔁</div><h2>العدات (${repList.length})</h2></div><div class="fl-reps">
-        ${repList.map((r, i) => `<div class="fl-rep" data-t="${r.t0}"><span class="n">${i + 1}</span><div><b>عمق ${flN(r.bottom)}°</b> <small>· نزول ${flN(r.down, 1)} ث · طلوع ${flN(r.up, 1)} ث · ${flN(r.dur, 1)} ث</small></div></div>`).join("")}</div></div>` : ""}
+        ${repList.map((r, i) => `<div class="fl-rep" data-t="${r.t0}"><span class="n">${i + 1}</span><div><b>${r.peak ? "ارتفاع" : "عمق"} ${flN(r.bottom)}°</b> <small>· نزول ${flN(r.down, 1)} ث · طلوع ${flN(r.up, 1)} ث · ${flN(r.dur, 1)} ث</small></div></div>`).join("")}</div></div>` : ""}
       <div id="flVidHost"></div>
       <div class="row" style="margin-top:12px;gap:8px">
-        ${o.track && window.MofitPoseResults ? `<button class="btn navy grow" id="flDeep">📊 التحليل الكامل (عزوم وزوايا)</button>` : ""}
+        ${o.track && window.MofitPoseResults && !(o.angle && (o.angle.key === "front" || o.angle.key === "back")) ? `<button class="btn navy grow" id="flDeep">📊 التحليل الكامل (عزوم وزوايا)</button>` : ""}
         ${o.canGhost ? `<button class="btn grow" id="flGhost" style="border:1.5px solid #FDE68A;background:#FFFBEB;color:#92400E;font-weight:800">⭐ خلّي دي الشبح المثالي</button>` : ""}
       </div>
       <p class="fl-note">⚠️ التقييم استرشادي من زاوية تصوير واحدة وبيكمّل عين الكوتش — مش تشخيص طبي. لو حاسس بألم في أي تمرين، وقّف وكلّم الكوتش. الفيديو ما بيترفعش ولا بيتحفظ — بيتم التحليل على موبايلك وبيتشال.</p>`);
-    if (o.track && window.MofitPoseResults) body.querySelector("#flDeep").onclick = () => MofitPoseResults.open(o.track, { onSeek: t => { const v = body.querySelector("video"); if (v) v.currentTime = t; } });
+    body.querySelectorAll(".fl-angb").forEach(b => b.onclick = () => { flAngleOverride = b.dataset.ang; if (o.reanalyze) o.reanalyze(); });
+    if (o.track && window.MofitPoseResults && body.querySelector("#flDeep")) body.querySelector("#flDeep").onclick = () => MofitPoseResults.open(o.track, { onSeek: t => { const v = body.querySelector("video"); if (v) v.currentTime = t; } });
     if (o.canGhost) body.querySelector("#flGhost").onclick = async e => { await flSetGhost(o.lift, o.scanId, e.currentTarget); };
     body.querySelectorAll(".fl-rep").forEach(r => r.onclick = () => { const v = body.querySelector("video"); if (v) { v.currentTime = +r.dataset.t; v.pause(); } });
     if (o.videoURL && o.track) {
@@ -832,12 +967,14 @@
   /* pre-check: show the clip with a live skeleton and framing checks before the long scan */
   async function flPrecheck(file, sel, p, prog) {
     flCss();
+    flAngleOverride = null;
     const url = URL.createObjectURL(file);
     let alive = true;
     const body = openSheet(`<div class="between" style="margin-bottom:6px"><b style="font-size:1.05rem">🔍 فحص سريع قبل التحليل</b><button class="btn sm ghost" id="flPcX">✕</button></div>
       <div class="hint" id="flPcMsg">جاري تجهيز النموذج…</div>
       <div class="fl-pc-stage"><video src="${url}" muted playsinline loop preload="auto"></video><canvas></canvas></div>
       <div class="fl-pc-chips" id="flPcChips"></div>
+      <div class="fl-angbar" style="margin:4px 0 8px"><b id="flPcAng">📐 زاوية التصوير: بنحددها…</b><small>لو غلط اختار الزاوية بنفسك:</small><div class="fl-angpick"><button type="button" class="fl-angb on" data-ang="">تلقائي</button>${["front", "back", "side", "diag"].map(k => `<button type="button" class="fl-angb" data-ang="${k}">${FL_ANG[k].t}</button>`).join("")}</div></div>
       <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="flPcGo" disabled>▶ ابدأ التحليل</button><button class="btn ghost" id="flPcOther">🎥 اختار فيديو تاني</button></div>`);
     const video = body.querySelector("video"), cv = body.querySelector("canvas"), msg = body.querySelector("#flPcMsg"), chips = body.querySelector("#flPcChips"), go = body.querySelector("#flPcGo");
     const stop = () => { alive = false; try { video.pause(); } catch (_) {} };
@@ -845,6 +982,14 @@
     body.querySelector("#flPcX").onclick = () => { finish(); closeSheet(); };
     body.querySelector("#flPcOther").onclick = () => { finish(); closeSheet(); const fi = document.getElementById("flFile"); if (fi) fi.click(); };
     go.onclick = () => { finish(); closeSheet(); flScan(file, sel, p, prog); };
+    body.querySelectorAll(".fl-angb").forEach(b => b.onclick = () => { flAngleOverride = b.dataset.ang || null; body.querySelectorAll(".fl-angb").forEach(x => x.classList.toggle("on", x === b)); showAng(); });
+    const angS = [];
+    const showAng = () => {
+      const el = body.querySelector("#flPcAng"); if (!el) return;
+      if (flAngleOverride) { el.textContent = "📐 زاوية التصوير: " + FL_ANG[flAngleOverride].t + " (اخترتها انت)"; return; }
+      const e = flAngFromSamples(angS.slice(-12));
+      el.textContent = e.key ? "📐 زاوية التصوير: " + FL_ANG[e.key].t + (e.conf === "low" ? " (مش متأكد)" : "") : "📐 زاوية التصوير: بنحددها…";
+    };
     try { await new Promise((res, rej) => { if (video.readyState >= 1) return res(); video.onloadedmetadata = res; video.onerror = () => rej(new Error("video")); setTimeout(res, 5000); }); } catch (_) {}
     try { await flEnsureModel(); } catch (e) { msg.textContent = "تعذر تجهيز النموذج، تقدر تبدأ التحليل برضه."; go.disabled = false; return; }
     go.disabled = false; msg.textContent = "الفيديو شغال بدون صوت. السكيلتون الأخضر بيوريك لو الجسم ظاهر كويس.";
@@ -865,6 +1010,8 @@
       const r = await apDetectFrame(video);
       const st = flBodyState(r.lms);
       hist.push({ st, luma: r.luma, blank: r.blank }); if (hist.length > 8) hist.shift();
+      if (r.lms) angS.push(flAngSample(i => { const q = r.lms[i]; return q ? { x: q.x, y: q.y, v: q.visibility == null ? 1 : q.visibility } : null; }, (video.videoWidth && video.videoHeight) ? video.videoWidth / video.videoHeight : 0.5625));
+      showAng();
       draw(r.lms);
       const n = hist.length, found = hist.filter(x => x.st.found).length, full = hist.filter(x => x.st.full).length, big = hist.filter(x => x.st.found && x.st.h >= 0.35).length;
       const lumas = hist.map(x => x.luma).filter(v => v != null), luma = lumas.length ? lumas.reduce((a, b) => a + b, 0) / lumas.length : null;
@@ -928,7 +1075,7 @@
       }
       const analysis = flAnalyze(lift, track, summary);
       show(1, "✓ خلص");
-      const repList = (summary.reps && summary.reps.list) || [];
+      const repList = (analysis.reps && analysis.reps.list) || [];
       if (!repList.length) toast("اتحلل الفيديو بس متعرفش على عدات واضحة — التقييم من الحركة العامة");
       /* auto-save the metrics row (never the video) */
       const saved = await flSaveScan(p.id, exName, analysis);
@@ -936,11 +1083,9 @@
       if (saved && saved.error) { console.warn("formlab save", saved.error); toast("⚠️ التحليل ظهر لكن ماتحفظش في السجل — بلّغ المدرب"); }
       if (saved && saved.queued) toast("📴 التحليل اتحفظ على الموبايل وهيتبعت لما النت يرجع");
       const ghosts = await flLoadGhosts();
-      flResultSheet({
-        lift: exName, score: analysis.score, grade: analysis.grade, checks: analysis.checks, metrics: analysis.metrics,
-        barPath: analysis.barPath, repList, ghost: ghosts[exName] || null,
-        videoURL: url, track, canGhost: S.me.role === "coach" && !!scanId, scanId,
-      });
+      const baseOpts = { lift: exName, ghost: ghosts[exName] || null, videoURL: url, track, canGhost: S.me.role === "coach" && !!scanId, scanId };
+      const showAnalysis = a => flResultSheet(Object.assign({}, baseOpts, { score: a.score, grade: a.grade, checks: a.checks, metrics: a.metrics, barPath: a.barPath, repList: (a.reps && a.reps.list) || [], angle: a.angle, reanalyze: () => { closeSheet(); showAnalysis(flAnalyze(lift, track, summary)); } }));
+      showAnalysis(analysis);
       setTimeout(() => { prog.hidden = true; }, 600);
       flRefreshList(p);
     } catch (e) {
