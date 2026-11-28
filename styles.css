@@ -1398,3 +1398,22 @@ input[type=url],input[placeholder*="youtu"]{direction:ltr;text-align:left}
 .hsec{display:flex;align-items:center;gap:10px;margin:22px 4px 10px;font-weight:800;font-size:.95rem;letter-spacing:.2px;color:var(--navy,#0F172A)}
 .hsec::before{content:"";width:5px;height:18px;border-radius:3px;background:#F97316;box-shadow:0 0 12px rgba(249,115,22,.55)}
 .hsec::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,rgba(249,115,22,.45),transparent)}
+/* minerals & fiber */
+.min-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px;margin-top:10px}
+.min-chip{background:var(--soft);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;gap:1px;font-size:.74rem}
+.min-chip b{font-size:1rem}.min-chip small{color:var(--mut,#888);font-size:.7rem}
+.min-chip.lim{background:#fff4e5}
+.min-src{font-size:.68rem;color:var(--mut,#888);margin-top:5px}
+.min-na{font-size:.76rem;color:var(--mut,#888);margin-top:8px}
+.min-box{margin-top:12px;background:rgba(255,255,255,.07);border-radius:12px;padding:8px 10px;color:#fff}
+.min-h{display:flex;flex-direction:column;cursor:pointer;list-style:none}.min-h::-webkit-details-marker{display:none}
+.min-h small{opacity:.7;font-size:.72rem}.min-score{background:var(--acc);color:#fff;border-radius:99px;padding:0 8px;font-size:.75rem;margin-inline-start:6px}
+.min-rows{display:grid;grid-template-columns:1fr 1fr;gap:8px 12px;margin-top:8px}
+.min-row{font-size:.76rem}.min-l{display:flex;flex-direction:column;gap:0}.min-l>span{white-space:nowrap}.min-l b{font-size:.95rem}
+.min-row small{opacity:.7;font-size:.68rem}
+.min-bar{height:6px;background:rgba(255,255,255,.15);border-radius:99px;overflow:hidden;margin:3px 0 1px}
+.min-bar>i{display:block;height:100%;border-radius:99px;transition:width .6s;background:#f5a524}
+.min-row.ok .min-bar>i{background:#2fbf71}.min-row.low .min-bar>i{background:#e5484d}.min-row.mid .min-bar>i{background:#f5a524}
+.min-row.warn .min-bar>i{background:#f5a524}.min-row.bad .min-bar>i{background:#e5484d}
+.min-miss{font-size:.7rem;opacity:.75;margin:8px 0 0}
+@media(max-width:360px){.min-rows{grid-template-columns:1fr}}
