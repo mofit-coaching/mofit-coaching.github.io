@@ -1219,7 +1219,7 @@
   async function flViewPosture(el, p) {
     flCss();
     const st = { front: null, side: null };
-    el.innerHTML = `<div class="card dark hero"><div class="card-h"><div class="ic">🧍</div><h2>معمل القوام<small>صورتين، والتطبيق يقيس وقفتك على موبايلك</small></h2></div>
+    el.innerHTML = `<div class="card dark hero"><div class="card-h"><div class="ic">🧍</div><h2>معمل القوام <small style="display:block">صورتين، والتطبيق يقيس وقفتك على موبايلك</small></h2></div>
         <p class="hero-sub">صوّر نفسك من قدام ومن الجنب والتطبيق يقيس ميل الكتفين والحوض ووضع الراس واستقامة الركبتين ويديك تقييم من ١٠٠ وتمرين ٥ دقايق. الصور ما بتترفعش.</p></div>
       <div class="card"><div class="fl-pz">
         <div class="fl-pslot" data-k="front"><b>🧍 صورة من قدام</b><small>واقف عادي، الجسم كامل، الإيدين جنبك</small><div class="fl-pph" id="flPzFront"></div><button class="btn primary" data-pick="front">📷 صوّر أو اختار صورة</button></div>
