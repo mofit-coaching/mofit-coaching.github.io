@@ -448,7 +448,7 @@ async function renderMeals(el,{mode}){
   const drawTot=()=>{ const tot=sumMacros(planMode?plan:items);
     $("#fTot").innerHTML=`<div class="card-h"><div class="ic">${planMode?"📋":"🔥"}</div><h2>${planMode?"إجمالي الخطة":"ملخص اليوم"}<small>${planMode?"مقارنة بأهداف العميل":"المتبقي: "+(t.kcal?fmt(t.kcal-tot.kcal):"—")+" kcal"}</small></h2></div>
       <div style="display:flex;gap:16px;align-items:center">${ring(tot.kcal,t.kcal||1,{size:112,track:"rgba(255,255,255,.15)",label:fmt(tot.kcal),sub:"من "+fmt(t.kcal),textColor:"#fff"})}
-      <div style="flex:1;color:#fff">${macroRow("بروتين",tot.P,t.P,"جم")}${macroRow("كارب",tot.C,t.C,"جم")}${macroRow("دهون",tot.F,t.F,"جم")}</div></div>${planMode?mineralTotHTML(plan):mineralTotHTML(items,"اللي اتاكل النهارده")}`; };
+      <div style="flex:1;color:#fff">${macroRow("بروتين",tot.P,t.P,"جم")}${macroRow("كارب",tot.C,t.C,"جم")}${macroRow("دهون",tot.F,t.F,"جم")}</div></div>${planMode?mineralTotHTML(plan,"الخطة",p,t.kcal):mineralTotHTML(items,"اللي اتاكل النهارده",p,t.kcal)}`; };
   drawTot();
   const wrap=$("#meals");
   for(let m=1;m<=meals;m++){
@@ -800,4 +800,4 @@ async function homeCheckinCard(p,wk){
     `<div class="card"><div class="card-h"><div class="ic acc">📸</div><h2>متابعة الأسبوع ${wk}<small>${thisW?(thisW.reviewed_at?"✓✓ الكوتش رد":"✓ اتبعتت – مستنية رد الكوتش"):"لسه ما اتبعتتش – وزن + صور + إحساسك"}</small></h2><button class="btn sm ${thisW?"":"primary"}" id="goCI">${thisW?"عرض":"ابعت"}</button></div>
      ${lastReply?`<p class="hint" style="white-space:pre-wrap">💬 آخر رد (أسبوع ${lastReply.week}): ${esc(lastReply.coach_reply.slice(0,160))}${lastReply.coach_reply.length>160?"…":""}</p>`:""}</div>`;
   $("#goCI").onclick=()=>{ S.tab="body"; S.bodySeg="c"; S.ciWeek=wk; render(); };
-                                                                                                }
+          }
