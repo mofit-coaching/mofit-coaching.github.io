@@ -119,7 +119,7 @@ function openFinish(p, day, week, exs, logs, onDone){
 
 /* weekly training load (sRPE = minutes × RPE) — home card for client & coach */
 async function loadCardHTML(p){
-  const { data } = await sb.from("workout_sessions").select("log_date,week,duration_min,rpe,volume").eq("client_id",p.id).order("log_date");
+  const { data } = await wsRows(p.id);
   const W=data||[]; if(!W.length) return "";
   const wkNow=currentWeek(p), by={}; W.forEach(s=>{ (by[s.week]=by[s.week]||[]).push(s); });
   const load=w=>(by[w]||[]).reduce((a,s)=>a+(+s.duration_min||0)*(+s.rpe||0),0);
@@ -201,7 +201,7 @@ function heatmapHTML(p){
     <div class="hm-legend">أقل <i style="background:#EEF0F4"></i><i style="background:#FFD9BF"></i><i style="background:#FFA66B"></i><i style="background:#FF6B1A"></i> أكتر</div></div>`;
 }
 async function streakCardHTML(p){
-  const { data } = await sb.from("workout_sessions").select("log_date,week").eq("client_id",p.id);
+  const { data } = await wsRows(p.id);
   const W=data||[]; window._hmSessions=W;
   const goal=Math.max(1,new Set(S.program.map(e=>e.day_no)).size||3), wkNow=currentWeek(p), cnt={};
   W.forEach(s=>{ cnt[s.week]=(cnt[s.week]||0)+1; });
