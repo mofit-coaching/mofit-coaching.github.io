@@ -1402,7 +1402,9 @@ input[type=url],input[placeholder*="youtu"]{direction:ltr;text-align:left}
 .min-chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(92px,1fr));gap:6px;margin-top:10px}
 .min-chip{background:var(--soft);border-radius:10px;padding:6px 8px;display:flex;flex-direction:column;gap:1px;font-size:.74rem}
 .min-chip b{font-size:1rem}.min-chip small{color:var(--mut,#888);font-size:.7rem}
-.min-chip.lim{background:#fff4e5}
+.min-chip.lim{background:#fff4e5;color:#0F172A;box-shadow:inset 0 0 0 1.5px #F59E0B}
+.min-chip.lim small{color:#92400E}
+@media (prefers-color-scheme: dark){.min-chip.lim{background:var(--soft);color:inherit;box-shadow:inset 0 0 0 1.5px #F59E0B}.min-chip.lim small{color:var(--mut,#94A3B8)}}
 .min-src{font-size:.68rem;color:var(--mut,#888);margin-top:5px}
 .min-na{font-size:.76rem;color:var(--mut,#888);margin-top:8px}
 .min-box{margin-top:12px;background:rgba(255,255,255,.07);border-radius:12px;padding:8px 10px;color:#fff}
