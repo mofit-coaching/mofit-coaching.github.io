@@ -52,5 +52,6 @@ function mineralTotHTML(items,label,p,kcal){
   return `<details class="min-box" ${open?"open":""} ontoggle="localStorage.setItem('mofit_min_open',this.open?'1':'0')">
     <summary class="min-h"><b>الأملاح والألياف <span class="min-score">${hit}/${need}</span></b><small>${label||"النهارده"} · مقارنة باحتياجك اليومي</small></summary>
     <div class="min-rows">${rows}</div>
-    ${s.missing?`<p class="min-miss">⚠️ ${s.missing} صنف من ${items.length} مالوش بيانات أملاح، فالأرقام أقل من الحقيقي.</p>`:""}</details>`;
+    ${s.missing?`<p class="min-miss">⚠️ ${s.missing} صنف من ${items.length} مالوش بيانات أملاح، فالأرقام أقل من الحقيقي.</p>`:""}
+    <p class="min-miss" style="opacity:.55">مصادر بيانات الأملاح: Open Food Facts (ODbL) · USDA FoodData Central</p></details>`;
 }
