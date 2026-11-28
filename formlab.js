@@ -530,7 +530,7 @@
 
   /* full analysis: returns { score, grade, checks, metrics, barPath } — pure, testable */
   /* ---------- camera angle (front / back / side / diagonal) ---------- */
-  const FL_ANG = { front: { t: "أمامي", ic: "🧍" }, back: { t: "خلفي", ic: "🔙" }, side: { t: "جانبي", ic: "↔️" }, diag: { t: "قُطري (٣/٤)", ic: "↗️" } };
+  const FL_ANG = { front: { t: "أمامي / خلفي", ic: "🧍" }, back: { t: "أمامي / خلفي", ic: "🔙" }, side: { t: "جانبي", ic: "↔️" }, diag: { t: "قُطري (٣/٤)", ic: "↗️" } };
   let flAngleOverride = null;
   const flMedian = a => { a = a.filter(v => v != null && isFinite(v)).sort((x, y) => x - y); return a.length ? a[Math.floor(a.length / 2)] : null; };
   /* one sample from a getter get(i) -> {x,y,v} | null; ar = width/height */
@@ -541,17 +541,18 @@
     const sw = Math.abs(a.x - b.x) * ar, sx = (a.x + b.x) / 2 * ar, sy = (a.y + b.y) / 2, hx = (c.x + d.x) / 2 * ar, hy = (c.y + d.y) / 2;
     const tr = Math.hypot(sx - hx, sy - hy); if (tr < 0.05) return null;
     const fv = [get(0), get(2), get(5)].map(p => p ? p.v : 0);
-    return { r: sw / tr, face: (fv[0] + fv[1] + fv[2]) / 3 };
+    return { r: sw / tr, face: (fv[0] + fv[1] + fv[2]) / 3, lr: a.x > b.x ? 1 : 0 };
   }
   function flAngFromSamples(S) {
     S = S.filter(Boolean);
     if (S.length < 3) return { key: null, yaw: null, conf: "low", n: S.length };
     const r = flMedian(S.map(s => s.r)), face = flMedian(S.map(s => s.face));
     const R0 = 0.68, yaw = Math.round(Math.acos(Math.min(1, r / R0)) * 180 / Math.PI);
-    const key = yaw < 30 ? (face >= 0.5 ? "front" : "back") : yaw < 65 ? "diag" : "side";
+    /* front and back look the same to the model (its left/right labels flip on back views), and the checks are identical, so they share one bucket */
+    const key = yaw < 30 ? "front" : yaw < 65 ? "diag" : "side";
     const spread = flMedian(S.map(s => Math.abs(Math.acos(Math.min(1, s.r / R0)) * 180 / Math.PI - yaw)));
     const near = Math.min(Math.abs(yaw - 30), Math.abs(yaw - 65)) < 8;
-    const faceUnsure = yaw < 30 && face > 0.3 && face < 0.7;
+    const faceUnsure = false;
     return { key, yaw, r: +r.toFixed(2), face: +face.toFixed(2), conf: (near || faceUnsure || spread > 15) ? "low" : "high", n: S.length };
   }
   function flAngleOfTrack(track) {
@@ -873,7 +874,7 @@
       <div class="fl-hero-score">${ring(o.score, 100, { size: 110, stroke: 11, label: flN(o.score), sub: "من ١٠٠", color: tone === "ok" ? "#22C55E" : tone === "mid" ? "#FACC15" : "#F43F5E" })}
         <div class="gv"><span class="fl-grade ${o.grade.tone}">${o.grade.t}</span><small class="hint">${(o.metrics.reps || 0) > 0 ? "تقييم MOFIT الاسترشادي — " + o.metrics.reps + " عدات متعرف عليها" : "تقييم مبدئي من الحركة العامة — مفيش عدات واضحة في الفيديو"}</small></div></div>
       ${approx ? `<div class="fl-approx">🔎 تحليل تقريبي — التمرين ده ملوش نموذج مخصص لسه، فالتقييم من الحركة العامة (عدات · إيقاع · ثبات · اتزان) ومحددش تفاصيل زي العمق أو زاوية الكوع. أقصى تقييم هنا ٨٥.</div>` : ""}
-      ${o.angle && o.angle.key ? `<div class="fl-angbar"><b>📐 صُوّر من: ${FL_ANG[o.angle.key].t}</b>${o.angle.conf === "low" && !o.angle.manual ? `<small>مش متأكد من الزاوية — اختار الصح:</small>` : `<small>غلط؟ غيّر الزاوية:</small>`}<div class="fl-angpick">${["front", "back", "side", "diag"].map(k => `<button type="button" class="fl-angb${o.angle.key === k ? " on" : ""}" data-ang="${k}">${FL_ANG[k].t}</button>`).join("")}</div></div>` : ""}
+      ${o.angle && o.angle.key ? `<div class="fl-angbar"><b>📐 صُوّر من: ${FL_ANG[o.angle.key].t}</b>${o.angle.conf === "low" && !o.angle.manual ? `<small>مش متأكد من الزاوية — اختار الصح:</small>` : `<small>غلط؟ غيّر الزاوية:</small>`}<div class="fl-angpick">${["front", "side", "diag"].map(k => `<button type="button" class="fl-angb${o.angle.key === k ? " on" : ""}" data-ang="${k}">${FL_ANG[k].t}</button>`).join("")}</div></div>` : ""}
       ${flGhostBox(o.lift, o.metrics, o.ghost)}
       <div class="card" style="box-shadow:none;border:1px solid var(--soft2,#EEF2F7)"><div class="card-h"><div class="ic acc">✅</div><h2>تفاصيل التقييم</h2></div>
         ${checks.map(c => `<div class="fl-check"><span class="fl-dot ${c.tone}"></span><div class="fl-cb"><b>${flEsc(c.label)}</b><small>${flEsc(c.val)}</small>${c.tip && c.tone !== "ok" ? `<span class="fl-ct">💡 ${flEsc(c.tip)}</span>` : ""}</div>${c.tone === "na" ? `<b style="color:#94A3B8">—</b>` : c.pts ? `<b style="color:#BE123C">-${c.pts}</b>` : `<b style="color:#15803D">✓</b>`}</div>`).join("")}</div>
@@ -974,7 +975,7 @@
       <div class="hint" id="flPcMsg">جاري تجهيز النموذج…</div>
       <div class="fl-pc-stage"><video src="${url}" muted playsinline loop preload="auto"></video><canvas></canvas></div>
       <div class="fl-pc-chips" id="flPcChips"></div>
-      <div class="fl-angbar" style="margin:4px 0 8px"><b id="flPcAng">📐 زاوية التصوير: بنحددها…</b><small>لو غلط اختار الزاوية بنفسك:</small><div class="fl-angpick"><button type="button" class="fl-angb on" data-ang="">تلقائي</button>${["front", "back", "side", "diag"].map(k => `<button type="button" class="fl-angb" data-ang="${k}">${FL_ANG[k].t}</button>`).join("")}</div></div>
+      <div class="fl-angbar" style="margin:4px 0 8px"><b id="flPcAng">📐 زاوية التصوير: بنحددها…</b><small>لو غلط اختار الزاوية بنفسك:</small><div class="fl-angpick"><button type="button" class="fl-angb on" data-ang="">تلقائي</button>${["front", "side", "diag"].map(k => `<button type="button" class="fl-angb" data-ang="${k}">${FL_ANG[k].t}</button>`).join("")}</div></div>
       <div class="row" style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn primary" id="flPcGo" disabled>▶ ابدأ التحليل</button><button class="btn ghost" id="flPcOther">🎥 اختار فيديو تاني</button></div>`);
     const video = body.querySelector("video"), cv = body.querySelector("canvas"), msg = body.querySelector("#flPcMsg"), chips = body.querySelector("#flPcChips"), go = body.querySelector("#flPcGo");
     const stop = () => { alive = false; try { video.pause(); } catch (_) {} };
