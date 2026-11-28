@@ -18,15 +18,17 @@ const progWait=()=>S.me?.role!=="coach"&&(S.progPending||!(S.program||[]).length
 async function boot(){
   const { data:{ session } } = await sb.auth.getSession();
   if(!session){ $("#loginView").classList.remove("hidden"); $("#appView").classList.add("hidden"); return; }
+  const vidsP=loadVideos(); window._progPre={id:session.user.id,p:sb.from("program_exercises").select("*").eq("client_id",session.user.id).order("day_no").order("position").then(r=>r,()=>null)};
   let me=null; try{ ({ data:me } = await sb.from("profiles").select("*").eq("id",session.user.id).single()); }catch(e){ me=null; }
   if(me) cacheSet("me",me); else { me=cacheGet("me"); if(!me||me.id!==session.user.id){ $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden"); window.__bootN=(window.__bootN||0)+1; waitCard($("#main"),()=>boot(),Math.min(window.__bootN-1,5)); return; } }
   if(!me.active){ await sb.auth.signOut(); $("#loginView").classList.remove("hidden"); $("#loginErr").textContent=me.signup_days?"طلبك قيد المراجعة – الكوتش هيفعّل حسابك بعد تأكيد الاشتراك":"الحساب غير مفعّل – تواصل مع الكوتش"; return; }
   S.me=me; $("#loginView").classList.add("hidden"); $("#appView").classList.remove("hidden");
   if(me.role==="assistant"){ S.assistant=true; renderAssistantHome(); return; }
   if(!$("#main").children.length) $("#main").innerHTML=skelCards();
-  await loadVideos(); flushQueue();
+  await vidsP; flushQueue();
   if(me.role==="coach"){ S.tab="clients"; await Promise.all([loadClients(),loadCoachTemplates(),loadDietTemplates()]); }
   else { await openClient(me); const qt=new URLSearchParams(location.search).get("tab"); if(qt==="supps"&&S.supps?.length){ S.tab="supps"; } else if(qt==="train"||qt==="food"){ S.tab=qt; if(qt==="food") S.date=today(); } }
+  if(document.readyState==="loading") await new Promise(r=>document.addEventListener("DOMContentLoaded",r,{once:true}));
   render();
   (async()=>{ if(me.role==="client"){ try{ await ensureHealth(); }catch(e){} } setTimeout(maybeOnboard,400); })();
 }
@@ -67,7 +69,8 @@ async function assistantClient(cid,c){
 }
 async function openClient(p){
   S.client=p; S.week=currentWeek(p); S.date=today(); S.bodyWeek=null;
-  const { data, error } = await sb.from("program_exercises").select("*").eq("client_id",p.id).order("day_no").order("position");
+  const pre=window._progPre; window._progPre=null;
+  const { data, error } = (pre&&pre.id===p.id&&(await pre.p))||await sb.from("program_exercises").select("*").eq("client_id",p.id).order("day_no").order("position");
   S.program=error? (cacheGet("prog_"+p.id)||[]) : (data||[]); if(!error) cacheSet("prog_"+p.id,S.program);
   S.progPending=!!p.program_pending&&S.me?.role!=="coach"; if(S.progPending) S.program=[]; S.dietPending=!!p.diet_pending&&S.me?.role!=="coach";
   const days=[...new Set(S.program.map(e=>e.day_no))];
@@ -128,7 +131,8 @@ function weekRecapHTML(all,bodyRows,wk){
     <div style="background:var(--c30-tint,#EEF1F6);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px"><small style="opacity:.75">حجم التمرين</small><b class="num" style="font-size:1.5rem">${fmt(Math.round(vol))}</b><small style="opacity:.7">كجم إجمالي</small></div>
     <div style="background:var(--c30-tint,#EEF1F6);border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:2px"><small style="opacity:.75">أرقام جديدة</small><b class="num" style="font-size:1.5rem">${prs}</b><small style="opacity:.7">تمرين اتحسّن</small></div>${wd}</div></div>`;
 }
-async function viewHome(el){
+function wsRows(id){ const w=window._ws; if(!w||w.id!==id||Date.now()-w.t>2000) window._ws={id,t:Date.now(),p:sb.from("workout_sessions").select("log_date,week,duration_min,rpe,volume").eq("client_id",id).order("log_date").then(r=>r)}; return window._ws.p; }
+async function viewHome(el){ window._ws=null;
   const p=S.client, t=targets(p), wk=currentWeek(p), dn=todayDayNo();
   const todayEx=S.program.filter(e=>e.day_no===dn);
   el.innerHTML=`${progWait()?planningCard("train"):`<div class="card dark hero"><div class="card-h"><div class="ic">💪</div><h2>تمرين النهارده<small>${dn?"يوم "+dn+(dayLabel(dn)?" · "+esc(dayLabel(dn)):""):"يوم راحة واستشفاء"}</small></h2>${dn?`<span class="pill acc">${todayEx.length} تمارين</span>`:""}</div>
@@ -148,7 +152,7 @@ async function viewHome(el){
     ${tipCardHTML()}
     ${S.me.role==="client"?installCardHTML():""}`;
   wireInstall();
-  window.ghRenderHomeCard&&S.me.role==="client"&&window.ghRenderHomeCard($("#ghHome"),p,()=>viewHome(el));
+  if(window.ghRenderHomeCard&&S.me.role==="client") setTimeout(()=>{ if($("#ghHome")) window.ghRenderHomeCard($("#ghHome"),p,()=>viewHome(el)); },1200);
   window.stepsClientCard&&window.stepsClientCard($("#hSteps"),p);
   $("#goTrain")&&($("#goTrain").onclick=()=>{ S.tab="train"; S.day=dn; S.week=wk; render(); });
   homeCheckinCard(p,wk);
