@@ -348,10 +348,41 @@ function openFoodPicker(title, onPick, opts={}){
   body.querySelector("[data-close]").onclick=closeSheet;
   const q=$("#fpQ"), res=$("#fpRes"); let timer; setTimeout(()=>q.focus(),100);
   const rowHTML=x=>{ const u=unitInfo(x); return `<div class="food-r" data-id="${x.id}"><div class="fi">${u.cnt?"🍞":"⚖"}</div><div class="nm">${esc(x.name)}<small>${u.base}: <b>${fmt(u.per.kcal)} kcal</b> · ب ${fmt(u.per.P,1)} · ك ${fmt(u.per.C,1)} · د ${fmt(u.per.F,1)}</small></div><span class="pill">${esc(x.unit)}</span></div>`; };
-  const showFavs=()=>{ const fv=favFoods();
-    res.innerHTML=fv.length?`<div class="sub" style="margin-top:4px">⭐ مفضلتك – دوس عليها تسجّل على طول</div>`+fv.map(rowHTML).join(""):"";
-    res.querySelectorAll("[data-id]").forEach(d=>d.onclick=()=>pickQty(fv.find(x=>x.id==d.dataset.id))); };
+  let recentRows=null;
+  const loadRecent=async()=>{ if(recentRows) return recentRows;
+    try{ const cid=(S.client&&S.client.id)||(S.me&&S.me.id); if(!cid) return (recentRows=[]);
+      const { data:h }=await sb.from("meal_items").select("food_id,log_date").eq("client_id",cid).not("food_id","is",null).order("log_date",{ascending:false}).limit(300);
+      const st={}; (h||[]).forEach((r,i)=>{ const o=st[r.food_id]||(st[r.food_id]={n:0,first:i}); o.n++; });
+      const ids=Object.keys(st).sort((a,b)=>st[b].n-st[a].n||st[a].first-st[b].first).slice(0,14);
+      if(!ids.length) return (recentRows=[]);
+      const { data:fs }=await sb.from("foods").select("*").in("id",ids);
+      const byId={}; (fs||[]).forEach(f=>byId[f.id]=f);
+      recentRows=ids.map(i=>byId[i]).filter(Boolean);
+    }catch(e){ recentRows=[]; }
+    return recentRows; };
+  const showFavs=async()=>{ const fv=favFoods(), favIds=new Set(fv.map(x=>x.id));
+    const draw=rc=>{ if(q.value.trim().length>=2) return;
+      res.innerHTML=(fv.length?`<div class="sub" style="margin-top:4px">⭐ مفضلتك – دوس عليها تسجّل على طول</div>`+fv.map(rowHTML).join(""):"")
+        +(rc.length?`<div class="sub" style="margin-top:8px">🕘 الأكتر تسجيلاً عندك</div>`+rc.map(rowHTML).join(""):"");
+      const all=[...fv,...rc];
+      res.querySelectorAll("[data-id]").forEach(d=>d.onclick=()=>pickQty(all.find(x=>x.id==d.dataset.id))); };
+    draw(recentRows?recentRows.filter(x=>!favIds.has(x.id)):[]);
+    const rc=await loadRecent(); draw(rc.filter(x=>!favIds.has(x.id))); };
   showFavs();
+  if(opts.quick){ q.insertAdjacentHTML("beforebegin",`<button class="btn sm block" id="fpQuick" style="margin-top:8px">⚡ سعرات سريعة (من غير صنف)</button>`);
+    $("#fpQuick").onclick=()=>{ body.innerHTML=`<div class="between"><button class="btn sm ghost" data-back>→ رجوع</button><button class="btn sm ghost" data-close>✕</button></div>
+      <b style="font-size:1.05rem">⚡ سعرات سريعة</b>
+      <label class="f">الاسم (اختياري)</label><input id="qaName" placeholder="مثلاً: وجبة بره" maxlength="60">
+      <label class="f">السعرات (kcal)</label><input id="qaK" inputmode="decimal" placeholder="0">
+      <div class="g4" style="margin-top:8px"><div><label class="f">بروتين</label><input id="qaP" inputmode="decimal" placeholder="0"></div><div><label class="f">كارب</label><input id="qaC" inputmode="decimal" placeholder="0"></div><div><label class="f">دهون</label><input id="qaF" inputmode="decimal" placeholder="0"></div></div>
+      <button class="btn primary block" id="qaAdd" style="margin-top:12px">إضافة</button>`;
+      body.querySelector("[data-close]").onclick=closeSheet; body.querySelector("[data-back]").onclick=()=>openFoodPicker(title,onPick,opts);
+      $("#qaAdd").onclick=async()=>{ const k=num($("#qaK").value)||0, P=num($("#qaP").value)||0, C=num($("#qaC").value)||0, F=num($("#qaF").value)||0;
+        if(k<=0&&P+C+F<=0) return toast("اكتب السعرات");
+        const kcal=k>0?k:Math.round(P*4+C*4+F*9);
+        if(kcal>5000||P>500||C>1000||F>500) return toast("الرقم كبير، راجعه");
+        const nm=($("#qaName").value||"").trim()||"إضافة سريعة";
+        await onPick({id:null,name:nm,unit:"حصة",kcal:kcal*100,protein:P*100,carbs:C*100,fat:F*100},1); closeSheet(); }; }; }
   q.oninput=()=>{ clearTimeout(timer); timer=setTimeout(async()=>{
     const term=q.value.trim(); if(term.length<2){ showFavs(); return; }
     const { data:f } = await sb.rpc("search_foods",{q:term});
@@ -379,7 +410,7 @@ function openFoodPicker(title, onPick, opts={}){
     body.querySelectorAll("[data-s]").forEach(b=>b.onclick=()=>{ qi.value=Math.max(0,(num(qi.value)||0)+(+b.dataset.s)*step); prev(); });
     body.querySelectorAll("[data-q]").forEach(b=>b.onclick=()=>{ qi.value=b.dataset.q; prev(); });
     body.querySelector("[data-close]").onclick=closeSheet;
-    body.querySelector("[data-back]").onclick=()=>openFoodPicker(title,onPick);
+    body.querySelector("[data-back]").onclick=()=>openFoodPicker(title,onPick,opts);
     if(opts.match){ const m=opts.match; const cmp=()=>{ const c=foodCalc(food,num(qi.value)||0); $("#fpPrev").insertAdjacentHTML("beforeend",`<div class="muted" style="margin-top:4px">مقارنة بالأصلي: ب ${c.protein-m.protein>=0?"+":""}${fmt(c.protein-m.protein,1)} · ك ${c.carbs-m.carbs>=0?"+":""}${fmt(c.carbs-m.carbs,1)} · د ${c.fat-m.fat>=0?"+":""}${fmt(c.fat-m.fat,1)} جم</div>`); }; const op=qi.oninput; qi.oninput=()=>{op();cmp();}; cmp(); }
     $("#fpAdd").textContent=opts.match?"تبديل":"إضافة";
     $("#fpAdd").onclick=async()=>{ const qv=num(qi.value); if(!qv||qv<=0) return toast("اكتب الكمية"); await onPick(food,qv); closeSheet(); };
@@ -468,7 +499,7 @@ async function renderMeals(el,{mode}){
         ${mp.length||edit?`<div class="sub">📋 خطة الكوتش</div>`:""}
         ${planRows.map(({pi,hit})=>`<div class="item plan">${planMode||edit?"":`<button class="tick ${hit?"on":""}" data-tick="${pi.id}" title="أكلتها">✓</button>`}
           <div class="nm">${esc(pi.food_name)}<small>${qtyText(pi)}${pi.notes?" · "+esc(pi.notes):""}</small></div><span class="kc num">${fmt(pi.kcal)}</span>${hit?"":`<button class="x" data-swap="${pi.id}" title="تبديل بصنف تاني">⇄</button>`}${edit?`<button class="x" data-pdel="${pi.id}">✕</button>`:""}</div>`).join("")}
-        ${!planMode&&extras.length?`<div class="sub">🍽 أكلت كمان</div>`+extras.map(i=>`<div class="item"><div class="nm">${esc(i.food_name)}<small>${qtyText(i)} · ب ${fmt(i.protein,1)} · ك ${fmt(i.carbs,1)} · د ${fmt(i.fat,1)}</small></div><span class="kc num">${fmt(i.kcal)}</span><button class="x" data-ldel="${i.id}">✕</button></div>`).join(""):""}
+        ${!planMode&&extras.length?`<div class="sub">🍽 أكلت كمان</div>`+extras.map(i=>`<div class="item"><div class="nm">${esc(i.food_name)}<small>${qtyText(i)} · ب ${fmt(i.protein,1)} · ك ${fmt(i.carbs,1)} · د ${fmt(i.fat,1)}</small></div><span class="kc num">${fmt(i.kcal)}</span><button class="x" data-ledit="${i.id}" title="تعديل الكمية">✎</button><button class="x" data-ldel="${i.id}">✕</button></div>`).join(""):""}
         ${!mp.length&&!ml.length&&!edit?`<div class="item"><span class="muted">مفيش أصناف لسه</span></div>`:""}
         <div class="meal-f">${edit?`<button class="btn sm navy grow" data-padd>+ صنف للخطة</button>`:`${mp.length?`<button class="btn sm grow" data-all>✓ أكلت الوجبة كلها</button>`:""}<button class="btn sm primary grow" data-ladd>+ سجّل صنف</button>`}</div>`;
       box.querySelector("[data-edit]")&&(box.querySelector("[data-edit]").onclick=()=>{edit=!edit; draw();});
@@ -483,11 +514,28 @@ async function renderMeals(el,{mode}){
         else await logOne(pr.pi);
         draw(); drawTot(); });
       box.querySelector("[data-all]")&&(box.querySelector("[data-all]").onclick=async()=>{ for(const r of planRows) if(!r.hit) await logOne(r.pi); draw(); drawTot(); toast("✓ اتسجلت الوجبة"); });
+      box.querySelectorAll("[data-ledit]").forEach(b=>b.onclick=()=>{ const it=items.find(i=>i.id===b.dataset.ledit); if(!it||!(+it.qty>0)) return;
+        const cnt=COUNT_UNITS(it.unit), step=cnt?0.5:10;
+        openSheet(`<div class="between"><b>${esc(it.food_name)}</b><button class="btn sm ghost" data-close>✕</button></div>
+          <label class="f">${cnt?"العدد":"الكمية"} (${esc(it.unit||"جم")})</label>
+          <div class="stepper"><button data-s="-1">−</button><input id="leQty" inputmode="decimal" value="${+it.qty}"><button data-s="1">+</button></div>
+          <div class="card" style="background:var(--acc-soft);box-shadow:none;margin:10px 0" id="lePrev"></div>
+          <button class="btn primary block" id="leSave">حفظ</button>`);
+        const sc=()=>{ const nq=num($("#leQty").value)||0, k=nq/(+it.qty); return {nq,k}; };
+        const prev=()=>{ const {nq,k}=sc(); $("#lePrev").innerHTML=`<div class="between"><b>${fmt(nq,2)} ${esc(it.unit||"جم")}</b><b style="color:var(--acc)" class="num">${fmt((+it.kcal||0)*k)} kcal</b></div><div class="muted">بروتين ${fmt((+it.protein||0)*k,1)} · كارب ${fmt((+it.carbs||0)*k,1)} · دهون ${fmt((+it.fat||0)*k,1)} جم</div>`; };
+        $("#leQty").oninput=prev; prev();
+        $("#sheetBody").querySelectorAll("[data-s]").forEach(x=>x.onclick=()=>{ $("#leQty").value=Math.max(0,(num($("#leQty").value)||0)+(+x.dataset.s)*step); prev(); });
+        $("#sheetBody").querySelector("[data-close]").onclick=closeSheet;
+        $("#leSave").onclick=async()=>{ const {nq,k}=sc(); if(!(nq>0)||nq>10000) return toast("اكتب الكمية");
+          const upd={qty:nq}; ["kcal","protein","carbs","fat"].forEach(f=>{ upd[f]=+((+it[f]||0)*k).toFixed(1); });
+          MIN_KEYS.forEach(([key])=>{ if(it[key]!=null) upd[key]=+(it[key]*k).toFixed(key==="iron_mg"||key==="zinc_mg"?2:1); });
+          const { error } = await sb.from("meal_items").update(upd).eq("id",it.id); if(error) return toast(error.message);
+          Object.assign(it,upd); closeSheet(); draw(); drawTot(); toast("✓ اتعدّل"); }; });
       box.querySelectorAll("[data-ldel]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("meal_items").delete().eq("id",b.dataset.ldel); if(error) return toast(error.message); items.splice(items.findIndex(i=>i.id===b.dataset.ldel),1); draw(); drawTot(); });
       box.querySelectorAll("[data-pdel]").forEach(b=>b.onclick=async()=>{ const { error } = await sb.from("diet_plan_items").delete().eq("id",b.dataset.pdel); if(error) return toast(error.message); plan.splice(plan.findIndex(i=>i.id===b.dataset.pdel),1); draw(); drawTot(); });
       box.querySelector("[data-ladd]")&&(box.querySelector("[data-ladd]").onclick=()=>openFoodPicker("سجّل في "+mealName(p,m), async(food,qty)=>{
-        const { data:ins, error } = await sb.from("meal_items").insert({client_id:p.id,log_date:S.date,meal_no:m,food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)}).select().single();
-        if(error) return toast(error.message); items.push(ins); draw(); drawTot(); toast("✓ اتسجل"); }));
+        const { data:ins, error } = await sb.from("meal_items").insert({client_id:p.id,log_date:S.date,meal_no:m,food_id:food.id||null,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)}).select().single();
+        if(error) return toast(error.message); items.push(ins); draw(); drawTot(); toast("✓ اتسجل"); },{quick:true}));
       box.querySelector("[data-padd]")&&(box.querySelector("[data-padd]").onclick=()=>openFoodPicker("أضف لخطة "+mealName(p,m), async(food,qty)=>{
         const { data:ins, error } = await sb.from("diet_plan_items").insert({client_id:p.id,meal_no:m,position:mp.length,food_id:food.id,food_name:food.name,unit:food.unit,qty,...foodCalc(food,qty),...mineralCalc(food,qty)}).select().single();
         if(error) return toast(error.message); plan.push(ins); draw(); drawTot(); toast("✓ اتضاف للخطة"); }));
