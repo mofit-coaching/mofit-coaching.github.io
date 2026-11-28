@@ -1419,3 +1419,6 @@ input[type=url],input[placeholder*="youtu"]{direction:ltr;text-align:left}
 .min-row.warn .min-bar>i{background:#f5a524}.min-row.bad .min-bar>i{background:#e5484d}
 .min-miss{font-size:.7rem;opacity:.75;margin:8px 0 0}
 @media(max-width:360px){.min-rows{grid-template-columns:1fr}}
+/* chat button never sits on the rest timer: lift it above the timer bar while the timer is showing */
+#chatFab{transition:bottom .2s ease}
+body:has(#timer:not(.hidden)) #chatFab{bottom:calc(158px + env(safe-area-inset-bottom))}

@@ -312,6 +312,7 @@ document.addEventListener("scroll",s,{passive:true,capture:true});document.addEv
     const sh=document.getElementById("sheet"), tm=document.getElementById("timer"), ae=document.activeElement;
     if(sh&&!sh.classList.contains("hidden")) return false; if(tm&&!tm.classList.contains("hidden")) return false;
     if(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)) return false; if(Date.now()-lastTouch<20000) return false; return true; };
+  window.__mofitSafe=safe;
   async function check(){ try{
     if(busy||document.hidden||Date.now()-lastCheck<10*6e4) return; busy=true; lastCheck=Date.now();
     const mine=cur(); if(!mine) { busy=false; return; }
@@ -335,9 +336,15 @@ document.addEventListener("scroll",s,{passive:true,capture:true});document.addEv
   if(!("serviceWorker" in navigator)) return;
   const reloaded=v=>sessionStorage.getItem("mofit-reloaded-"+v);
   const mark=v=>sessionStorage.setItem("mofit-reloaded-"+v,"1");
+  /* A new build must never throw a logged-in user back to the main menu mid-workout: wait until the same "safe" test as the stale-app check passes (not on the training tab, no sheet/chat/rest timer/focused field, 20s since last touch). Logged-out screens reload at once unless a field is focused. */
+  const reloadWhenSafe=()=>{
+    const ok=()=>{ if(typeof S==="undefined"||!S.me){ const ae=document.activeElement; return !(ae&&/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName)); } return typeof window.__mofitSafe==="function"?window.__mofitSafe():false; };
+    if(ok()){ location.reload(); return; }
+    let n=0; const iv=setInterval(()=>{ if(ok()){ clearInterval(iv); location.reload(); } else if(++n>720) clearInterval(iv); },10000);
+  };
   navigator.serviceWorker.addEventListener("message",e=>{
     const d=e.data||{}; if(d.type!=="mofit-sw-activated"||!d.V) return;
-    if(reloaded(d.V)) return; mark(d.V); location.reload();
+    if(reloaded(d.V)) return; mark(d.V); reloadWhenSafe();
   });
   try{
     const pageV=([...document.scripts].map(s=>(s.src.match(/[?&]v=([0-9a-f]{8})/)||[])[1]).find(Boolean));
@@ -345,7 +352,7 @@ document.addEventListener("scroll",s,{passive:true,capture:true});document.addEv
     fetch("sw.js?cb="+Date.now(),{cache:"no-store"}).then(r=>r.text()).then(t=>{
       const m=t.match(/const V="([^"]+)"/); if(!m||m[1]===pageV||reloaded(m[1])) return;
       mark(m[1]);
-      navigator.serviceWorker.getRegistration().then(r=>(r?r.update():Promise.resolve()).finally(()=>location.reload()));
+      navigator.serviceWorker.getRegistration().then(r=>(r?r.update():Promise.resolve()).finally(()=>reloadWhenSafe()));
     }).catch(()=>{});
   }catch(_){}
 })();
