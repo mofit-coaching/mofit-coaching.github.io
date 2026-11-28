@@ -1,9 +1,9 @@
 /* ======================================================================
-   Mofit — barcode food scanner (bc-*): scan a product's barcode with the
-   phone camera, pull its nutrition from Open Food Facts, and log it like
-   any other food. ZXing (Apache-2.0, vendored in ./vendor, lazy-loaded on
-   first scan). Works fully on-device; only the barcode number is sent to
-   the Open Food Facts API to fetch the product.
+   Mofit — barcode food scanner (bc-*): scan a barcode, look it up in the
+   coach foods table first (barcode is kept in foods.notes as "باركود <digits>"),
+   then online in Open Food Facts and USDA FoodData Central, save the result
+   (kcal, macros, minerals, per-row source) and log it. ZXing vendored in ./vendor.
+   Only the barcode number leaves the device.
 
    Open Food Facts data is under ODbL 1.0 — attribution is shown on every
    scanned product card with links (required by the license).
@@ -72,7 +72,7 @@
 
   /* ---------- Open Food Facts lookup ---------- */
   async function offLookup(code){
-    const url="https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json?fields=code,product_name,product_name_ar,brands,quantity,serving_size,serving_quantity,nutriments";
+    const url="https://world.openfoodfacts.org/api/v2/product/"+encodeURIComponent(code)+".json?fields=code,product_name,product_name_ar,product_name_en,brands,quantity,serving_size,serving_quantity,nutriments";
     const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),9000);
     let j; try{ const r=await fetch(url,{signal:ctl.signal,headers:{accept:"application/json"}}); j=await r.json(); }
     finally{ clearTimeout(to); }
@@ -80,38 +80,113 @@
     const p=j.product, n=p.nutriments||{};
     const kcal=n["energy-kcal_100g"]!=null?+n["energy-kcal_100g"]:(n.energy_100g!=null?+(+n.energy_100g/4.184).toFixed(0):null);
     if(kcal==null) return null;
-    const name=(p.product_name_ar||p.product_name||"").trim();
+    const name=(p.product_name_ar||p.product_name||p.product_name_en||"").trim();
     if(!name) return null;
     const r2=v=>v==null?null:Math.round(+v*10)/10;
     return {
       code:String(code), name, brand:(p.brands||"").split(",")[0].trim(),
       packQty:(p.quantity||"").trim(), serving:(p.serving_size||"").trim(), servingQty:num(p.serving_quantity),
       kcal:r2(kcal), protein:r2(n.proteins_100g), carbs:r2(n.carbohydrates_100g), fat:r2(n.fat_100g),
-      fiber_g:r2(n.fiber_100g), sodium_mg:n.sodium_100g!=null?Math.round(+n.sodium_100g*1000):null
+      fiber_g:r2(n.fiber_100g), sodium_mg:gToMg(n.sodium_100g),
+      potassium_mg:gToMg(n.potassium_100g), calcium_mg:gToMg(n.calcium_100g), magnesium_mg:gToMg(n.magnesium_100g),
+      iron_mg:gToMg(n.iron_100g,2), zinc_mg:gToMg(n.zinc_100g,2),
+      src:"Open Food Facts", srcKey:"Open Food Facts "+code, srcUrl:"https://world.openfoodfacts.org/product/"+encodeURIComponent(code)
     };
+  }
+
+
+  /* ---------- helpers: units, barcode variants ---------- */
+  function gToMg(v,d){ if(v==null||v==="") return null; const x=+v; if(!isFinite(x)||x<0) return null; return +(x*1000).toFixed(d==null?0:d); }
+  function codeVariants(c){
+    c=String(c); const out=new Set([c]); const nz=c.replace(/^0+/,"");
+    if(nz.length>=8){ out.add(nz); [12,13].forEach(n=>{ if(nz.length<=n) out.add(nz.padStart(n,"0")); }); }
+    return [...out];
+  }
+  const MINCOLS=["fiber_g","sodium_mg","potassium_mg","calcium_mg","magnesium_mg","iron_mg","zinc_mg"];
+
+  /* ---------- 1) the user's own foods table first (barcode lives in notes as "باركود <digits>") ---------- */
+  async function dbLookup(code){
+    const vs=codeVariants(code);
+    try{
+      const { data } = await sb.from("foods").select("*").or(vs.map(v=>"notes.ilike.%"+v+"%").join(",")).limit(10);
+      if(!data) return null;
+      const hit=data.find(r=>{ const m=String(r.notes||"").match(/\d{8,14}/g)||[]; return m.some(x=>vs.includes(x)); });
+      return hit||null;
+    }catch(_){ return null; }
+  }
+  function rowToProd(r,code){
+    return { code:String(code), name:r.name, brand:r.brand||"", packQty:"", serving:"", servingQty:null,
+      kcal:r.kcal, protein:r.protein, carbs:r.carbs, fat:r.fat, fiber_g:r.fiber_g, sodium_mg:r.sodium_mg,
+      potassium_mg:r.potassium_mg, calcium_mg:r.calcium_mg, magnesium_mg:r.magnesium_mg, iron_mg:r.iron_mg, zinc_mg:r.zinc_mg,
+      fromDb:true, row:r, src:r.source||"قاعدة بياناتك", srcKey:r.mineral_source||null };
+  }
+
+  /* ---------- 2) USDA FoodData Central (branded products, searched by GTIN) ---------- */
+  const USDA_KEY="DEMO_KEY";
+  async function usdaLookup(code){
+    for(const v of codeVariants(code).slice(0,3)){
+      const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),9000);
+      try{
+        const r=await fetch("https://api.nal.usda.gov/fdc/v1/foods/search?api_key="+USDA_KEY+"&dataType=Branded&pageSize=5&query="+encodeURIComponent(v),{signal:ctl.signal});
+        if(!r.ok) continue; const j=await r.json();
+        const f=(j.foods||[]).find(x=>String(x.gtinUpc||"").replace(/^0+/,"")===v.replace(/^0+/,""));
+        if(!f) continue;
+        const N={}; (f.foodNutrients||[]).forEach(n=>{ N[n.nutrientNumber]=n.value; });
+        const kcal=N["208"]; if(kcal==null) continue;
+        const r2=x=>x==null?null:Math.round(+x*10)/10;
+        return { code:String(code), name:(f.description||"").trim(), brand:(f.brandOwner||f.brandName||"").trim(), packQty:f.packageWeight||"", serving:"", servingQty:(f.servingSizeUnit||"").toLowerCase()==="g"?num(f.servingSize):null,
+          kcal:r2(kcal), protein:r2(N["203"]), carbs:r2(N["205"]), fat:r2(N["204"]), fiber_g:r2(N["291"]), sodium_mg:r2(N["307"]),
+          potassium_mg:r2(N["306"]), calcium_mg:r2(N["301"]), magnesium_mg:r2(N["304"]), iron_mg:r2(N["303"]), zinc_mg:r2(N["309"]),
+          src:"USDA FoodData Central", srcKey:"USDA FoodData Central "+f.fdcId, srcUrl:"https://fdc.nal.usda.gov/fdc-app.html#/food-details/"+f.fdcId+"/nutrients" };
+      }catch(_){ } finally{ clearTimeout(to); }
+    }
+    return null;
+  }
+  /* try every source in order; the first with calories wins, missing minerals are topped up from the next one */
+  async function findProduct(code){
+    const row=await dbLookup(code);
+    if(row){ const p=rowToProd(row,code);
+      if(!MINCOLS.some(k=>p[k]!=null)){ /* own row has no minerals yet: fetch them online (NULL-only) */
+        let o=null; try{ o=await offLookup(code); }catch(_){ } if(!o) o=await usdaLookup(code);
+        if(o){ p.mineralPatch=o; MINCOLS.forEach(k=>{ if(p[k]==null&&o[k]!=null) p[k]=o[k]; }); p.mineralFrom=o.srcKey; }
+      }
+      return p; }
+    let o=null; try{ o=await offLookup(code); }catch(_){ }
+    if(!o){ try{ o=await usdaLookup(code); }catch(_){ } }
+    else if(!MINCOLS.some(k=>o[k]!=null)){ const u=await usdaLookup(code).catch(()=>null); if(u&&u.kcal!=null&&Math.abs(u.kcal-o.kcal)<=Math.max(30,o.kcal*0.25)){ MINCOLS.forEach(k=>{ if(o[k]==null&&u[k]!=null) o[k]=u[k]; }); o.srcKey+=" + "+u.srcKey; } }
+    return o;
   }
 
   /* ---------- keep the scanned product in the shared foods table when possible ----------
      Coach accounts can insert; if policies block the insert we still log the item
      with its full macro snapshot, just without a foods row (food_id is omitted). */
+  function mineralRec(prod){ const r={}; MINCOLS.forEach(k=>{ if(prod[k]!=null) r[k]=prod[k]; }); return r; }
   async function ensureFoodRow(prod){
+    if(prod.fromDb){
+      const row=prod.row;
+      if(prod.mineralPatch){ /* fill only columns that are NULL in the row, never overwrite */
+        const patch={}; MINCOLS.forEach(k=>{ if(row[k]==null&&prod[k]!=null) patch[k]=prod[k]; });
+        if(Object.keys(patch).length){ patch.mineral_source=prod.mineralFrom;
+          try{ const { data, error }=await sb.from("foods").update(patch).eq("id",row.id).select().single(); if(!error&&data){ cacheSet(prod.code,data); return data; } }catch(_){ } }
+        return {...row,...patch};
+      }
+      cacheSet(prod.code,row); return row;
+    }
     const cached=cacheGet(prod.code); if(cached&&cached.kcal!=null) return cached;
     const base={name:prod.brand&&!prod.name.includes(prod.brand)?prod.name+" ("+prod.brand+")":prod.name,
       unit:"جم", kcal:prod.kcal??0, protein:prod.protein??0, carbs:prod.carbs??0, fat:prod.fat??0};
+    const mins=mineralRec(prod);
     try{
-      const { data:found } = await sb.from("foods").select("*").ilike("notes","%"+prod.code+"%").limit(1);
-      if(found&&found[0]){ cacheSet(prod.code,found[0]); return found[0]; }
+      const found=await dbLookup(prod.code);
+      if(found){ cacheSet(prod.code,found); return found; }
     }catch(_){ }
     try{
-      const rec={...base, source:"Open Food Facts", brand:prod.brand||null, category:"منتجات بالباركود", notes:"باركود: "+prod.code};
-      if(prod.fiber_g!=null){ rec.fiber_g=prod.fiber_g; }
-      if(prod.sodium_mg!=null){ rec.sodium_mg=prod.sodium_mg; }
-      if(rec.fiber_g!=null||rec.sodium_mg!=null) rec.mineral_source="Open Food Facts";
+      const rec={...base, ...mins, source:prod.src||"Open Food Facts", brand:prod.brand||null, category:"منتجات بالباركود", notes:"باركود "+prod.code};
+      if(Object.keys(mins).length) rec.mineral_source=prod.srcKey||prod.src;
       const { data:ins, error } = await sb.from("foods").insert(rec).select().single();
       if(!error&&ins){ cacheSet(prod.code,ins); return ins; }
     }catch(_){ }
-    const synth={...base}; if(prod.fiber_g!=null) synth.fiber_g=prod.fiber_g; if(prod.sodium_mg!=null) synth.sodium_mg=prod.sodium_mg;
-    return synth;
+    return {...base, ...mins};
   }
 
   /* ---------- scanner overlay ---------- */
@@ -177,15 +252,16 @@
     body.innerHTML=`<div class="between"><button class="btn sm ghost" data-back>→ رجوع</button><button class="btn sm ghost" data-close>✕</button></div>
       <b style="font-size:1.05rem">${esc(prod.name)}</b>
       ${prod.brand?`<div class="muted" style="margin-top:2px">${esc(prod.brand)}${prod.packQty?" · "+esc(prod.packQty):""}</div>`:""}
-      <span class="bc-offbadge">🌍 اتعرّف بالباركود</span>
+      <span class="bc-offbadge">${prod.fromDb?"📚 من قاعدة بياناتك":"🌍 اتعرّف بالباركود · "+esc(prod.src||"")}</span>
       <div class="unitbox"><span class="u">100 جم</span> <span style="color:#CBD5E1;font-size:.8rem">القيم الغذائية لكل 100 جم</span>
         <div class="g4"><div><b class="num">${fmt(prod.kcal)}</b><small>سعرات</small></div><div><b class="num">${fmt(prod.protein,1)}</b><small>بروتين</small></div><div><b class="num">${fmt(prod.carbs,1)}</b><small>كارب</small></div><div><b class="num">${fmt(prod.fat,1)}</b><small>دهون</small></div></div></div>
+      ${MINCOLS.some(k=>prod[k]!=null)?`<div class="muted" style="font-size:.78rem;margin:6px 0">${[["fiber_g","ألياف","جم"],["sodium_mg","صوديوم","مجم"],["potassium_mg","بوتاسيوم","مجم"],["calcium_mg","كالسيوم","مجم"],["magnesium_mg","ماغنيسيوم","مجم"],["iron_mg","حديد","مجم"],["zinc_mg","زنك","مجم"]].filter(x=>prod[x[0]]!=null).map(x=>x[1]+" "+fmt(prod[x[0]],1)+" "+x[2]).join(" · ")} <small>(لكل 100 جم)</small></div>`:`<div class="muted" style="font-size:.78rem;margin:6px 0">الأملاح مش متسجلة للمنتج ده لسه</div>`}
       <label class="f">الكمية (جم)</label>
       <div class="stepper"><button data-s="-1">−</button><input id="bcQty" inputmode="decimal" value="${prod.servingQty&&prod.servingQty>0?Math.round(prod.servingQty):100}"><button data-s="1">+</button></div>
       <div class="scroller" style="margin-top:8px">${servChip.length?`<button class="chip" data-q="${servChip[0]}">حصة ${servChip[0]} جم</button>`:""}${quick.map(v=>`<button class="chip" data-q="${v}">${v} جم</button>`).join("")}</div>
       <div class="card" style="background:var(--acc-soft);box-shadow:none;margin:10px 0" id="bcPrev"></div>
       <button class="btn primary block" id="bcAdd">إضافة</button>
-      <div class="bc-attr">${OFF_ATTR}<br><a href="https://world.openfoodfacts.org/product/${esc(prod.code)}" target="_blank" rel="noopener">صفحة المنتج على Open Food Facts ↗</a></div>`;
+      <div class="bc-attr">${prod.src==="USDA FoodData Central"?`القيم من <a href="${esc(prod.srcUrl)}" target="_blank" rel="noopener">USDA FoodData Central</a> (بيانات مفتوحة)`:OFF_ATTR}<br><a href="${esc(prod.srcUrl||("https://world.openfoodfacts.org/product/"+prod.code))}" target="_blank" rel="noopener">صفحة المنتج ↗</a></div>`;
     const qi=body.querySelector("#bcQty");
     const prev=()=>{ const qv=num(qi.value)||0, k=qv/100;
       body.querySelector("#bcPrev").innerHTML=`<div class="between"><b>${fmt(qv,1)} جم</b><b style="color:var(--acc)" class="num">${fmt((prod.kcal||0)*k)} kcal</b></div><div class="muted">بروتين ${fmt((prod.protein||0)*k,1)} · كارب ${fmt((prod.carbs||0)*k,1)} · دهون ${fmt((prod.fat||0)*k,1)} جم</div>`; };
@@ -220,15 +296,24 @@
       row.querySelector("button").onclick=()=>{
         openScanner(async(code)=>{
           const sb2=document.querySelector("#sheetBody"); if(!sb2) return;
-          sb2.innerHTML=`<div style="text-align:center;padding:40px 0"><span class="bc-spin"></span><div class="muted" style="margin-top:10px">بندور على المنتج <b class="num">${esc(code)}</b>…</div></div>`;
+          sb2.innerHTML=`<div style="text-align:center;padding:40px 0"><span class="bc-spin"></span><div class="muted" style="margin-top:10px">بندور في قاعدتك وعلى الإنترنت على <b class="num">${esc(code)}</b>…</div></div>`;
           let prod=null;
-          try{ prod=await offLookup(code); }catch(_){ }
+          try{ prod=await findProduct(code); }catch(_){ }
           if(!prod){
             sb2.innerHTML=`<div class="between"><button class="btn sm ghost" data-back>→ رجوع</button><button class="btn sm ghost" data-close>✕</button></div>
-              ${emptyBox("🛒","المنتج ده مش متسجل في Open Food Facts<br><small class=\"muted\">دور باسمه في البحث العادي، أو امسح باركود تاني.</small>")}
+              ${emptyBox("🛒","المنتج ده <b class=\"num\">"+esc(code)+"</b> مش موجود في قاعدتك ولا في Open Food Facts ولا USDA<br><small class=\"muted\">ضيفه مرة واحدة وهيتعرّف تلقائي في المرات الجاية.</small>")}
+              <label class="f">اسم المنتج</label><input id="bcNm" placeholder="الاسم">
+              <div class="g4" style="margin-top:8px"><div><label class="f">سعرات/100جم</label><input id="bcK" inputmode="decimal"></div><div><label class="f">بروتين</label><input id="bcP" inputmode="decimal"></div><div><label class="f">كارب</label><input id="bcC" inputmode="decimal"></div><div><label class="f">دهون</label><input id="bcF" inputmode="decimal"></div></div>
+              <button class="btn primary block" id="bcSave" style="margin-top:10px">حفظ واستخدام</button>
               <div class="bc-attr">${OFF_ATTR}</div>`;
             sb2.querySelector("[data-close]").onclick=closeSheet;
             sb2.querySelector("[data-back]").onclick=()=>window.openFoodPicker(title,onPick,opts);
+            sb2.querySelector("#bcSave").onclick=()=>{
+              const nm=(sb2.querySelector("#bcNm").value||"").trim(), k=num(sb2.querySelector("#bcK").value);
+              if(!nm||k==null||k<0) return toast("اكتب الاسم والسعرات");
+              const man={code:String(code),name:nm,brand:"",packQty:"",serving:"",servingQty:null,kcal:k,protein:num(sb2.querySelector("#bcP").value)||0,carbs:num(sb2.querySelector("#bcC").value)||0,fat:num(sb2.querySelector("#bcF").value)||0,src:"إدخال يدوي",srcKey:null};
+              showProduct(sb2,man,ensureFoodRow(man),onPick,()=>window.openFoodPicker(title,onPick,opts));
+            };
             return;
           }
           const foodRowP=ensureFoodRow(prod);
@@ -243,3 +328,4 @@
     let tries=0; const iv=setInterval(()=>{ if(wrap()||++tries>40) clearInterval(iv); },250);
   }
 })();
+
