@@ -110,7 +110,7 @@ async function flameHeroHTML(p, pre, opts){
   let W, goal, wkNow;
   if(pre){ W=pre.W; goal=pre.goal; wkNow=pre.wkNow; }
   else{
-    const { data } = await sb.from("workout_sessions").select("log_date,week").eq("client_id",p.id);
+    const { data } = await wsRows(p.id);
     W=data||[];
     goal=Math.max(1,new Set(S.program.map(e=>e.day_no)).size||3);
     wkNow=currentWeek(p);
