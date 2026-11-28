@@ -754,6 +754,16 @@
 .fl-dot.mid{background:#FACC15;box-shadow:0 0 8px rgba(250,204,21,.7)}
 .fl-dot.bad{background:#F43F5E;box-shadow:0 0 8px rgba(244,63,94,.7)}
 .fl-dot.na{background:#CBD5E1}
+.fl-modes{display:flex;gap:8px;margin:0 0 10px}
+.fl-modes button{flex:1;font:inherit;font-weight:900;padding:12px;border-radius:14px;border:2px solid var(--soft2,#E2E8F0);background:var(--card,#fff);color:var(--navy,#0f172a)}
+.fl-modes button.on{background:var(--navy,#0f172a);color:#fff;border-color:var(--navy,#0f172a)}
+.fl-pz{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fl-pslot{display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.fl-pslot b{font-size:.9rem}.fl-pslot small{opacity:.75;font-size:.72rem}
+.fl-pslot .btn{padding:9px 6px;font-size:.78rem}
+.fl-pph{min-height:120px;border:1.5px dashed var(--soft2,#CBD5E1);border-radius:12px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4px;overflow:hidden}
+.fl-pimg{position:relative;width:100%}.fl-pimg img{width:100%;display:block;border-radius:8px;max-height:260px;object-fit:contain;background:#000}
+.fl-pimg canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .fl-angbar{margin:10px 0;padding:10px 12px;border:1.5px solid #BAE6FD;background:#F0F9FF;border-radius:14px;display:flex;flex-direction:column;gap:6px;color:#075985}
 .fl-angbar small{opacity:.85}
 .fl-angpick{display:flex;flex-wrap:wrap;gap:6px}
@@ -1123,7 +1133,139 @@
     });
   }
 
-  window.viewFormLab = async function viewFormLab(el) {
+  /* ==================================================================
+     Posture Lab: front + side photo, on-device, nothing uploaded
+     ================================================================== */
+  async function flDetectImage(img) {
+    const out = { lms: null, w: img.naturalWidth || img.width, h: img.naturalHeight || img.height };
+    try {
+      if (typeof apLandmarker === "undefined" || !apLandmarker) return out;
+      const m = Math.max(out.w, out.h), sc = m > 960 ? 960 / m : 1;
+      const cv = document.createElement("canvas"); cv.width = Math.max(2, Math.round(out.w * sc)); cv.height = Math.max(2, Math.round(out.h * sc));
+      cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+      try { apLandmarker.setOptions({ runningMode: "IMAGE" }); } catch (_) {}
+      const res = apLandmarker.detect(cv);
+      out.lms = (res && res.landmarks && res.landmarks[0]) || null;
+    } catch (e) { out.err = String(e && e.message || e); }
+    return out;
+  }
+  const flLoadImg = file => new Promise((res, rej) => { const u = URL.createObjectURL(file), im = new Image(); im.onload = () => res({ im, u }); im.onerror = () => rej(new Error("image")); im.src = u; });
+  const flTone = (v, okMax, midMax) => v <= okMax ? "ok" : v <= midMax ? "mid" : "bad";
+  /* front photo checks. lms: [{x,y,visibility}] normalized, ar = width/height */
+  function flPostureFront(lms, ar) {
+    const g = i => { const p = lms[i]; return p && (p.visibility == null ? 1 : p.visibility) >= 0.4 ? { x: p.x * ar, y: p.y } : null; };
+    const deg = (a, b) => { const d = Math.abs(Math.atan2(b.y - a.y, b.x - a.x) * 180 / Math.PI); return d > 90 ? 180 - d : d; };
+    const out = [];
+    const sL = g(11), sR = g(12), hL = g(23), hR = g(24), nose = g(0), eL = g(7), eR = g(8);
+    if (sL && sR) { const t = deg(sL, sR); out.push({ key: "shoulders", label: "استواء الكتفين", val: "ميل " + t.toFixed(1) + "°", tone: flTone(t, 2, 4), pts: 12 }); }
+    if (hL && hR) { const t = deg(hL, hR); out.push({ key: "hips", label: "استواء الحوض", val: "ميل " + t.toFixed(1) + "°", tone: flTone(t, 2, 4), pts: 12 }); }
+    if (nose && sL && sR) {
+      const sw = Math.abs(sL.x - sR.x) || 1, off = Math.abs(nose.x - (sL.x + sR.x) / 2) / sw;
+      out.push({ key: "head", label: "الراس فوق الكتفين", val: "إزاحة " + Math.round(off * 100) + "٪ من عرض الكتف", tone: flTone(off, 0.1, 0.2), pts: 10 });
+    }
+    if (eL && eR) { const t = deg(eL, eR); out.push({ key: "headtilt", label: "ميل الراس", val: "ميل " + t.toFixed(1) + "°", tone: flTone(t, 3, 6), pts: 6 }); }
+    const knee = (h, k, a) => { if (!h || !k || !a) return null; const len = Math.hypot(a.x - h.x, a.y - h.y) || 1, t = (k.y - h.y) / ((a.y - h.y) || 1), lx = h.x + (a.x - h.x) * t; return { dev: (k.x - lx) / len, side: k.x }; };
+    const kL = knee(g(23), g(25), g(27)), kR = knee(g(24), g(26), g(28));
+    if (kL || kR) {
+      const dv = [kL, kR].filter(Boolean).map(k => Math.abs(k.dev)), m = Math.max(...dv);
+      out.push({ key: "knees", label: "استقامة الركبتين", val: "انحراف " + Math.round(m * 100) + "٪ من طول الرجل", tone: flTone(m, 0.04, 0.08), pts: 10 });
+    }
+    return out;
+  }
+  /* side photo checks */
+  function flPostureSide(lms, ar) {
+    const g = i => { const p = lms[i]; return p && (p.visibility == null ? 1 : p.visibility) >= 0.4 ? { x: p.x * ar, y: p.y, v: p.visibility == null ? 1 : p.visibility } : null; };
+    const out = [];
+    const useL = ((lms[7] && lms[7].visibility) || 0) + ((lms[11] && lms[11].visibility) || 0) >= ((lms[8] && lms[8].visibility) || 0) + ((lms[12] && lms[12].visibility) || 0);
+    const ear = g(useL ? 7 : 8), sh = g(useL ? 11 : 12), hip = g(useL ? 23 : 24), ank = g(useL ? 27 : 28), nose = g(0);
+    if (ear && sh) {
+      const dir = nose ? Math.sign(nose.x - ear.x) || 1 : 1;
+      const cva = Math.atan2(sh.y - ear.y, Math.abs(ear.x - sh.x)) * 180 / Math.PI, fwd = (ear.x - sh.x) * dir;
+      out.push({ key: "fhead", label: "الراس لقدام", val: "زاوية الرقبة " + Math.round(cva) + "° (تقريبي)" + (fwd <= 0 ? " · الراس فوق الكتف" : ""), tone: cva >= 52 || fwd <= 0 ? "ok" : cva >= 46 ? "mid" : "bad", pts: 16 });
+      if (hip) {
+        const tr = Math.hypot(sh.x - hip.x, sh.y - hip.y) || 1, so = (sh.x - hip.x) * dir / tr;
+        out.push({ key: "shoulder", label: "الكتف قدام الحوض", val: "إزاحة " + Math.round(so * 100) + "٪ من طول الجذع", tone: so <= 0.08 ? "ok" : so <= 0.16 ? "mid" : "bad", pts: 10 });
+      }
+    }
+    if (hip && ank && sh) {
+      const tr = Math.hypot(sh.x - hip.x, sh.y - hip.y) || 1, lean = Math.abs((sh.x - ank.x)) / tr;
+      out.push({ key: "plumb", label: "الوقفة على خط الجاذبية", val: "الكتف بعيد " + Math.round(lean * 100) + "٪ عن خط الكعب", tone: flTone(lean, 0.12, 0.25), pts: 8 });
+    }
+    return out;
+  }
+  const FL_DRILLS = {
+    fhead: { t: "تمارين الرقبة والضهر العلوي", s: ["تراجع الذقن (Chin Tucks): ٢×١٠ ببطء", "ملائكة الحيطة (Wall Angels): ٢×١٠", "تمدد الصدر عند الباب: ٢×٣٠ ثانية"] },
+    shoulder: { t: "فتح الصدر وتقوية الضهر", s: ["تمدد الصدر عند الباب: ٢×٣٠ ثانية", "سحب الكتف للخلف (Band Pull-Apart): ٢×١٥", "ملائكة الحيطة: ٢×١٠"] },
+    shoulders: { t: "توازن الكتفين", s: ["تمدد جانب الرقبة: ٢×٣٠ ثانية لكل جنب", "شراغ كتف بتحكم: ٢×١٠", "شيل شنطة/دمبل في إيد واحدة وامشي ٣٠ ثانية لكل إيد"] },
+    hips: { t: "توازن الحوض", s: ["جسر الأرداف (Glute Bridge): ٢×١٢", "وقفة على رجل واحدة: ٣٠ ثانية لكل رجل", "تمدد الفخذ من قدام: ٢×٣٠ ثانية"] },
+    head: { t: "وضع الراس", s: ["تراجع الذقن: ٢×١٠", "تمدد جانب الرقبة: ٢×٣٠ ثانية", "قف قدام المراية وظبّط الراس في النص ٣٠ ثانية"] },
+    headtilt: { t: "وضع الراس", s: ["تمدد جانب الرقبة: ٢×٣٠ ثانية لكل جنب", "قف قدام المراية وظبّط الراس ٣٠ ثانية"] },
+    knees: { t: "ثبات الركبة", s: ["جسر الأرداف بشريط حول الركبة: ٢×١٢", "خطوة جانبية بشريط: ٢×١٠ لكل جنب", "سكوات بوزن الجسم قدام المراية: ٢×١٠"] },
+    plumb: { t: "الوقفة المتزنة", s: ["قف ضهرك للحيطة: كعب وحوض وكتف وراس يلمسوها ٣٠ ثانية", "مشي بتحكم وانت ماسك الجسم طويل: ٢ دقيقة"] },
+  };
+  function flPostureResult(front, side) {
+    const checks = [].concat(front || [], side || []);
+    if (!checks.length) return null;
+    const lost = checks.reduce((a, c) => a + (c.tone === "ok" ? 0 : c.tone === "mid" ? Math.round(c.pts / 2) : c.pts), 0);
+    const score = Math.max(10, Math.min(100, 100 - lost));
+    const worst = checks.filter(c => c.tone !== "ok").sort((a, b) => (b.tone === "bad") - (a.tone === "bad") || b.pts - a.pts)[0] || null;
+    return { score, checks, worst, drill: worst ? FL_DRILLS[worst.key] : null };
+  }
+  function flPostureHist(cid) { try { return JSON.parse(localStorage.getItem("mofit_posture_" + cid) || "[]"); } catch (_) { return []; } }
+  function flPostureSaveHist(cid, r, hasF, hasS) {
+    const h = flPostureHist(cid); h.push({ t: Date.now(), score: r.score, f: hasF, s: hasS }); try { localStorage.setItem("mofit_posture_" + cid, JSON.stringify(h.slice(-12))); } catch (_) {}
+    return h.slice(-12);
+  }
+  async function flViewPosture(el, p) {
+    flCss();
+    const st = { front: null, side: null };
+    el.innerHTML = `<div class="card dark hero"><div class="card-h"><div class="ic">🧍</div><h2>معمل القوام <small style="display:block">صورتين، والتطبيق يقيس وقفتك على موبايلك</small></h2></div>
+        <p class="hero-sub">صوّر نفسك من قدام ومن الجنب والتطبيق يقيس ميل الكتفين والحوض ووضع الراس واستقامة الركبتين ويديك تقييم من ١٠٠ وتمرين ٥ دقايق. الصور ما بتترفعش.</p></div>
+      <div class="card"><div class="fl-pz">
+        <div class="fl-pslot" data-k="front"><b>🧍 صورة من قدام</b><small>واقف عادي، الجسم كامل، الإيدين جنبك</small><div class="fl-pph" id="flPzFront"></div><button class="btn primary" data-pick="front">📷 صوّر أو اختار صورة</button></div>
+        <div class="fl-pslot" data-k="side"><b>↔️ صورة من الجنب</b><small>واقف عادي، الجسم كامل، بصّ لقدام</small><div class="fl-pph" id="flPzSide"></div><button class="btn primary" data-pick="side">📷 صوّر أو اختار صورة</button></div></div>
+        <input type="file" id="flPzFile" accept="image/*" class="hidden">
+        <p class="hint" style="margin-top:8px">📌 الموبايل ثابت على مستوى الوسط، من بعيد ٢ لـ ٣ متر، إضاءة كويسة، لبس ضيق شوية. تقدر تحلل بصورة واحدة بس الصورتين أدق.</p>
+        <button class="btn primary block" id="flPzGo" disabled>🔍 حلّل القوام</button>
+        <div class="fl-prog" id="flPzProg" hidden><div class="t"><span>جاري التحليل…</span><b></b></div></div></div>
+      <div id="flPzOut"></div>`;
+    let target = null; const fileIn = el.querySelector("#flPzFile"), go = el.querySelector("#flPzGo"), out = el.querySelector("#flPzOut"), prog = el.querySelector("#flPzProg");
+    const sync = () => { go.disabled = !(st.front || st.side); };
+    el.querySelectorAll("[data-pick]").forEach(b => b.onclick = () => { target = b.dataset.pick; fileIn.click(); });
+    fileIn.onchange = async () => {
+      const f = fileIn.files && fileIn.files[0]; fileIn.value = ""; if (!f || !target) return;
+      const k = target, ph = el.querySelector(k === "front" ? "#flPzFront" : "#flPzSide");
+      ph.innerHTML = `<span class="hint">بيتحمّل…</span>`;
+      try {
+        const { im, u } = await flLoadImg(f);
+        await flEnsureModel();
+        const d = await flDetectImage(im);
+        st[k] = { url: u, w: d.w, h: d.h, lms: d.lms };
+        ph.innerHTML = `<div class="fl-pimg"><img src="${u}"><canvas></canvas></div>${d.lms ? `<small class="hint">✅ الجسم ظاهر</small>` : `<small class="hint" style="color:#B91C1C">⚠️ مش شايف جسم في الصورة دي، جرّب صورة أوضح والجسم كامل</small>`}`;
+        const cv = ph.querySelector("canvas"); cv.width = d.w; cv.height = d.h;
+        if (d.lms) { const c = cv.getContext("2d"); c.lineWidth = Math.max(3, d.w / 150); c.strokeStyle = "#22C55E"; c.fillStyle = "#F97316"; FL_EDGES.forEach(([a, b]) => { const A = d.lms[a], B = d.lms[b]; if (!A || !B || (A.visibility ?? 1) < 0.4 || (B.visibility ?? 1) < 0.4) return; c.beginPath(); c.moveTo(A.x * d.w, A.y * d.h); c.lineTo(B.x * d.w, B.y * d.h); c.stroke(); }); }
+        if (!d.lms) st[k].lms = null;
+      } catch (e) { ph.innerHTML = `<small class="hint" style="color:#B91C1C">تعذر قراءة الصورة. جرّب صورة تانية. (${flEsc(String(e && e.message || e))})</small>`; st[k] = null; }
+      sync();
+    };
+    go.onclick = () => {
+      const f = st.front && st.front.lms ? flPostureFront(st.front.lms, st.front.w / st.front.h) : null;
+      const s = st.side && st.side.lms ? flPostureSide(st.side.lms, st.side.w / st.side.h) : null;
+      const r = flPostureResult(f, s);
+      if (!r) { out.innerHTML = `<div class="card"><b style="color:#B91C1C">مقدرناش نقيس القوام</b><p class="hint">مفيش جسم واضح في الصور. صوّر والجسم كامل من الراس للرجلين، إضاءة كويسة، وخلفية بسيطة.</p></div>`; return; }
+      const hist = flPostureSaveHist(p.id, r, !!f, !!s);
+      const prev = hist.length > 1 ? hist[hist.length - 2] : null;
+      const tone = r.score >= 75 ? "ok" : r.score >= 50 ? "mid" : "bad";
+      out.innerHTML = `<div class="card"><div class="fl-hero-score">${ring(r.score, 100, { size: 110, stroke: 11, label: flN(r.score), sub: "من ١٠٠", color: tone === "ok" ? "#22C55E" : tone === "mid" ? "#FACC15" : "#F43F5E" })}
+          <div class="gv"><b>تقييم القوام</b><small class="hint">${f && s ? "من الصورتين" : f ? "من صورة القدام بس — ضيف صورة الجنب لتقييم الراس والكتف" : "من صورة الجنب بس — ضيف صورة القدام لتقييم الكتفين والحوض والركبة"}${prev ? " · المرة اللي فاتت " + flN(prev.score) : ""}</small></div></div>
+        ${r.checks.map(c => `<div class="fl-check"><span class="fl-dot ${c.tone}"></span><div class="fl-cb"><b>${flEsc(c.label)}</b><small>${flEsc(c.val)}</small></div>${c.tone === "ok" ? `<b style="color:#15803D">✓</b>` : `<b style="color:#BE123C">-${c.tone === "mid" ? Math.round(c.pts / 2) : c.pts}</b>`}</div>`).join("")}
+        ${r.drill ? `<div class="fl-approx" style="margin-top:10px"><b>🧘 تمرين ٥ دقايق يوميًا: ${flEsc(r.drill.t)}</b><ul style="margin:6px 18px 0">${r.drill.s.map(x => `<li>${flEsc(x)}</li>`).join("")}</ul><small class="hint">صوّر تاني بعد أسبوعين وقارن.</small></div>` : `<div class="fl-approx" style="margin-top:10px">🎉 قوامك كويس في اللي اتقاس. حافظ على حركتك وصوّر كل شهر تتابع.</div>`}
+        ${hist.length > 1 ? `<div class="hint" style="margin-top:8px">📈 آخر ${hist.length} مرات: ${hist.map(x => flN(x.score)).join(" ← ")}</div>` : ""}
+        <p class="fl-note">⚠️ ده تقدير من صورة موبايل عادية، بيقيس زوايا وإزاحات بس. بيتابع التغيير مع الوقت، مش تشخيص طبي، ومش بيقيس ميل الحوض للأمام أو الخلف. لو عندك ألم مستمر، كلّم الكوتش أو دكتور.</p></div>`;
+    };
+  }
+
+  async function flViewExercise(el) {
     flCss();
     const p = S.client; if (!p) { el.innerHTML = ""; return; }
     const isCoach = S.me.role === "coach";
@@ -1173,5 +1315,18 @@
     el.querySelector("#flPick").onclick = () => file.click();
     file.onchange = () => { const f = file.files && file.files[0]; file.value = ""; if (f) flPrecheck(f, { model: S.formLift, ex: S.formEx }, p, prog); };
     flRefreshList(p);
+  }
+  window.viewFormLab = async function viewFormLab(el) {
+    flCss();
+    const p = S.client; if (!p) { el.innerHTML = ""; return; }
+    S.formMode = S.formMode || "ex";
+    el.innerHTML = `<div class="fl-modes"><button type="button" data-m="ex">🏋️ تمرين</button><button type="button" data-m="pose">🧍 قوام</button></div><div id="flModeBody"></div>`;
+    const draw = () => {
+      el.querySelectorAll(".fl-modes [data-m]").forEach(b => b.classList.toggle("on", b.dataset.m === S.formMode));
+      const body = el.querySelector("#flModeBody");
+      if (S.formMode === "pose") flViewPosture(body, p); else flViewExercise(body);
+    };
+    el.querySelectorAll(".fl-modes [data-m]").forEach(b => b.onclick = () => { S.formMode = b.dataset.m; draw(); });
+    draw();
   };
 })();
