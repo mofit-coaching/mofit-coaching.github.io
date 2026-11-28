@@ -107,6 +107,10 @@
   /* ---------- 1) the user's own foods table first (barcode lives in notes as "باركود <digits>") ---------- */
   async function dbLookup(code){
     const vs=codeVariants(code);
+    try{ /* indexed foods.barcode column first; falls through to the old notes search on a miss or if the column is missing */
+      const { data:bc, error:be } = await sb.from("foods").select("*").in("barcode",vs).limit(1);
+      if(!be&&bc&&bc.length) return bc[0];
+    }catch(_){ }
     try{
       const { data } = await sb.from("foods").select("*").or(vs.map(v=>"notes.ilike.%"+v+"%").join(",")).limit(10);
       if(!data) return null;
@@ -181,7 +185,7 @@
       if(found){ cacheSet(prod.code,found); return found; }
     }catch(_){ }
     try{
-      const rec={...base, ...mins, source:prod.src||"Open Food Facts", brand:prod.brand||null, category:"منتجات بالباركود", notes:"باركود "+prod.code};
+      const rec={...base, ...mins, source:prod.src||"Open Food Facts", brand:prod.brand||null, category:"منتجات بالباركود", notes:"باركود "+prod.code, barcode:String(prod.code)};
       if(Object.keys(mins).length) rec.mineral_source=prod.srcKey||prod.src;
       const { data:ins, error } = await sb.from("foods").insert(rec).select().single();
       if(!error&&ins){ cacheSet(prod.code,ins); return ins; }
